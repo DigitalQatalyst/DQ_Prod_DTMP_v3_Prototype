@@ -1710,8 +1710,8 @@ export default function Stage2AppPage() {
       </div>
 
       {/* Middle Column - Context & Controls */}
-      <div className={`${rightSidebarCollapsed ? 'w-0' : 'w-80'} bg-white border-r border-gray-200 flex flex-col transition-all duration-300 overflow-hidden flex-shrink-0 h-full`}>
-        {!rightSidebarCollapsed && (
+      <div className={`${rightSidebarCollapsed || activeService === "Solution Build" ? 'w-0' : 'w-80'} bg-white border-r border-gray-200 flex flex-col transition-all duration-300 overflow-hidden flex-shrink-0 h-full`}>
+        {!rightSidebarCollapsed && activeService !== "Solution Build" && (
           <>
             {/* Header */}
             <div className="p-4 border-b border-gray-200 flex-shrink-0">
