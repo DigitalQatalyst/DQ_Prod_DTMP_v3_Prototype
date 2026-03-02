@@ -113,6 +113,10 @@ import {
   SpecsWorkspaceSidebar,
   type SpecsWorkspaceTab,
 } from "@/components/stage2/specs/SpecsWorkspacePanels";
+import {
+  BuildWorkspaceMain,
+  BuildWorkspaceSidebar,
+} from "@/components/stage2/build/BuildWorkspacePanels";
 import { CourseDetailView } from "@/components/learning";
 import LifecycleOverview from "./lifecycle/LifecycleOverview";
 import TemplatesLibrary from "./lifecycle/TemplatesLibrary";
@@ -122,7 +126,6 @@ import ApplicationsPage from "./lifecycle/ApplicationsPage";
 import { buildRequests, type BuildRequest, deliveryTeams } from "@/data/solutionBuild";
 import { Progress } from "@/components/ui/progress";
 import IntelligenceWorkspacePage from "@/pages/stage2/intelligence/IntelligenceWorkspacePage";
-import SolutionBuildWorkspacePage from "@/pages/stage2/solutionBuild/SolutionBuildWorkspacePage";
 import { supportTickets, serviceRequests, knowledgeArticles, ServiceRequest } from "@/data/supportData";
 import { technicalSupport, expertConsultancy } from "@/data/supportServices";
 import { getSupportServiceDetail } from "@/data/supportServices/detailsSupport";
@@ -504,6 +507,12 @@ export default function Stage2AppPage() {
   const [activeSpecsTab, setActiveSpecsTab] = useState<SpecsWorkspaceTab>(
     getSpecsTabFromPath()
   );
+
+  // Solution Build States
+  const [sbSearchQuery, setSbSearchQuery] = useState("");
+  const [activeBuildRequestId, setActiveBuildRequestId] = useState<string | null>(null);
+  const [sbStatusFilter, setSbStatusFilter] = useState("all");
+  const [sbPriorityFilter, setSbPriorityFilter] = useState("all");
   const [knowledgeSearchQuery, setKnowledgeSearchQuery] = useState("");
   const [savedKnowledgeIds, setSavedKnowledgeIds] = useState<string[]>([]);
   const [knowledgeHistory, setKnowledgeHistory] = useState<KnowledgeHistoryEntry[]>([]);
@@ -1078,6 +1087,30 @@ export default function Stage2AppPage() {
       },
     });
   };
+
+  const filteredBuildRequests = useMemo(() => {
+    let filtered = buildRequests.filter(
+      (r) => r.requestedBy === "Sarah Johnson" || r.requestedBy === "Current User"
+    );
+    if (sbSearchQuery) {
+      const q = sbSearchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (r) =>
+          r.name.toLowerCase().includes(q) ||
+          r.id.toLowerCase().includes(q) ||
+          r.department.toLowerCase().includes(q)
+      );
+    }
+    if (sbStatusFilter !== "all") filtered = filtered.filter((r) => r.status === sbStatusFilter);
+    if (sbPriorityFilter !== "all") filtered = filtered.filter((r) => r.priority === sbPriorityFilter);
+
+    return filtered;
+  }, [sbSearchQuery, sbStatusFilter, sbPriorityFilter]);
+
+  const selectedBuildRequest = useMemo(() =>
+    buildRequests.find(r => r.id === activeBuildRequestId) || null
+    , [activeBuildRequestId]);
+
   const handleKnowledgeNotificationClick = (notification: MentionNotification) => {
     markMentionNotificationRead(notification.id);
     const [sourceTab, sourceId] = notification.itemId.split(":");
@@ -1449,10 +1482,10 @@ export default function Stage2AppPage() {
         }
       );
     }
-    if (subServiceId !== "support-detail") {
+    if (activeSubService !== "support-detail") {
       // leaving detail view but keep selection for navigation purposes
     }
-    if (subServiceId !== "support-knowledge-detail") {
+    if (activeSubService !== "support-knowledge-detail") {
       setSupportSelectedArticleId(null);
     }
   };
@@ -1695,8 +1728,8 @@ export default function Stage2AppPage() {
       </div>
 
       {/* Middle Column - Context & Controls */}
-      <div className={`${rightSidebarCollapsed || activeService === "Solution Build" ? 'w-0' : 'w-80'} bg-white border-r border-gray-200 flex flex-col transition-all duration-300 overflow-hidden flex-shrink-0 h-full`}>
-        {!rightSidebarCollapsed && activeService !== "Solution Build" && (
+      <div className={`${rightSidebarCollapsed ? 'w-0' : 'w-80'} bg-white border-r border-gray-200 flex flex-col transition-all duration-300 overflow-hidden flex-shrink-0 h-full`}>
+        {!rightSidebarCollapsed && (
           <>
             {/* Header */}
             <div className="p-4 border-b border-gray-200 flex-shrink-0">
@@ -1806,6 +1839,18 @@ export default function Stage2AppPage() {
                 <SpecsWorkspaceSidebar
                   activeTab={activeSpecsTab}
                   onTabChange={handleSpecsTabClick}
+                />
+              ) : activeService === "Solution Build" ? (
+                <BuildWorkspaceSidebar
+                  requests={filteredBuildRequests}
+                  activeRequestId={activeBuildRequestId}
+                  onSelectRequest={setActiveBuildRequestId}
+                  searchQuery={sbSearchQuery}
+                  setSearchQuery={setSbSearchQuery}
+                  statusFilter={sbStatusFilter}
+                  setStatusFilter={setSbStatusFilter}
+                  priorityFilter={sbPriorityFilter}
+                  setPriorityFilter={setSbPriorityFilter}
                 />
               ) : activeService === "Lifecycle Management" ? (
                 <div className="space-y-4">
@@ -2237,7 +2282,9 @@ export default function Stage2AppPage() {
               })()}
             </div>
           ) : activeService === "Solution Build" ? (
-            <SolutionBuildWorkspacePage />
+            <BuildWorkspaceMain
+              selectedRequest={selectedBuildRequest}
+            />
           ) : activeService === "Digital Intelligence" ? (
             <IntelligenceWorkspacePage activeSubService={activeSubService} />
           ) : activeService === "Support Services" && activeSubService ? (
