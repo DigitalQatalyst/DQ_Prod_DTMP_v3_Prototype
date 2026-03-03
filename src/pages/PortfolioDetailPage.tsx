@@ -86,8 +86,8 @@ const PortfolioDetailPage = () => {
   };
 
   const handleRequestClick = (card: RequestCard) => {
-    // Just show login modal like "Access Service" button
-    setShowLoginModal(true);
+    setSelectedRequestCard(card);
+    setShowRequestModal(true);
   };
 
   const submitRequest = (formData: RequestFormData) => {
@@ -105,8 +105,17 @@ const PortfolioDetailPage = () => {
     // Show success message (TODO: Add toast notification)
     console.log('Request submitted:', request);
 
-    // Navigate to Stage 2
-    window.location.href = '/stage2';
+    // Navigate to Stage 2 -> Portfolio My Requests
+    navigate('/stage2/portfolio-management', {
+      state: {
+        marketplace: 'portfolio-management',
+        tab: 'my-requests',
+        cardId: request.serviceId,
+        serviceName: request.serviceName,
+        action: 'request-service',
+        submittedRequestId: request.id,
+      },
+    });
   };
 
   const handleRequestSubmit = (formData: RequestFormData) => {
@@ -907,6 +916,21 @@ const PortfolioDetailPage = () => {
           cardId: cardId || "",
           serviceName: service.title,
           action: "access service"
+        }}
+        onLoginSuccess={() => {
+          if (pendingRequestData) {
+            submitRequest(pendingRequestData);
+            setPendingRequestData(null);
+            return;
+          }
+          navigate('/stage2/portfolio-management', {
+            state: {
+              marketplace: 'portfolio-management',
+              tab: 'overview',
+              cardId,
+              serviceName: service.title,
+            },
+          });
         }}
       />
 

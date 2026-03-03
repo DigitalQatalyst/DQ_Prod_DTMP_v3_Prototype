@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Network, Database, Cloud, Server, Layers, AlertCircle, Info, Users, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ActionFormModal, ActionFormData } from "./ActionFormModal";
 import { LoginModal } from "@/components/learningCenter/LoginModal";
 import { useAuth } from "@/contexts/AuthContext";
+import { addRequest } from "@/data/requests/mockRequests";
 
 interface DependencyNode {
   id: string;
@@ -28,6 +30,8 @@ export function DependencyVisualization({ context = 'application' }: DependencyV
   const [showActionForm, setShowActionForm] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [actionContext, setActionContext] = useState<any>(null);
+  const [pendingActionData, setPendingActionData] = useState<ActionFormData | null>(null);
+  const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
 
   const isApplication = context === 'application';
@@ -81,26 +85,55 @@ const criticalityConfig = {
     setShowActionForm(true);
   };
 
+  const submitDependencyAnalysisRequest = (formData: ActionFormData) => {
+    const mappedPriority =
+      formData.priority === "normal" ? "medium" : formData.priority;
+    const request = addRequest({
+      userId: user?.id || "user-123",
+      userName: user?.name || "John Doe",
+      userEmail: user?.email || "john.doe@company.com",
+      serviceName: isApplication
+        ? "Application Dependency Mapping"
+        : "Project Dependency & Resource Mapping",
+      serviceId: isApplication ? "application-dependencies" : "project-dependencies",
+      requestType: "Dependency Impact Analysis Request",
+      requestCategory: "deep-dive-analysis",
+      priority: mappedPriority,
+      businessJustification: formData.description,
+      desiredCompletionDate: formData.targetDate,
+      additionalRequirements: formData.actionPlan,
+      specificData: {
+        actionType: formData.actionType,
+        notifyStakeholders: formData.notifyStakeholders,
+        requestBudget: formData.requestBudget,
+        budgetAmount: formData.budgetAmount,
+        additionalNotes: formData.additionalNotes,
+        context: actionContext,
+      },
+    });
+
+    navigate("/stage2/portfolio-management", {
+      state: {
+        marketplace: "portfolio-management",
+        tab: "my-requests",
+        cardId: request.serviceId,
+        serviceName: request.serviceName,
+        submittedRequestId: request.id,
+      },
+    });
+  };
+
   const handleActionSubmit = (formData: ActionFormData) => {
     // Check if user is authenticated before submitting
     if (!isAuthenticated) {
       // Show login modal
       setShowActionForm(false);
+      setPendingActionData(formData);
       setShowLoginModal(true);
       return;
     }
-    
-    console.log('Analysis request submitted:', {
-      context: actionContext,
-      action: formData,
-      submittedBy: user?.name || 'Unknown User'
-    });
-    
-    // TODO: Send to backend API
-    alert(`Analysis request created successfully!\n\nTarget Date: ${formData.targetDate}\nPriority: ${formData.priority}`);
-    
-    // Navigate to Stage 2
-    window.location.href = '/stage2';
+
+    submitDependencyAnalysisRequest(formData);
   };
 
   return (
@@ -539,6 +572,19 @@ const criticalityConfig = {
           cardId: "dependency-visualization",
           serviceName: isApplication ? "Application Dependency Mapping" : "Project Dependency & Resource Mapping",
           action: "request analysis"
+        }}
+        onLoginSuccess={() => {
+          if (pendingActionData) {
+            submitDependencyAnalysisRequest(pendingActionData);
+            setPendingActionData(null);
+            return;
+          }
+          navigate("/stage2/portfolio-management", {
+            state: {
+              marketplace: "portfolio-management",
+              tab: "my-requests",
+            },
+          });
         }}
       />
     </section>

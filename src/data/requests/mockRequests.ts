@@ -13,7 +13,7 @@ const generateRequestId = (): string => {
 // Add a new request
 export const addRequest = (requestData: Partial<ServiceRequest>): ServiceRequest => {
   const now = new Date().toISOString();
-  
+
   const newRequest: ServiceRequest = {
     id: generateRequestId(),
     userId: requestData.userId || 'user-123',
@@ -44,7 +44,7 @@ export const addRequest = (requestData: Partial<ServiceRequest>): ServiceRequest
     comments: [],
     deliverables: []
   };
-  
+
   mockRequests.push(newRequest);
   return newRequest;
 };
@@ -66,7 +66,7 @@ export const updateRequestStatus = (
   comment?: string
 ): ServiceRequest | undefined => {
   const request = mockRequests.find(req => req.id === requestId);
-  
+
   if (request) {
     const now = new Date().toISOString();
     request.status = newStatus;
@@ -77,7 +77,7 @@ export const updateRequestStatus = (
       comment: comment || `Status updated to ${newStatus}`
     });
   }
-  
+
   return request;
 };
 
@@ -88,7 +88,7 @@ export const addRequestComment = (
   message: string
 ): ServiceRequest | undefined => {
   const request = mockRequests.find(req => req.id === requestId);
-  
+
   if (request) {
     const now = new Date().toISOString();
     request.comments.push({
@@ -99,7 +99,7 @@ export const addRequestComment = (
     });
     request.updatedAt = now;
   }
-  
+
   return request;
 };
 
@@ -114,7 +114,7 @@ export const addRequestDeliverable = (
   }
 ): ServiceRequest | undefined => {
   const request = mockRequests.find(req => req.id === requestId);
-  
+
   if (request) {
     const now = new Date().toISOString();
     request.deliverables.push({
@@ -124,14 +124,14 @@ export const addRequestDeliverable = (
     });
     request.updatedAt = now;
   }
-  
+
   return request;
 };
 
 // Get request counts by status
 export const getRequestCountsByStatus = (userId: string): Record<RequestStatus, number> => {
   const userRequests = getUserRequests(userId);
-  
+
   const counts: Record<RequestStatus, number> = {
     'submitted': 0,
     'under-review': 0,
@@ -142,11 +142,11 @@ export const getRequestCountsByStatus = (userId: string): Record<RequestStatus, 
     'delivered': 0,
     'closed': 0
   };
-  
+
   userRequests.forEach(req => {
     counts[req.status]++;
   });
-  
+
   return counts;
 };
 
@@ -177,37 +177,36 @@ export const seedDemoRequests = (userId: string): void => {
       userId,
       userName: 'John Doe',
       userEmail: 'john.doe@company.com',
-      serviceName: 'License Compliance & Optimization',
-      serviceId: 'license-compliance-tracking',
-      requestType: 'Compliance Audit Report',
-      requestCategory: 'deep-dive-analysis',
-      priority: 'urgent',
-      businessJustification: 'Upcoming audit requires full compliance review',
-      desiredCompletionDate: '2024-11-30',
-      scope: 'enterprise-wide',
-      budgetCode: 'COMPLIANCE-2024'
+      serviceName: 'Portfolio Health Review',
+      serviceId: 'portfolio-health-dashboard',
+      requestType: 'Remediation Action Plan',
+      requestCategory: 'consulting',
+      priority: 'medium',
+      businessJustification: 'Address critical health issues in the Business Applications segment',
+      desiredCompletionDate: '2025-01-20',
+      scope: 'specific-applications'
     },
     {
       userId,
       userName: 'John Doe',
       userEmail: 'john.doe@company.com',
-      serviceName: 'TCO Optimization',
-      serviceId: 'tco-optimization',
-      requestType: 'TCO Workshop',
+      serviceName: 'Portfolio Health Review',
+      serviceId: 'portfolio-health-dashboard',
+      requestType: 'Health Review Workshop',
       requestCategory: 'workshop',
-      priority: 'medium',
-      businessJustification: 'Need to align stakeholders on cost optimization strategy',
-      desiredCompletionDate: '2024-12-01',
+      priority: 'low',
+      businessJustification: 'Quarterly alignment with stakeholders on portfolio health indicators',
+      desiredCompletionDate: '2025-02-05',
       specificData: {
-        numberOfParticipants: 15,
-        duration: 'full-day',
-        location: 'on-site'
+        numberOfParticipants: 8,
+        duration: 'half-day',
+        location: 'remote'
       }
     }
   ];
-  
+
   demoRequests.forEach(req => addRequest(req));
-  
+
   // Update some statuses for demo
   const requests = getUserRequests(userId);
   if (requests.length > 0) {
@@ -216,5 +215,8 @@ export const seedDemoRequests = (userId: string): void => {
   }
   if (requests.length > 1) {
     updateRequestStatus(requests[1].id, 'under-review', 'Request is being reviewed by compliance team');
+  }
+  if (requests.length > 2) {
+    updateRequestStatus(requests[2].id, 'submitted', 'Request received and placed in queue');
   }
 };

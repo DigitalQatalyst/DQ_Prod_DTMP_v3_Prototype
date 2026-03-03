@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Activity, TrendingUp, TrendingDown, AlertTriangle, CheckCircle, XCircle, DollarSign, Shield, Info } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -12,6 +13,7 @@ import {
 import { ActionFormModal, ActionFormData } from "./ActionFormModal";
 import { LoginModal } from "@/components/learningCenter/LoginModal";
 import { useAuth } from "@/contexts/AuthContext";
+import { addRequest } from "@/data/requests/mockRequests";
 
 interface HealthData {
   category: string;
@@ -31,6 +33,8 @@ export function DynamicHealthDashboard({ context = 'application' }: DynamicHealt
   const [showActionForm, setShowActionForm] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [actionContext, setActionContext] = useState<any>(null);
+  const [pendingActionData, setPendingActionData] = useState<ActionFormData | null>(null);
+  const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
 
   // Context-specific data
@@ -101,26 +105,55 @@ export function DynamicHealthDashboard({ context = 'application' }: DynamicHealt
     setShowActionForm(true);
   };
 
+  const submitRemediationRequest = (formData: ActionFormData) => {
+    const mappedPriority =
+      formData.priority === "normal" ? "medium" : formData.priority;
+    const request = addRequest({
+      userId: user?.id || "user-123",
+      userName: user?.name || "John Doe",
+      userEmail: user?.email || "john.doe@company.com",
+      serviceName: isApplication
+        ? "Application Portfolio Health Dashboard"
+        : "Project Portfolio Health Dashboard",
+      serviceId: isApplication ? "portfolio-health-dashboard" : "project-health-tracking",
+      requestType: "Remediation Action Request",
+      requestCategory: "consulting",
+      priority: mappedPriority,
+      businessJustification: formData.description,
+      desiredCompletionDate: formData.targetDate,
+      additionalRequirements: formData.actionPlan,
+      specificData: {
+        actionType: formData.actionType,
+        notifyStakeholders: formData.notifyStakeholders,
+        requestBudget: formData.requestBudget,
+        budgetAmount: formData.budgetAmount,
+        additionalNotes: formData.additionalNotes,
+        context: actionContext,
+      },
+    });
+
+    navigate("/stage2/portfolio-management", {
+      state: {
+        marketplace: "portfolio-management",
+        tab: "my-requests",
+        cardId: request.serviceId,
+        serviceName: request.serviceName,
+        submittedRequestId: request.id,
+      },
+    });
+  };
+
   const handleActionSubmit = (formData: ActionFormData) => {
     // Check if user is authenticated before submitting
     if (!isAuthenticated) {
       // Show login modal
       setShowActionForm(false);
+      setPendingActionData(formData);
       setShowLoginModal(true);
       return;
     }
-    
-    console.log('Remediation action submitted:', {
-      context: actionContext,
-      action: formData,
-      submittedBy: user?.name || 'Unknown User'
-    });
-    
-    // TODO: Send to backend API
-    alert(`Remediation request created successfully!\n\nTarget Date: ${formData.targetDate}\nPriority: ${formData.priority}`);
-    
-    // Navigate to Stage 2
-    window.location.href = '/stage2';
+
+    submitRemediationRequest(formData);
   };
 
   return (
@@ -474,6 +507,19 @@ export function DynamicHealthDashboard({ context = 'application' }: DynamicHealt
           cardId: "health-dashboard",
           serviceName: isApplication ? "Application Portfolio Health Dashboard" : "Project Portfolio Health Dashboard",
           action: "request remediation"
+        }}
+        onLoginSuccess={() => {
+          if (pendingActionData) {
+            submitRemediationRequest(pendingActionData);
+            setPendingActionData(null);
+            return;
+          }
+          navigate("/stage2/portfolio-management", {
+            state: {
+              marketplace: "portfolio-management",
+              tab: "my-requests",
+            },
+          });
         }}
       />
     </section>

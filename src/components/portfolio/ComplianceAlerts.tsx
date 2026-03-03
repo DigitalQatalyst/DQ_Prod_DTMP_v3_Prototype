@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { AlertTriangle, Calendar, Shield, FileText, Clock, ChevronRight, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ActionFormModal, ActionFormData } from "./ActionFormModal";
 import { LoginModal } from "@/components/learningCenter/LoginModal";
 import { useAuth } from "@/contexts/AuthContext";
+import { addRequest } from "@/data/requests/mockRequests";
 
 interface ComplianceAlert {
   id: string;
@@ -32,6 +34,8 @@ export function ComplianceAlerts({ context = 'application' }: ComplianceAlertsPr
   const [showActionForm, setShowActionForm] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [selectedAlert, setSelectedAlert] = useState<ComplianceAlert | null>(null);
+  const [pendingActionData, setPendingActionData] = useState<ActionFormData | null>(null);
+  const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
 
   const isApplication = context === 'application';
@@ -226,29 +230,55 @@ const statusConfig = {
     setShowActionForm(true);
   };
 
+  const submitComplianceActionRequest = (formData: ActionFormData) => {
+    const mappedPriority =
+      formData.priority === "normal" ? "medium" : formData.priority;
+    const request = addRequest({
+      userId: user?.id || "user-123",
+      userName: user?.name || "John Doe",
+      userEmail: user?.email || "john.doe@company.com",
+      serviceName: isApplication
+        ? "Application Risk & Compliance Monitoring"
+        : "Project Risk & Governance Alerts",
+      serviceId: isApplication ? "application-risk-compliance" : "project-risk-compliance",
+      requestType: "Compliance Action Request",
+      requestCategory: "consulting",
+      priority: mappedPriority,
+      businessJustification: formData.description,
+      desiredCompletionDate: formData.targetDate,
+      additionalRequirements: formData.actionPlan,
+      specificData: {
+        actionType: formData.actionType,
+        selectedAlert,
+        notifyStakeholders: formData.notifyStakeholders,
+        requestBudget: formData.requestBudget,
+        budgetAmount: formData.budgetAmount,
+        additionalNotes: formData.additionalNotes,
+      },
+    });
+
+    navigate("/stage2/portfolio-management", {
+      state: {
+        marketplace: "portfolio-management",
+        tab: "my-requests",
+        cardId: request.serviceId,
+        serviceName: request.serviceName,
+        submittedRequestId: request.id,
+      },
+    });
+  };
+
   const handleActionSubmit = (formData: ActionFormData) => {
     // Check if user is authenticated before submitting
     if (!isAuthenticated) {
       // Show login modal
       setShowActionForm(false);
+      setPendingActionData(formData);
       setShowLoginModal(true);
       return;
     }
-    
-    console.log('Action submitted:', {
-      alert: selectedAlert,
-      action: formData,
-      submittedBy: user?.name || 'Unknown User'
-    });
-    
-    // TODO: Send to backend API
-    // In a real app, this would create a task/ticket in the system
-    
-    // Show success message
-    alert(`Action created successfully!\n\nTarget Date: ${formData.targetDate}\nPriority: ${formData.priority}`);
-    
-    // Navigate to Stage 2
-    window.location.href = '/stage2';
+
+    submitComplianceActionRequest(formData);
   };
 
   return (
@@ -660,6 +690,19 @@ const statusConfig = {
           cardId: "compliance-alerts",
           serviceName: isApplication ? "Compliance & Risk Alerts" : "Project Risk & Governance Alerts",
           action: "take action"
+        }}
+        onLoginSuccess={() => {
+          if (pendingActionData) {
+            submitComplianceActionRequest(pendingActionData);
+            setPendingActionData(null);
+            return;
+          }
+          navigate("/stage2/portfolio-management", {
+            state: {
+              marketplace: "portfolio-management",
+              tab: "my-requests",
+            },
+          });
         }}
       />
     </section>
