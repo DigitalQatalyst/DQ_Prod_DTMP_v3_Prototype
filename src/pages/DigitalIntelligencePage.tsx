@@ -331,7 +331,7 @@
                  onFilterChange={handleFilterChange}
                  onClearAll={handleClearFilters}
                  isOpen={mobileFilterOpen}
-                 onClose={() => setMobileFilterOpen(false)}
+                 onToggle={() => setMobileFilterOpen(!mobileFilterOpen)}
                />
  
                {/* ── Main Content ── */}

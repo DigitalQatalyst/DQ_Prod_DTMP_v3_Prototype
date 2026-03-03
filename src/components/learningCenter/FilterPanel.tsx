@@ -1,6 +1,8 @@
-import { X, SlidersHorizontal } from "lucide-react";
+import { useState } from "react";
+import { X, SlidersHorizontal, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface FilterPanelProps {
   filters: Record<string, string[]>;
@@ -8,7 +10,7 @@ interface FilterPanelProps {
   onFilterChange: (group: string, value: string) => void;
   onClearAll: () => void;
   isOpen: boolean;
-  onClose: () => void;
+  onToggle: () => void;
 }
 
 const filterLabels: Record<string, string> = {
@@ -55,6 +57,16 @@ const filterLabels: Record<string, string> = {
   experienceLevel: "Experience Level",
   engagementDuration: "Engagement Duration",
   industrySpecialization: "Industry Specialization",
+  // Portfolio Management-specific filters
+  serviceCategory: "Service Category",
+  portfolioScope: "Portfolio Scope",
+  analysisType: "Analysis Type",
+  updateFrequency: "Update Frequency",
+  integrationLevel: "Integration Level",
+  complexity: "Complexity",
+  portfolioType: "Portfolio Type",
+  projectPhase: "Project Phase",
+  reportingLevel: "Reporting Level",
 };
 
 export function FilterPanel({
@@ -63,10 +75,20 @@ export function FilterPanel({
   onFilterChange,
   onClearAll,
   isOpen,
-  onClose,
+  onToggle,
 }: FilterPanelProps) {
   const hasActiveFilters = Object.values(selectedFilters).some(arr => arr.length > 0);
   const activeFilterCount = Object.values(selectedFilters).reduce((sum, arr) => sum + arr.length, 0);
+  
+  // Track which filter groups are expanded (default: all collapsed)
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+
+  const toggleGroup = (group: string) => {
+    setExpandedGroups(prev => ({
+      ...prev,
+      [group]: !prev[group]
+    }));
+  };
 
   return (
     <>
@@ -74,7 +96,7 @@ export function FilterPanel({
       {isOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={onClose}
+          onClick={onToggle}
           aria-hidden="true"
         />
       )}
@@ -110,7 +132,7 @@ export function FilterPanel({
               </button>
             )}
             <button
-              onClick={onClose}
+              onClick={onToggle}
               className="lg:hidden p-2 text-gray-400 hover:text-gray-600 min-w-[44px] min-h-[44px] flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-[hsl(var(--orange))] focus:ring-offset-2 rounded"
               aria-label="Close filters panel"
             >
@@ -122,41 +144,59 @@ export function FilterPanel({
         {/* Filter Groups */}
         {Object.entries(filters).map(([group, options]) => {
           const selectedCount = selectedFilters[group]?.length || 0;
+          const isExpanded = expandedGroups[group] || false;
+          
           return (
-            <fieldset key={group} className="mb-6 pb-6 border-b border-gray-100 last:border-0">
-              <legend className="text-sm font-semibold text-gray-900 mb-3">
-                {filterLabels[group] || group}
-                {selectedCount > 0 && (
-                  <span className="ml-2 text-xs font-normal text-gray-500">
-                    ({selectedCount} selected)
-                  </span>
+            <Collapsible
+              key={group}
+              open={isExpanded}
+              onOpenChange={() => toggleGroup(group)}
+              className="mb-4 pb-4 border-b border-gray-100 last:border-0"
+            >
+              <CollapsibleTrigger className="w-full flex items-center justify-between py-2 hover:bg-gray-50 rounded px-2 -mx-2 transition-colors group">
+                <span className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                  {filterLabels[group] || group}
+                  {selectedCount > 0 && (
+                    <span className="text-xs font-normal bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">
+                      {selectedCount}
+                    </span>
+                  )}
+                </span>
+                {isExpanded ? (
+                  <ChevronDown className="w-4 h-4 text-gray-500 group-hover:text-gray-700 transition-colors" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-gray-700 transition-colors" />
                 )}
-              </legend>
-              <div className="space-y-2">
-                {options.map((option) => {
-                  const isChecked = selectedFilters[group]?.includes(option) || false;
-                  const checkboxId = `filter-${group}-${option.replace(/\s+/g, '-').toLowerCase()}`;
-                  return (
-                    <div key={option} className="flex items-center gap-2 py-2 min-h-[44px]">
-                      <Checkbox
-                        id={checkboxId}
-                        checked={isChecked}
-                        onCheckedChange={() => onFilterChange(group, option)}
-                        className="border-gray-300 data-[state=checked]:bg-orange-600 data-[state=checked]:border-orange-600 w-5 h-5"
-                        aria-describedby={`${checkboxId}-label`}
-                      />
-                      <label
-                        id={`${checkboxId}-label`}
-                        htmlFor={checkboxId}
-                        className="text-sm text-gray-700 cursor-pointer hover:text-gray-900 flex-1"
-                      >
-                        {option}
-                      </label>
-                    </div>
-                  );
-                })}
-              </div>
-            </fieldset>
+              </CollapsibleTrigger>
+              
+              <CollapsibleContent className="pt-2">
+                <fieldset className="space-y-2">
+                  <legend className="sr-only">{filterLabels[group] || group} options</legend>
+                  {options.map((option) => {
+                    const isChecked = selectedFilters[group]?.includes(option) || false;
+                    const checkboxId = `filter-${group}-${option.replace(/\s+/g, '-').toLowerCase()}`;
+                    return (
+                      <div key={option} className="flex items-center gap-2 py-2 min-h-[44px]">
+                        <Checkbox
+                          id={checkboxId}
+                          checked={isChecked}
+                          onCheckedChange={() => onFilterChange(group, option)}
+                          className="border-gray-300 data-[state=checked]:bg-orange-600 data-[state=checked]:border-orange-600 w-5 h-5"
+                          aria-describedby={`${checkboxId}-label`}
+                        />
+                        <label
+                          id={`${checkboxId}-label`}
+                          htmlFor={checkboxId}
+                          className="text-sm text-gray-700 cursor-pointer hover:text-gray-900 flex-1"
+                        >
+                          {option}
+                        </label>
+                      </div>
+                    );
+                  })}
+                </fieldset>
+              </CollapsibleContent>
+            </Collapsible>
           );
         })}
       </aside>

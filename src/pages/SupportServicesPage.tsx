@@ -229,7 +229,7 @@ export default function SupportServicesPage() {
                   onFilterChange={handleFilterChange}
                   onClearAll={handleClearFilters}
                   isOpen={isFilterOpen}
-                  onClose={() => setIsFilterOpen(false)}
+                  onToggle={() => setIsFilterOpen(!isFilterOpen)}
                 />
 
                 {/* Main Content */}
