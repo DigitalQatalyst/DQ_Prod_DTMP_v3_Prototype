@@ -4,6 +4,8 @@ import { X, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { enrolledCourses } from "@/data/learning";
+import { mapRuntimeCourseToStage2CourseId } from "@/data/learningCenter/trackProgress";
 import { setUserAuthenticated } from "@/data/sessionAuth";
 import { setSessionRole, isTOStage3Role, type SessionRole } from "@/data/sessionRole";
 
@@ -14,23 +16,34 @@ const resolveRoleFromEmail = (email: string): SessionRole => {
   return "business-user";
 };
 
+interface LoginModalContext {
+  marketplace: string;
+  tab: string;
+  cardId: string;
+  serviceName: string;
+  action: string;
+  formData?: Record<string, string>;
+  dashboardName?: string;
+  requestDescription?: string;
+  commentText?: string;
+  requestMessage?: string;
+  sectionRef?: string;
+  requestType?: string;
+}
+
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
-  context: {
-    marketplace: string;
-    tab: string;
-    cardId: string;
-    serviceName: string;
-    action: string;
-    formData?: Record<string, string>;
-    dashboardName?: string;
-    requestDescription?: string;
-  };
+  context: LoginModalContext;
   onLoginSuccess?: () => void;
 }
 
-export function LoginModal({ isOpen, onClose, context, onLoginSuccess }: LoginModalProps) {
+export function LoginModal({
+  isOpen,
+  onClose,
+  context,
+  onLoginSuccess,
+}: LoginModalProps) {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -41,54 +54,30 @@ export function LoginModal({ isOpen, onClose, context, onLoginSuccess }: LoginMo
     e.preventDefault();
     onClose();
 
-    // Persist auth state and role derived from email
-    const role = resolveRoleFromEmail(email);
+    const actorEmail = email.trim();
+    const role = resolveRoleFromEmail(actorEmail);
     setUserAuthenticated(true);
     setSessionRole(role);
 
-    // Use custom callback if provided
     if (onLoginSuccess) {
       onLoginSuccess();
       return;
     }
 
-    // TO roles go straight to Stage 3
     if (isTOStage3Role(role)) {
       navigate("/stage3/dashboard");
       return;
     }
 
-    // Support Services uses a Stage 1 request form before entering Stage 2.
     if (context.marketplace === "support-services" && context.action === "request-service") {
       navigate("/marketplaces/support-services/new-request", {
         state: context,
       });
-    setUserAuthenticated(true);
-    const sessionRole = resolveSessionRole(email);
-    setSessionRole(sessionRole);
-
-    if (context.action === "access-platform") {
-      if (isTOStage3Role(sessionRole)) {
-        navigate("/stage3/dashboard");
-      }
-      onClose();
       return;
     }
 
-    // Solution Specs — "Make Request" action goes to the request form
     if (context.marketplace === "solution-specs" && context.action === "Make Request") {
       navigate("/marketplaces/solution-specs/request", {
-    if (context.marketplace === "learning-center") {
-      const fallbackCourseId = enrolledCourses[0]?.id ?? "digital-transformation-fundamentals";
-      const mappedCourseId =
-        learningStage1ToStage2CourseMap[context.cardId] ??
-        (enrolledCourses.some((course) => course.id === context.cardId)
-          ? context.cardId
-          : fallbackCourseId);
-      const learningRole = resolveLearningRole(email);
-      const targetView = learningRole === "admin" ? "admin" : "user";
-
-      navigate(`/stage2/learning-center/course/${mappedCourseId}/${targetView}`, {
         state: {
           specId: context.cardId,
           serviceName: context.serviceName,
@@ -97,15 +86,44 @@ export function LoginModal({ isOpen, onClose, context, onLoginSuccess }: LoginMo
       return;
     }
 
-    // Solution Specs — other actions go to Stage 2 specs overview
+    if (context.marketplace === "learning-center") {
+      const fallbackCourseId =
+        enrolledCourses[0]?.id ?? "digital-transformation-fundamentals";
+      const mappedCourseId =
+        mapRuntimeCourseToStage2CourseId(context.cardId) ??
+        (enrolledCourses.some((course) => course.id === context.cardId)
+          ? context.cardId
+          : fallbackCourseId);
+
+      navigate(`/stage2/learning-center/course/${mappedCourseId}/user`, {
+        state: {
+          ...context,
+          cardId: mappedCourseId,
+          actorEmail,
+          learningRole: "learner",
+        },
+      });
+      return;
+    }
+
+    if (context.marketplace === "knowledge-center") {
+      const targetTab = context.action === "save-to-workspace" ? "saved" : "overview";
+      navigate(`/stage2/knowledge/${targetTab}`, {
+        state: {
+          ...context,
+          actorEmail,
+        },
+      });
+      return;
+    }
+
     if (context.marketplace === "solution-specs") {
-      navigate(`/stage2/specs/overview`, {
+      navigate("/stage2/specs/overview", {
         state: { fromStage1: true, specId: context.cardId },
       });
       return;
     }
 
-    // Digital Intelligence request actions should land in Stage 2 -> My Requests.
     if (
       context.marketplace === "digital-intelligence" &&
       context.action &&
@@ -114,59 +132,33 @@ export function LoginModal({ isOpen, onClose, context, onLoginSuccess }: LoginMo
       navigate("/stage2/intelligence/requests", {
         state: {
           ...context,
-          actorEmail: email.trim(),
+          actorEmail,
         },
       });
       return;
     }
 
-    // Default: navigate to Stage 2 with context
+    if (
+      (context.marketplace === "templates" ||
+        context.marketplace === "document-studio") &&
+      context.action === "request-service"
+    ) {
+      navigate("/stage2/templates/new-request", {
+        state: {
+          ...context,
+          actorEmail,
+          templateId: context.cardId,
+        },
+      });
+      return;
+    }
+
     navigate("/stage2", {
       state: {
         ...context,
-        actorEmail: email.trim(),
+        actorEmail,
       },
     });
-    } else if (context.marketplace === "knowledge-center") {
-      const targetTab = context.action === "save-to-workspace" ? "saved" : "overview";
-      navigate(`/stage2/knowledge/${targetTab}`, {
-        state: context,
-      });
-    } else {
-      // Keep existing handoff flow for non-learning marketplaces
-      if (context.marketplace === "solution-specs") {
-        if (
-          context.cardId.includes("architecture") ||
-          context.cardId.includes("blueprint") ||
-          context.cardId.includes("reference")
-        ) {
-          navigate(`/stage2/specs/blueprints`, {
-            state: { fromStage1: true, specId: context.cardId },
-          });
-        } else {
-          navigate(`/stage2/specs/overview`, {
-            state: { fromStage1: true, specId: context.cardId },
-          });
-        }
-      } else if (
-        context.marketplace === "templates" ||
-        context.marketplace === "document-studio"
-      ) {
-        // For document studio, go directly to new request page with template pre-selected
-        navigate("/stage2/templates/new-request", {
-          state: {
-            templateId: context.cardId,
-            ...context,
-          },
-        });
-      } else {
-        navigate("/stage2", {
-          state: context,
-        });
-      }
-    }
- 
-    onClose();
   };
 
   const handleOverlayClick = (e: React.MouseEvent) => {
@@ -271,11 +263,19 @@ export function LoginModal({ isOpen, onClose, context, onLoginSuccess }: LoginMo
 
         {/* Demo credential hints */}
         <div className="mt-5 border-t pt-4">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Demo credentials</p>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+            Demo credentials
+          </p>
           <div className="space-y-1 text-xs text-gray-500">
-            <p><span className="font-medium text-gray-700">TO Ops:</span> any@to.dtmp.com</p>
-            <p><span className="font-medium text-gray-700">TO Admin:</span> admin@to.dtmp.com</p>
-            <p><span className="font-medium text-gray-700">Business User:</span> any other email</p>
+            <p>
+              <span className="font-medium text-gray-700">TO Ops:</span> any@to.dtmp.com
+            </p>
+            <p>
+              <span className="font-medium text-gray-700">TO Admin:</span> admin@to.dtmp.com
+            </p>
+            <p>
+              <span className="font-medium text-gray-700">Business User:</span> any other email
+            </p>
             <p className="text-gray-400 mt-1">Password: any value</p>
           </div>
         </div>
