@@ -39,7 +39,6 @@ export function LoginModal({ isOpen, onClose, context, onLoginSuccess }: LoginMo
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onClose();
 
     // Persist auth state and role derived from email
     const role = resolveRoleFromEmail(email);
@@ -48,9 +47,12 @@ export function LoginModal({ isOpen, onClose, context, onLoginSuccess }: LoginMo
 
     // Use custom callback if provided
     if (onLoginSuccess) {
+      onClose();
       onLoginSuccess();
       return;
     }
+
+    onClose();
 
     // TO roles go straight to Stage 3
     if (isTOStage3Role(role)) {

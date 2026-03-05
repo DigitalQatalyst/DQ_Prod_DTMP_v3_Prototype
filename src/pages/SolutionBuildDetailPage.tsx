@@ -14,9 +14,11 @@ import { preBuiltSolutions } from "@/data/solutionBuild";
 import type { SolutionType as BuildSolutionType, BuildPriority } from "@/data/solutionBuild";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { LoginModal } from "@/components/learningCenter/LoginModal";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { isUserAuthenticated } from "@/data/sessionAuth";
 import { createSolutionBuildStage3Intake } from "@/data/stage3/intake";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
@@ -48,9 +50,9 @@ export function SolutionBuildDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [showLogin, setShowLogin] = useState(false);
+  const [showFormDialog, setShowFormDialog] = useState(false);
   const [activeTab, setActiveTab] = useState<DetailTab>("overview");
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [showRequestForm, setShowRequestForm] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(isUserAuthenticated());
   const [formData, setFormData] = useState({
     department: '',
     priority: '' as BuildPriority | '',
@@ -95,17 +97,8 @@ export function SolutionBuildDetailPage() {
     .slice(0, 3);
 
   const handleRequestAccess = () => {
-    // Create the Stage 3 intake record
-    createSolutionBuildStage3Intake({
-      buildId: solution.id,
-      buildTitle: solution.name,
-      requesterName: "Current User",
-      requesterEmail: "user@dtmp.local",
-      requesterRole: "Platform User",
-      message: `Pre-built solution access request: ${solution.name}`,
-    });
     if (isLoggedIn) {
-      setShowRequestForm(true);
+      setShowFormDialog(true);
     } else {
       setShowLogin(true);
     }
@@ -114,7 +107,7 @@ export function SolutionBuildDetailPage() {
   const handleLoginSuccess = () => {
     setShowLogin(false);
     setIsLoggedIn(true);
-    setShowRequestForm(true);
+    setShowFormDialog(true);
   };
 
   const handleSubmitRequest = () => {
@@ -126,6 +119,17 @@ export function SolutionBuildDetailPage() {
       setFormErrors(errors);
       return;
     }
+    
+    // Create Stage 3 intake
+    createSolutionBuildStage3Intake({
+      buildId: solution.id,
+      buildTitle: solution.name,
+      requesterName: "Current User",
+      requesterEmail: "user@dtmp.local",
+      requesterRole: formData.department,
+      message: `Pre-built solution request: ${solution.name}${formData.additionalRequirements ? '. Additional requirements: ' + formData.additionalRequirements : ''}`,
+      priority: formData.priority as any,
+    });
     
     // Store the request in localStorage
     const newRequest = {
@@ -165,7 +169,13 @@ export function SolutionBuildDetailPage() {
     // Dispatch custom event to notify Stage2 page to refresh
     window.dispatchEvent(new CustomEvent('buildRequestAdded', { detail: newRequest }));
     
-    navigate('/stage2', { state: { marketplace: 'solution-build', autoSelectMyRequests: true } });
+    navigate('/stage2', { 
+      state: { 
+        marketplace: 'solution-build',
+        tab: 'my-requests',
+        autoSelectRequest: newRequest.id
+      } 
+    });
   };
 
   return (
@@ -349,110 +359,13 @@ export function SolutionBuildDetailPage() {
                 <Button
                   onClick={handleRequestAccess}
                   className="w-full bg-orange-600 hover:bg-orange-700 text-white py-4 text-lg font-semibold transition-all hover:shadow-xl"
-                  disabled={showRequestForm}
                 >
-                  {showRequestForm ? 'Request Form Below' : 'Request Access'}
+                  Request Access
                 </Button>
 
               </div>
             </aside>
           </div>
-
-          {/* Request Form */}
-          {showRequestForm && (
-            <div className="mt-8 bg-white border border-gray-200 rounded-xl p-6 shadow-lg">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Request This Solution</h2>
-              <div className="space-y-4">
-                <div>
-                  <Label>Department *</Label>
-                  <Select value={formData.department} onValueChange={(v) => { setFormData({...formData, department: v}); setFormErrors({...formErrors, department: ''}); }}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="Select department" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Marketing">Marketing</SelectItem>
-                      <SelectItem value="Engineering">Engineering</SelectItem>
-                      <SelectItem value="Security">Security</SelectItem>
-                      <SelectItem value="Platform">Platform</SelectItem>
-                      <SelectItem value="Executive">Executive</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {formErrors.department && <p className="text-sm text-red-600 mt-1">{formErrors.department}</p>}
-                </div>
-
-                <div>
-                  <Label>Customization Options</Label>
-                  <p className="text-sm text-gray-500 mb-2">Select any customizations you need:</p>
-                  <div className="space-y-2">
-                    {solution.customizationOptions.map((option) => (
-                      <div key={option} className="flex items-center space-x-2 p-2 border rounded-lg hover:bg-gray-50">
-                        <Checkbox
-                          id={option}
-                          checked={formData.customizations.includes(option)}
-                          onCheckedChange={(checked) => {
-                            setFormData({
-                              ...formData,
-                              customizations: checked
-                                ? [...formData.customizations, option]
-                                : formData.customizations.filter(c => c !== option)
-                            });
-                          }}
-                        />
-                        <Label htmlFor={option} className="flex-1 cursor-pointer text-sm">
-                          {option}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="additionalRequirements">Additional Requirements or Changes</Label>
-                  <Textarea
-                    id="additionalRequirements"
-                    value={formData.additionalRequirements}
-                    onChange={(e) => setFormData({...formData, additionalRequirements: e.target.value})}
-                    placeholder="Describe any specific changes or additional requirements..."
-                    rows={4}
-                    className="mt-1"
-                  />
-                </div>
-
-                <div>
-                  <Label>Priority *</Label>
-                  <RadioGroup value={formData.priority} onValueChange={(v) => { setFormData({...formData, priority: v as BuildPriority}); setFormErrors({...formErrors, priority: ''}); }} className="mt-2 space-y-2">
-                    <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50">
-                      <RadioGroupItem value="critical" id="critical" />
-                      <Label htmlFor="critical" className="flex-1 cursor-pointer">
-                        <div className="font-medium text-red-600">Critical</div>
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50">
-                      <RadioGroupItem value="high" id="high" />
-                      <Label htmlFor="high" className="flex-1 cursor-pointer">
-                        <div className="font-medium text-orange-600">High</div>
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50">
-                      <RadioGroupItem value="medium" id="medium" />
-                      <Label htmlFor="medium" className="flex-1 cursor-pointer">
-                        <div className="font-medium text-yellow-600">Medium</div>
-                      </Label>
-                    </div>
-                  </RadioGroup>
-                  {formErrors.priority && <p className="text-sm text-red-600 mt-1">{formErrors.priority}</p>}
-                </div>
-
-                <Button 
-                  onClick={handleSubmitRequest} 
-                  className="w-full" 
-                  style={{ backgroundColor: '#16a34a', color: 'white' }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#15803d'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#16a34a'}
-                >
-                  <Check className="w-4 h-4 mr-2" />Submit Request
-                </Button>
-              </div>
-            </div>
-          )}
         </div>
       </Tabs>
 
@@ -494,6 +407,116 @@ export function SolutionBuildDetailPage() {
         }}
         onLoginSuccess={handleLoginSuccess}
       />
+
+      {/* Request Form Dialog */}
+      <Dialog open={showFormDialog} onOpenChange={setShowFormDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Request This Solution</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Department *</Label>
+              <Select value={formData.department} onValueChange={(v) => { setFormData({...formData, department: v}); setFormErrors({...formErrors, department: ''}); }}>
+                <SelectTrigger className="mt-1"><SelectValue placeholder="Select department" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Marketing">Marketing</SelectItem>
+                  <SelectItem value="Engineering">Engineering</SelectItem>
+                  <SelectItem value="Security">Security</SelectItem>
+                  <SelectItem value="Platform">Platform</SelectItem>
+                  <SelectItem value="Executive">Executive</SelectItem>
+                </SelectContent>
+              </Select>
+              {formErrors.department && <p className="text-sm text-red-600 mt-1">{formErrors.department}</p>}
+            </div>
+
+            <div>
+              <Label>Customization Options</Label>
+              <p className="text-sm text-gray-500 mb-2">Select any customizations you need:</p>
+              <div className="space-y-2">
+                {solution.customizationOptions.map((option) => (
+                  <div key={option} className="flex items-center space-x-2 p-2 border rounded-lg hover:bg-gray-50">
+                    <Checkbox
+                      id={option}
+                      checked={formData.customizations.includes(option)}
+                      onCheckedChange={(checked) => {
+                        setFormData({
+                          ...formData,
+                          customizations: checked
+                            ? [...formData.customizations, option]
+                            : formData.customizations.filter(c => c !== option)
+                        });
+                      }}
+                    />
+                    <Label htmlFor={option} className="flex-1 cursor-pointer text-sm">
+                      {option}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="additionalRequirements">Additional Requirements or Changes</Label>
+              <Textarea
+                id="additionalRequirements"
+                value={formData.additionalRequirements}
+                onChange={(e) => setFormData({...formData, additionalRequirements: e.target.value})}
+                placeholder="Describe any specific changes or additional requirements..."
+                rows={4}
+                className="mt-1"
+              />
+            </div>
+
+            <div>
+              <Label>Priority *</Label>
+              <RadioGroup value={formData.priority} onValueChange={(v) => { setFormData({...formData, priority: v as BuildPriority}); setFormErrors({...formErrors, priority: ''}); }} className="mt-2 space-y-2">
+                <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50">
+                  <RadioGroupItem value="critical" id="critical" />
+                  <Label htmlFor="critical" className="flex-1 cursor-pointer">
+                    <div className="font-medium text-red-600">Critical</div>
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50">
+                  <RadioGroupItem value="high" id="high" />
+                  <Label htmlFor="high" className="flex-1 cursor-pointer">
+                    <div className="font-medium text-orange-600">High</div>
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50">
+                  <RadioGroupItem value="medium" id="medium" />
+                  <Label htmlFor="medium" className="flex-1 cursor-pointer">
+                    <div className="font-medium text-yellow-600">Medium</div>
+                  </Label>
+                </div>
+              </RadioGroup>
+              {formErrors.priority && <p className="text-sm text-red-600 mt-1">{formErrors.priority}</p>}
+            </div>
+
+            <Button 
+              onClick={() => {
+                const errors: Record<string, string> = {};
+                if (!formData.department) errors.department = 'Required';
+                if (!formData.priority) errors.priority = 'Required';
+                
+                if (Object.keys(errors).length > 0) {
+                  setFormErrors(errors);
+                  return;
+                }
+                
+                handleSubmitRequest();
+                setShowFormDialog(false);
+              }} 
+              className="w-full" 
+              style={{ backgroundColor: '#16a34a', color: 'white' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#15803d'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#16a34a'}
+            >
+              <Check className="w-4 h-4 mr-2" />Submit Request
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Footer />
     </div>

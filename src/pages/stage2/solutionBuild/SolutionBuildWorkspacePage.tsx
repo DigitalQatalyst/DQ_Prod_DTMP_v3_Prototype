@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { buildRequests, type BuildRequest } from "@/data/solutionBuild";
+import { BuildWorkspaceSidebar, type BuildWorkspaceTab } from "@/components/stage2/build/BuildWorkspacePanels";
 
 export default function SolutionBuildWorkspacePage() {
   const navigate = useNavigate();
@@ -38,12 +39,19 @@ export default function SolutionBuildWorkspacePage() {
     communication: true,
     deliverables: true,
   });
+  const [leftView, setLeftView] = useState<BuildWorkspaceTab>("overview");
 
   // Load from localStorage (picks up any newly submitted requests)
   useEffect(() => {
     const loadRequests = () => {
       const stored: BuildRequest[] = JSON.parse(localStorage.getItem("buildRequests") || "[]");
-      setAllBuildRequests([...stored, ...buildRequests]);
+      const combined = [...stored, ...buildRequests];
+      setAllBuildRequests(combined);
+      
+      // Auto-select the newest request if it exists
+      if (stored.length > 0 && !selectedBuildRequest) {
+        setSelectedBuildRequest(stored[0]);
+      }
     };
     loadRequests();
     window.addEventListener("buildRequestAdded", loadRequests);
@@ -295,104 +303,7 @@ export default function SolutionBuildWorkspacePage() {
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="h-full flex overflow-hidden">
-      {/* Left panel — requests list */}
-      <div className="w-96 bg-white border-r border-gray-200 flex flex-col flex-shrink-0">
-        <div className="p-4 border-b flex-shrink-0">
-          <div className="relative mb-3">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              placeholder="Search requests..."
-              value={sbSearchQuery}
-              onChange={(e) => setSbSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 h-9 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-            />
-          </div>
-          <button
-            onClick={() => setSbShowFilters(!sbShowFilters)}
-            className="h-7 px-2 text-xs flex items-center gap-1 text-gray-600 hover:bg-gray-100 rounded"
-          >
-            <SlidersHorizontal className="w-3.5 h-3.5 mr-1" />
-            Filters {activeFiltersCount > 0 && `(${activeFiltersCount})`}
-          </button>
-          {sbShowFilters && (
-            <div className="mt-2 space-y-2">
-              <select
-                value={sbStatusFilter}
-                onChange={(e) => setSbStatusFilter(e.target.value)}
-                className="w-full h-8 text-xs border border-gray-300 rounded px-2"
-              >
-                <option value="all">All Statuses</option>
-                <option value="intake">Intake</option>
-                <option value="triage">Triage</option>
-                <option value="queue">Queue</option>
-                <option value="in-progress">In Progress</option>
-                <option value="testing">Testing</option>
-                <option value="deployed">Deployed</option>
-                <option value="closed">Closed</option>
-              </select>
-              <select
-                value={sbPriorityFilter}
-                onChange={(e) => setSbPriorityFilter(e.target.value)}
-                className="w-full h-8 text-xs border border-gray-300 rounded px-2"
-              >
-                <option value="all">All Priorities</option>
-                <option value="critical">Critical</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
-              </select>
-              {activeFiltersCount > 0 && (
-                <button onClick={clearFilters} className="text-xs text-orange-600 hover:underline">
-                  Clear filters
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="flex-1 overflow-y-auto">
-          {filteredRequests.length === 0 ? (
-            <div className="p-6 text-center text-gray-500">
-              <Filter className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-              <p className="text-sm">No requests found</p>
-            </div>
-          ) : (
-            <div className="divide-y">
-              {filteredRequests.map((request) => (
-                <button
-                  key={request.id}
-                  onClick={() => setSelectedBuildRequest(request)}
-                  className={`w-full p-4 text-left hover:bg-gray-50 transition-colors ${
-                    selectedBuildRequest?.id === request.id
-                      ? "bg-orange-50 border-l-4 border-orange-600"
-                      : ""
-                  }`}
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <h4 className="font-medium text-sm text-gray-900 truncate flex-1 mr-2">
-                      {request.name}
-                    </h4>
-                    <span
-                      className={`flex-shrink-0 px-2 py-0.5 text-xs rounded-full ${getStatusColor(
-                        request.status
-                      )}`}
-                    >
-                      {request.status}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-500 mb-2">
-                    {request.id} · {request.department}
-                  </p>
-                  <Progress value={request.progress} className="h-1.5" />
-                  <p className="text-xs text-gray-500 mt-1">{request.progress}% complete</p>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Right panel — request detail */}
+      {/* Main content - request detail */}
       <div className="flex-1 flex flex-col min-w-0">
         {selectedBuildRequest ? (
           <>

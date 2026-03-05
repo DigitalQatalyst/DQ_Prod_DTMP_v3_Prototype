@@ -370,7 +370,7 @@ export const createSolutionBuildStage3Intake = (input: {
   // 2. Create the Stage 3 request
   const stage3 = createStage3Request({
     type: "solution-build",
-    title: `Solution Build Request — ${input.buildTitle}`,
+    title: input.buildTitle,
     description: input.message,
     requester: {
       name: input.requesterName,

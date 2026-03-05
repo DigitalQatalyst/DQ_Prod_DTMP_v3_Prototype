@@ -23,7 +23,7 @@ const createActivityEntry = (
   detail,
 });
 
-export const stage3Requests: Stage3Request[] = [
+const defaultStage3Requests: Stage3Request[] = [
   {
     id: "req-stage3-001",
     requestNumber: "REQ-2026-001",
@@ -216,6 +216,24 @@ export const stage3Requests: Stage3Request[] = [
   },
 ];
 
+const loadStage3Requests = (): Stage3Request[] => {
+  const stored = localStorage.getItem('stage3Requests');
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch {
+      return [...defaultStage3Requests];
+    }
+  }
+  return [...defaultStage3Requests];
+};
+
+const saveStage3Requests = () => {
+  localStorage.setItem('stage3Requests', JSON.stringify(stage3Requests));
+};
+
+export const stage3Requests: Stage3Request[] = loadStage3Requests();
+
 export const stage3TeamMembers: Stage3TeamMember[] = [
   {
     id: "to-001",
@@ -290,6 +308,7 @@ export function createStage3Request(input: Stage3CreateRequestInput): Stage3Requ
     slaStatus: "on-track",
   };
   stage3Requests.unshift(request);
+  saveStage3Requests();
   return request;
 }
 
@@ -318,6 +337,7 @@ export function assignStage3Request(
     createActivityEntry("assigned", `Assigned to ${member.name} (${member.team}).`)
   );
 
+  saveStage3Requests();
   return request;
 }
 
@@ -336,6 +356,7 @@ export function unassignStage3Request(requestId: string): Stage3Request | null {
     createActivityEntry("unassigned", "Request unassigned from current owner/team.")
   );
 
+  saveStage3Requests();
   return request;
 }
 
@@ -380,6 +401,7 @@ export function transitionStage3RequestStatus(
     request.completedAt = undefined;
   }
 
+  saveStage3Requests();
   return request;
 }
 
@@ -397,5 +419,6 @@ export function appendStage3RequestNote(
   request.notes.unshift(trimmed);
   request.updatedAt = new Date().toISOString();
   request.activityLog.unshift(createActivityEntry("note-added", trimmed, actor));
+  saveStage3Requests();
   return request;
 }
