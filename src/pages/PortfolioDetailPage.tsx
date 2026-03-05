@@ -29,6 +29,7 @@ import { RequestFormModal } from "@/components/portfolio/RequestFormModal";
 import { RequestCard, RequestFormData } from "@/types/requests";
 import { addRequest } from "@/data/requests/mockRequests";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/hooks/use-toast";
 
 type DetailTab = "about" | "methodology" | "deliverables" | "getting-started";
 
@@ -86,8 +87,9 @@ const PortfolioDetailPage = () => {
   };
 
   const handleRequestClick = (card: RequestCard) => {
-    // Just show login modal like "Access Service" button
-    setShowLoginModal(true);
+    // Open the request form modal with the selected card
+    setSelectedRequestCard(card);
+    setShowRequestModal(true);
   };
 
   const submitRequest = (formData: RequestFormData) => {
@@ -102,11 +104,17 @@ const PortfolioDetailPage = () => {
     setShowRequestModal(false);
     setSelectedRequestCard(null);
 
-    // Show success message (TODO: Add toast notification)
-    console.log('Request submitted:', request);
+    // Show success toast
+    toast({
+      title: "Request Submitted Successfully",
+      description: `Your ${formData.requestType} request has been submitted. You can track its progress in your dashboard.`,
+      duration: 5000,
+    });
 
-    // Navigate to Stage 2
-    window.location.href = '/stage2';
+    // Navigate to Stage 2 after a short delay
+    setTimeout(() => {
+      window.location.href = '/stage2';
+    }, 1500);
   };
 
   const handleRequestSubmit = (formData: RequestFormData) => {
