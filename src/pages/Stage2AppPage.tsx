@@ -129,7 +129,7 @@ import ApplicationsPage from "./lifecycle/ApplicationsPage";
 import { type BuildRequest, deliveryTeams } from "@/data/solutionBuild";
 import { Progress } from "@/components/ui/progress";
 import IntelligenceWorkspacePage from "@/pages/stage2/intelligence/IntelligenceWorkspacePage";
-import { supportTickets, serviceRequests, knowledgeArticles, ServiceRequest } from "@/data/supportData";
+import { type ServiceRequest, type SupportTicket } from "@/data/supportData";
 import { technicalSupport, expertConsultancy } from "@/data/supportServices";
 import { getSupportServiceDetail } from "@/data/supportServices/detailsSupport";
 import { PriorityBadge, SLATimer } from "@/components/stage2";
@@ -141,12 +141,12 @@ import { SupportWorkspacePanels } from "@/components/stage2/support/SupportWorks
 import { intelligenceServices } from "@/data/digitalIntelligence/stage2/intelligenceServices";
 import DigitalIntelligenceDashboardPage from "@/pages/DigitalIntelligenceDashboardPage";
 import TemplatesOverview from "@/pages/stage2/templates/TemplatesOverview";
-import TemplateLibraryPage from "@/pages/stage2/templates/TemplateLibraryPage";
-import TemplateDetailPage from "@/pages/stage2/templates/TemplateDetailPage";
-import NewRequestPage from "@/pages/stage2/templates/NewRequestPage";
 import TemplatesMyRequestsPage from "@/pages/stage2/templates/MyRequestsPage";
+import TemplatesMyDocumentsPage from "@/pages/stage2/templates/MyDocumentsPage";
+import TemplatesRevisionsPage from "@/pages/stage2/templates/RevisionsPage";
 import TemplatesRequestDetailPage from "@/pages/stage2/templates/RequestDetailPage";
 import { getUserRequests, seedDemoRequests } from "@/data/requests/mockRequests";
+import { normalizeSupportSubService } from "@/pages/stage2/support/supportWorkspaceConfig";
 
 interface LocationState {
   marketplace?: string;
@@ -159,13 +159,15 @@ interface LocationState {
   requestMessage?: string;
   sectionRef?: string;
   requestType?: string;
+  submittedTicket?: SupportTicket;
+  submittedRequest?: ServiceRequest;
 }
 const EMPTY_LOCATION_STATE: LocationState = {};
 
 type EnrolledCourse = (typeof enrolledCourses)[number];
 type LearningUserTab = "overview" | "modules" | "progress" | "resources" | "certificate";
 type LearningAdminTab = "overview" | "enrollments" | "performance" | "content" | "settings";
-type TemplatesWorkspaceTab = "overview" | "library" | "new-request" | "my-requests";
+type TemplatesWorkspaceTab = "overview" | "my-requests" | "my-documents" | "revisions";
 const isPortfolioWorkspaceTab = (value: string | undefined): value is PortfolioWorkspaceTab =>
   value === "overview" || value === "my-requests" || value === "my-assets";
 
@@ -407,9 +409,11 @@ export default function Stage2AppPage() {
 
   const {
     marketplace: stateMarketplace = "portfolio-management",
-    cardId: stateCardId = "portfolio-dashboard",
+    cardId: rawStateCardId,
     serviceName: stateServiceName = "Portfolio Service",
   } = state;
+  const stateCardId =
+    rawStateCardId ?? (stateMarketplace === "portfolio-management" ? "portfolio-dashboard" : "");
 
   const marketplace = isLearningCenterRoute
     ? "learning-center"
@@ -477,6 +481,8 @@ export default function Stage2AppPage() {
       return "di-overview";
     }
     if (marketplace === "support-services") {
+      const requestedSupportSubService = normalizeSupportSubService(state.tab);
+      if (requestedSupportSubService) return requestedSupportSubService;
       return cardId ? "support-detail" : "support-overview";
     }
     return null;
@@ -498,9 +504,9 @@ export default function Stage2AppPage() {
         : "overview"
   );
   const getTemplatesTabFromPath = (): TemplatesWorkspaceTab => {
-    if (location.pathname.startsWith("/stage2/templates/library")) return "library";
-    if (location.pathname.startsWith("/stage2/templates/new-request")) return "new-request";
     if (location.pathname.startsWith("/stage2/templates/my-requests")) return "my-requests";
+    if (location.pathname.startsWith("/stage2/templates/my-documents")) return "my-documents";
+    if (location.pathname.startsWith("/stage2/templates/revisions")) return "revisions";
     return "overview";
   };
   const [activeTemplatesTab, setActiveTemplatesTab] = useState<TemplatesWorkspaceTab>(
@@ -638,13 +644,27 @@ export default function Stage2AppPage() {
       return;
     }
 
+    if (marketplace === "support-services") {
+      const requestedSupportSubService = normalizeSupportSubService(state.tab);
+      if (requestedSupportSubService) {
+        setActiveSubService(requestedSupportSubService);
+        return;
+      }
+      if (state.submittedTicket || state.submittedRequest) {
+        setActiveSubService("support-tickets");
+        return;
+      }
+      setActiveSubService(cardId ? "support-detail" : "support-overview");
+      return;
+    }
+
     if (marketplace === "digital-intelligence" && !cardId) {
       setActiveSubService("di-overview");
       return;
     }
 
     setActiveSubService(null);
-  }, [marketplace, cardId]);
+  }, [marketplace, cardId, state.tab, state.submittedTicket, state.submittedRequest]);
 
   useEffect(() => {
     if (
@@ -855,13 +875,10 @@ export default function Stage2AppPage() {
   }, []);
 
   const {
-    knowledgeArticles: supportKnowledgeArticles,
     supportSelectedService,
     setSupportSelectedService,
     supportAttachments,
     setSupportAttachments,
-    supportSelectedArticleId,
-    setSupportSelectedArticleId,
     supportTicketsState,
     supportSubmitMessage,
     supportRequestsState,
@@ -880,8 +897,8 @@ export default function Stage2AppPage() {
   } = useSupportWorkspace({
     marketplace,
     cardId,
-    submittedTicket: (location.state as { submittedTicket?: Parameters<typeof useSupportWorkspace>[0]["submittedTicket"] })?.submittedTicket,
-    submittedRequest: (location.state as { submittedRequest?: Parameters<typeof useSupportWorkspace>[0]["submittedRequest"] })?.submittedRequest,
+    submittedTicket: state.submittedTicket,
+    submittedRequest: state.submittedRequest,
     onNavigateToTickets: () => setActiveSubService("support-tickets"),
   });
 
@@ -1192,9 +1209,9 @@ export default function Stage2AppPage() {
     setActiveTemplatesTab(tabId);
     const pathByTab: Record<TemplatesWorkspaceTab, string> = {
       overview: "/stage2/templates/overview",
-      library: "/stage2/templates/library",
-      "new-request": "/stage2/templates/new-request",
       "my-requests": "/stage2/templates/my-requests",
+      "my-documents": "/stage2/templates/my-documents",
+      "revisions": "/stage2/templates/revisions",
     };
     navigate(pathByTab[tabId], {
       replace: true,
@@ -1354,7 +1371,6 @@ export default function Stage2AppPage() {
     { id: "support-overview", name: "Overview", description: "Dashboards & SLAs", icon: Headphones },
     { id: "support-tickets", name: "My Tickets", description: "Track incidents", icon: Ticket },
     { id: "support-requests", name: "Service Requests", description: "Access & changes", icon: ClipboardList },
-    { id: "support-knowledge", name: "Knowledge Base", description: "Articles and guides", icon: BookOpen }
   ];
   // Icon mapping function
   function getIconComponent(iconName: string): React.ComponentType<{ className?: string }> {
@@ -1429,7 +1445,6 @@ export default function Stage2AppPage() {
     }
     if (service !== "Support Services") {
       setSupportSelectedService(null);
-      setSupportSelectedArticleId(null);
     }
   };
 
@@ -1644,9 +1659,6 @@ export default function Stage2AppPage() {
     if (activeSubService !== "support-detail") {
       // leaving detail view but keep selection for navigation purposes
     }
-    if (activeSubService !== "support-knowledge-detail") {
-      setSupportSelectedArticleId(null);
-    }
   };
 
   const renderSupportWorkspace = () => (
@@ -1671,9 +1683,6 @@ export default function Stage2AppPage() {
       addNewRequestAttachments={addNewRequestAttachments}
       removeNewRequestAttachment={removeNewRequestAttachment}
       submitNewSupportRequest={submitNewSupportRequest}
-      knowledgeArticles={supportKnowledgeArticles}
-      supportSelectedArticleId={supportSelectedArticleId}
-      setSupportSelectedArticleId={setSupportSelectedArticleId}
     />
   );
 
@@ -1953,31 +1962,7 @@ export default function Stage2AppPage() {
                   >
                     <div className="text-left">
                       <div className="font-medium">Overview</div>
-                      <div className="text-xs text-gray-500 mt-0.5">Template workspace summary</div>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => handleTemplatesTabClick("library")}
-                    className={`w-full flex items-start gap-3 p-3 text-sm rounded-lg transition-colors ${activeTemplatesTab === "library"
-                      ? "bg-orange-50 text-orange-700 border border-orange-200"
-                      : "text-gray-700 hover:bg-gray-50 border border-transparent"
-                      }`}
-                  >
-                    <div className="text-left">
-                      <div className="font-medium">Template Library</div>
-                      <div className="text-xs text-gray-500 mt-0.5">Browse and open templates</div>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => handleTemplatesTabClick("new-request")}
-                    className={`w-full flex items-start gap-3 p-3 text-sm rounded-lg transition-colors ${activeTemplatesTab === "new-request"
-                      ? "bg-orange-50 text-orange-700 border border-orange-200"
-                      : "text-gray-700 hover:bg-gray-50 border border-transparent"
-                      }`}
-                  >
-                    <div className="text-left">
-                      <div className="font-medium">New Request</div>
-                      <div className="text-xs text-gray-500 mt-0.5">Generate a new document</div>
+                      <div className="text-xs text-gray-500 mt-0.5">Dashboard summary</div>
                     </div>
                   </button>
                   <button
@@ -1990,6 +1975,30 @@ export default function Stage2AppPage() {
                     <div className="text-left">
                       <div className="font-medium">My Requests</div>
                       <div className="text-xs text-gray-500 mt-0.5">Track request status</div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => handleTemplatesTabClick("my-documents")}
+                    className={`w-full flex items-start gap-3 p-3 text-sm rounded-lg transition-colors ${activeTemplatesTab === "my-documents"
+                      ? "bg-orange-50 text-orange-700 border border-orange-200"
+                      : "text-gray-700 hover:bg-gray-50 border border-transparent"
+                      }`}
+                  >
+                    <div className="text-left">
+                      <div className="font-medium">My Documents</div>
+                      <div className="text-xs text-gray-500 mt-0.5">Completed documents</div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => handleTemplatesTabClick("revisions")}
+                    className={`w-full flex items-start gap-3 p-3 text-sm rounded-lg transition-colors ${activeTemplatesTab === "revisions"
+                      ? "bg-orange-50 text-orange-700 border border-orange-200"
+                      : "text-gray-700 hover:bg-gray-50 border border-transparent"
+                      }`}
+                  >
+                    <div className="text-left">
+                      <div className="font-medium">Revisions</div>
+                      <div className="text-xs text-gray-500 mt-0.5">Revision requests</div>
                     </div>
                   </button>
                 </div>
@@ -2298,13 +2307,12 @@ export default function Stage2AppPage() {
           ) : activeService === "AI DocWriter" ? (
             <div className="h-full">
               {activeTemplatesTab === "overview" && <TemplatesOverview />}
-              {activeTemplatesTab === "library" && !routeTemplateId && <TemplateLibraryPage />}
-              {activeTemplatesTab === "library" && !!routeTemplateId && <TemplateDetailPage />}
-              {activeTemplatesTab === "new-request" && <NewRequestPage />}
               {activeTemplatesTab === "my-requests" && !routeRequestId && <TemplatesMyRequestsPage />}
               {activeTemplatesTab === "my-requests" && !!routeRequestId && (
                 <TemplatesRequestDetailPage />
               )}
+              {activeTemplatesTab === "my-documents" && <TemplatesMyDocumentsPage />}
+              {activeTemplatesTab === "revisions" && <TemplatesRevisionsPage />}
             </div>
           ) : activeService === "Solutions Specs" ? (
             <SpecsWorkspaceMain
