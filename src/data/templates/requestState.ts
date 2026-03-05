@@ -107,3 +107,45 @@ export const linkTemplateTORequestToStage3 = (
   writeRequests(next);
   return updated;
 };
+
+/**
+ * Seeds a completed demo request for testing the revision flow
+ */
+export const seedCompletedDemoRequest = (): TemplateTORequest => {
+  const requests = readRequests();
+  
+  // Check if demo request already exists
+  const existingDemo = requests.find(r => r.id === 'REQ-2026-001-DEMO');
+  if (existingDemo) return existingDemo;
+
+  const demoRequest: TemplateTORequest = {
+    id: 'REQ-2026-001-DEMO',
+    templateId: 'digital-maturity-assessment',
+    templateTitle: 'Digital Maturity Assessment',
+    tab: 'assessments',
+    requesterName: 'Current User',
+    requesterRole: 'Platform User',
+    message: `Assessment Request: Digital Maturity Assessment
+Organization/Business Unit: Digital Transformation Team
+Assessment Scope: Organisation-wide
+Focus Area: Cloud infrastructure and digital capabilities
+Framework: DBP Framework
+Target Audience: Executive
+Output Formats: PDF, PPTX
+Additional Notes: Need comprehensive assessment for Q1 2026 board presentation`,
+    status: 'Resolved',
+    createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days ago
+    updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago (completed)
+    stage3RequestId: 'stage3-req-demo-001',
+  };
+
+  writeRequests([demoRequest, ...requests]);
+  return demoRequest;
+};
+
+/**
+ * Gets or creates the demo completed request
+ */
+export const getCompletedDemoRequest = (): TemplateTORequest => {
+  return seedCompletedDemoRequest();
+};

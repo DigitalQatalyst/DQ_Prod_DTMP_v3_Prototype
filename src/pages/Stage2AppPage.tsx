@@ -140,10 +140,9 @@ import { SupportWorkspacePanels } from "@/components/stage2/support/SupportWorks
 import { intelligenceServices } from "@/data/digitalIntelligence/stage2/intelligenceServices";
 import DigitalIntelligenceDashboardPage from "@/pages/DigitalIntelligenceDashboardPage";
 import TemplatesOverview from "@/pages/stage2/templates/TemplatesOverview";
-import TemplateLibraryPage from "@/pages/stage2/templates/TemplateLibraryPage";
-import TemplateDetailPage from "@/pages/stage2/templates/TemplateDetailPage";
-import NewRequestPage from "@/pages/stage2/templates/NewRequestPage";
 import TemplatesMyRequestsPage from "@/pages/stage2/templates/MyRequestsPage";
+import TemplatesMyDocumentsPage from "@/pages/stage2/templates/MyDocumentsPage";
+import TemplatesRevisionsPage from "@/pages/stage2/templates/RevisionsPage";
 import TemplatesRequestDetailPage from "@/pages/stage2/templates/RequestDetailPage";
 import { getUserRequests, seedDemoRequests } from "@/data/requests/mockRequests";
 import { normalizeSupportSubService } from "@/pages/stage2/support/supportWorkspaceConfig";
@@ -167,7 +166,7 @@ const EMPTY_LOCATION_STATE: LocationState = {};
 type EnrolledCourse = (typeof enrolledCourses)[number];
 type LearningUserTab = "overview" | "modules" | "progress" | "resources" | "certificate";
 type LearningAdminTab = "overview" | "enrollments" | "performance" | "content" | "settings";
-type TemplatesWorkspaceTab = "overview" | "library" | "new-request" | "my-requests";
+type TemplatesWorkspaceTab = "overview" | "my-requests" | "my-documents" | "revisions";
 const isPortfolioWorkspaceTab = (value: string | undefined): value is PortfolioWorkspaceTab =>
   value === "overview" || value === "my-requests" || value === "my-assets";
 
@@ -504,9 +503,9 @@ export default function Stage2AppPage() {
         : "overview"
   );
   const getTemplatesTabFromPath = (): TemplatesWorkspaceTab => {
-    if (location.pathname.startsWith("/stage2/templates/library")) return "library";
-    if (location.pathname.startsWith("/stage2/templates/new-request")) return "new-request";
     if (location.pathname.startsWith("/stage2/templates/my-requests")) return "my-requests";
+    if (location.pathname.startsWith("/stage2/templates/my-documents")) return "my-documents";
+    if (location.pathname.startsWith("/stage2/templates/revisions")) return "revisions";
     return "overview";
   };
   const [activeTemplatesTab, setActiveTemplatesTab] = useState<TemplatesWorkspaceTab>(
@@ -1117,9 +1116,9 @@ export default function Stage2AppPage() {
     setActiveTemplatesTab(tabId);
     const pathByTab: Record<TemplatesWorkspaceTab, string> = {
       overview: "/stage2/templates/overview",
-      library: "/stage2/templates/library",
-      "new-request": "/stage2/templates/new-request",
       "my-requests": "/stage2/templates/my-requests",
+      "my-documents": "/stage2/templates/my-documents",
+      "revisions": "/stage2/templates/revisions",
     };
     navigate(pathByTab[tabId], {
       replace: true,
@@ -1853,31 +1852,7 @@ export default function Stage2AppPage() {
                   >
                     <div className="text-left">
                       <div className="font-medium">Overview</div>
-                      <div className="text-xs text-gray-500 mt-0.5">Template workspace summary</div>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => handleTemplatesTabClick("library")}
-                    className={`w-full flex items-start gap-3 p-3 text-sm rounded-lg transition-colors ${activeTemplatesTab === "library"
-                      ? "bg-orange-50 text-orange-700 border border-orange-200"
-                      : "text-gray-700 hover:bg-gray-50 border border-transparent"
-                      }`}
-                  >
-                    <div className="text-left">
-                      <div className="font-medium">Template Library</div>
-                      <div className="text-xs text-gray-500 mt-0.5">Browse and open templates</div>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => handleTemplatesTabClick("new-request")}
-                    className={`w-full flex items-start gap-3 p-3 text-sm rounded-lg transition-colors ${activeTemplatesTab === "new-request"
-                      ? "bg-orange-50 text-orange-700 border border-orange-200"
-                      : "text-gray-700 hover:bg-gray-50 border border-transparent"
-                      }`}
-                  >
-                    <div className="text-left">
-                      <div className="font-medium">New Request</div>
-                      <div className="text-xs text-gray-500 mt-0.5">Generate a new document</div>
+                      <div className="text-xs text-gray-500 mt-0.5">Dashboard summary</div>
                     </div>
                   </button>
                   <button
@@ -1890,6 +1865,30 @@ export default function Stage2AppPage() {
                     <div className="text-left">
                       <div className="font-medium">My Requests</div>
                       <div className="text-xs text-gray-500 mt-0.5">Track request status</div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => handleTemplatesTabClick("my-documents")}
+                    className={`w-full flex items-start gap-3 p-3 text-sm rounded-lg transition-colors ${activeTemplatesTab === "my-documents"
+                      ? "bg-orange-50 text-orange-700 border border-orange-200"
+                      : "text-gray-700 hover:bg-gray-50 border border-transparent"
+                      }`}
+                  >
+                    <div className="text-left">
+                      <div className="font-medium">My Documents</div>
+                      <div className="text-xs text-gray-500 mt-0.5">Completed documents</div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => handleTemplatesTabClick("revisions")}
+                    className={`w-full flex items-start gap-3 p-3 text-sm rounded-lg transition-colors ${activeTemplatesTab === "revisions"
+                      ? "bg-orange-50 text-orange-700 border border-orange-200"
+                      : "text-gray-700 hover:bg-gray-50 border border-transparent"
+                      }`}
+                  >
+                    <div className="text-left">
+                      <div className="font-medium">Revisions</div>
+                      <div className="text-xs text-gray-500 mt-0.5">Revision requests</div>
                     </div>
                   </button>
                 </div>
@@ -2177,13 +2176,12 @@ export default function Stage2AppPage() {
           ) : activeService === "AI DocWriter" ? (
             <div className="h-full">
               {activeTemplatesTab === "overview" && <TemplatesOverview />}
-              {activeTemplatesTab === "library" && !routeTemplateId && <TemplateLibraryPage />}
-              {activeTemplatesTab === "library" && !!routeTemplateId && <TemplateDetailPage />}
-              {activeTemplatesTab === "new-request" && <NewRequestPage />}
               {activeTemplatesTab === "my-requests" && !routeRequestId && <TemplatesMyRequestsPage />}
               {activeTemplatesTab === "my-requests" && !!routeRequestId && (
                 <TemplatesRequestDetailPage />
               )}
+              {activeTemplatesTab === "my-documents" && <TemplatesMyDocumentsPage />}
+              {activeTemplatesTab === "revisions" && <TemplatesRevisionsPage />}
             </div>
           ) : activeService === "Solutions Specs" ? (
             <SpecsWorkspaceMain

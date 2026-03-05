@@ -124,11 +124,10 @@ const App = () => (
             {/* Stage 2 — Templates / AI DocWriter */}
             <Route path="/stage2/templates" element={<Navigate to="/stage2/templates/overview" replace />} />
             <Route path="/stage2/templates/overview" element={<Stage2AppPage />} />
-            <Route path="/stage2/templates/library" element={<Stage2AppPage />} />
-            <Route path="/stage2/templates/library/:templateId" element={<Stage2AppPage />} />
-            <Route path="/stage2/templates/new-request" element={<Stage2AppPage />} />
             <Route path="/stage2/templates/my-requests" element={<Stage2AppPage />} />
             <Route path="/stage2/templates/my-requests/:requestId" element={<Stage2AppPage />} />
+            <Route path="/stage2/templates/my-documents" element={<Stage2AppPage />} />
+            <Route path="/stage2/templates/revisions" element={<Stage2AppPage />} />
 
             {/* Stage 2 — Digital Intelligence */}
             <Route path="/stage2/intelligence" element={<Navigate to="/stage2/intelligence/overview" replace />} />
@@ -170,8 +169,12 @@ const App = () => (
             <Route path="/marketplaces/knowledge-center/:tab/:cardId" element={<KnowledgeCenterDetailPage />} />
 
             {/* Templates marketplace */}
-            <Route path="/marketplaces/templates" element={<TemplatesPage />} />
-            <Route path="/marketplaces/templates/:tab/:cardId" element={<TemplatesDetailPage />} />
+            <Route path="/marketplaces/templates" element={<Navigate to="/marketplaces/document-studio" replace />} />
+            <Route path="/marketplaces/templates/:tab/:cardId" element={<Navigate to="/marketplaces/document-studio" replace />} />
+
+            {/* Document Studio marketplace */}
+            <Route path="/marketplaces/document-studio" element={<TemplatesPage />} />
+            <Route path="/marketplaces/document-studio/:tab/:cardId" element={<TemplatesDetailPage />} />
 
             {/* Blueprints marketplace - Legacy route with redirect */}
             <Route path="/marketplaces/blueprints" element={<Navigate to="/marketplaces/solution-specs" replace />} />

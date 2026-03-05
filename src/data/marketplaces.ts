@@ -61,7 +61,7 @@ export const marketplaces: Marketplace[] = [
       "Application Profiles",
       "Assessments",
     ],
-    serviceCount: 8,
+    serviceCount: 26,
     route: "/marketplaces/document-studio",
   },
   {

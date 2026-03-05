@@ -35,7 +35,7 @@ interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
   context: LoginModalContext;
-  onLoginSuccess?: () => void;
+  onLoginSuccess?: (email?: string) => void;
 }
 
 export function LoginModal({
@@ -60,7 +60,7 @@ export function LoginModal({
     setSessionRole(role);
 
     if (onLoginSuccess) {
-      onLoginSuccess();
+      onLoginSuccess(email);
       return;
     }
 
