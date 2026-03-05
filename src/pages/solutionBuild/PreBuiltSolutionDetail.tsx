@@ -2,9 +2,13 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Clock, DollarSign, Wrench, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { preBuiltSolutions } from "@/data/solutionBuild";
 import type { SolutionType, PreBuiltSolution } from "@/data/solutionBuild";
+import { isUserAuthenticated, setUserAuthenticated } from "@/data/sessionAuth";
+import { LoginModal } from "@/components/learningCenter/LoginModal";
 import QuickRequestForm from "./QuickRequestForm";
+import { useEffect, useState } from "react";
 
 interface EnrichedSolution extends PreBuiltSolution {
   estimatedWeeks: string;
@@ -26,6 +30,26 @@ function enrichSolution(solution: PreBuiltSolution): EnrichedSolution {
 export default function PreBuiltSolutionDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showFormDialog, setShowFormDialog] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    setIsAuthenticated(isUserAuthenticated());
+  }, []);
+
+  const handleRequestAccess = () => {
+    if (isAuthenticated) {
+      setShowFormDialog(true);
+    } else {
+      setShowLoginModal(true);
+    }
+  };
+
+  const handleLoginSuccess = () => {
+    setIsAuthenticated(true);
+    setShowFormDialog(true);
+  };
 
   const solution = preBuiltSolutions.find((s) => s.id === id);
   const enrichedSolution = solution ? enrichSolution(solution) : null;
@@ -114,15 +138,15 @@ export default function PreBuiltSolutionDetail() {
           </div>
 
 
-        </div>
-
-        {/* Quick Request Form */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Request This Solution</h2>
-          <QuickRequestForm 
-            solution={enrichedSolution} 
-            onCustomize={() => navigate('/stage2', { state: { marketplace: 'solution-build', action: 'customize', solutionId: enrichedSolution.id } })}
-          />
+          <Button 
+            onClick={handleRequestAccess}
+            className="w-full" 
+            style={{ backgroundColor: '#16a34a', color: 'white' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#15803d'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#16a34a'}
+          >
+            Request Access
+          </Button>
         </div>
 
         {/* Features */}
@@ -166,6 +190,37 @@ export default function PreBuiltSolutionDetail() {
           </div>
         )}
       </div>
+
+      {/* Login Modal */}
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        context={{
+          marketplace: 'solution-build',
+          tab: 'prebuilt',
+          cardId: enrichedSolution.id,
+          serviceName: enrichedSolution.name,
+          action: 'request-solution'
+        }}
+        onLoginSuccess={handleLoginSuccess}
+      />
+
+      {/* Request Form Dialog */}
+      <Dialog open={showFormDialog} onOpenChange={setShowFormDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Request This Solution</DialogTitle>
+          </DialogHeader>
+          <QuickRequestForm 
+            solution={enrichedSolution} 
+            onCustomize={() => {
+              setShowFormDialog(false);
+              navigate('/stage2', { state: { marketplace: 'solution-build', action: 'customize', solutionId: enrichedSolution.id } });
+            }}
+            onSubmitSuccess={() => setShowFormDialog(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -119,13 +119,14 @@ import {
   BuildWorkspaceMain,
   BuildWorkspaceSidebar,
 } from "@/components/stage2/build/BuildWorkspacePanels";
+import { BuildWorkspaceDetail } from "@/components/stage2/build/BuildWorkspaceDetail";
 import { CourseDetailView } from "@/components/learning";
 import LifecycleOverview from "./lifecycle/LifecycleOverview";
 import TemplatesLibrary from "./lifecycle/TemplatesLibrary";
 import ApprovalsPage from "./lifecycle/ApprovalsPage";
 import ProjectsPage from "./lifecycle/ProjectsPage";
 import ApplicationsPage from "./lifecycle/ApplicationsPage";
-import { buildRequests, type BuildRequest, deliveryTeams } from "@/data/solutionBuild";
+import { type BuildRequest, deliveryTeams } from "@/data/solutionBuild";
 import { Progress } from "@/components/ui/progress";
 import IntelligenceWorkspacePage from "@/pages/stage2/intelligence/IntelligenceWorkspacePage";
 import { type ServiceRequest, type SupportTicket } from "@/data/supportData";
@@ -387,7 +388,7 @@ export default function Stage2AppPage() {
     intelligenceTab?: string;
     intelligenceItemId?: string;
   }>();
-  const state = (location.state as LocationState) ?? EMPTY_LOCATION_STATE;
+  const state = (location.state as LocationState & { newBuildRequest?: any }) ?? EMPTY_LOCATION_STATE;
 
   const isLearningCenterRoute =
     !!routeCourseId && (routeView === "user" || routeView === "admin");
@@ -528,6 +529,98 @@ export default function Stage2AppPage() {
   const [activeBuildRequestId, setActiveBuildRequestId] = useState<string | null>(null);
   const [sbStatusFilter, setSbStatusFilter] = useState("all");
   const [sbPriorityFilter, setSbPriorityFilter] = useState("all");
+  const [sbActiveTab, setSbActiveTab] = useState<"overview" | "my-requests">("overview");
+  const [sbShowFilters, setSbShowFilters] = useState(false);
+  const [buildRequests, setBuildRequests] = useState<BuildRequest[]>(() => {
+    const stored = JSON.parse(localStorage.getItem('buildRequests') || '[]');
+    return [
+      ...stored,
+      {
+        id: 'BLD-2026-001',
+        name: 'Customer 360 Data Platform',
+        status: 'intake',
+        progress: 0,
+        department: 'Marketing',
+        priority: 'high',
+        requestedDate: '2026-01-05',
+        targetDate: '2026-04-30',
+        requestedBy: 'Sarah Johnson',
+        businessNeed: 'Unified customer data platform',
+        description: 'Build comprehensive customer 360 platform',
+        assignedTeam: 'Data Platform Team'
+      },
+      {
+        id: 'BLD-2026-003',
+        name: 'Zero Trust Network Implementation',
+        status: 'triage',
+        progress: 5,
+        department: 'Security',
+        priority: 'critical',
+        requestedDate: '2026-01-08',
+        targetDate: '2026-05-15',
+        requestedBy: 'Sarah Johnson',
+        businessNeed: 'Enhanced security posture',
+        description: 'Implement zero trust network architecture',
+        assignedTeam: 'Security Team'
+      },
+      {
+        id: 'BLD-2026-004',
+        name: 'API Gateway Performance Optimization',
+        status: 'queue',
+        progress: 10,
+        department: 'Platform',
+        priority: 'medium',
+        requestedDate: '2026-01-10',
+        targetDate: '2026-03-20',
+        requestedBy: 'Sarah Johnson',
+        businessNeed: 'Improve API performance',
+        description: 'Optimize API gateway for better throughput',
+        assignedTeam: 'Platform Team'
+      },
+      {
+        id: 'BLD-2025-089',
+        name: 'Real-Time Analytics Dashboard',
+        status: 'in-progress',
+        progress: 65,
+        department: 'Executive',
+        priority: 'high',
+        requestedDate: '2025-11-15',
+        targetDate: '2026-02-28',
+        requestedBy: 'Sarah Johnson',
+        businessNeed: 'Real-time business insights',
+        description: 'Build real-time analytics dashboard',
+        assignedTeam: 'Analytics Team'
+      },
+      {
+        id: 'BLD-2025-067',
+        name: 'Microservices Platform Deployment',
+        status: 'testing',
+        progress: 90,
+        department: 'Engineering',
+        priority: 'high',
+        requestedDate: '2025-09-20',
+        targetDate: '2026-01-31',
+        requestedBy: 'Sarah Johnson',
+        businessNeed: 'Scalable microservices architecture',
+        description: 'Deploy microservices platform',
+        assignedTeam: 'Engineering Team'
+      },
+      {
+        id: 'BLD-2025-034',
+        name: 'Customer Portal Platform',
+        status: 'deployed',
+        progress: 100,
+        department: 'Customer Success',
+        priority: 'medium',
+        requestedDate: '2025-06-10',
+        targetDate: '2025-12-15',
+        requestedBy: 'Sarah Johnson',
+        businessNeed: 'Self-service customer portal',
+        description: 'Deploy customer self-service portal',
+        assignedTeam: 'Customer Success Team'
+      }
+    ];
+  });
   const [knowledgeSearchQuery, setKnowledgeSearchQuery] = useState("");
   const [savedKnowledgeIds, setSavedKnowledgeIds] = useState<string[]>([]);
   const [knowledgeHistory, setKnowledgeHistory] = useState<KnowledgeHistoryEntry[]>([]);
@@ -1154,10 +1247,27 @@ export default function Stage2AppPage() {
     });
   };
 
+  useEffect(() => {
+    if (state.newBuildRequest) {
+      setBuildRequests(prev => [state.newBuildRequest, ...prev]);
+      setActiveBuildRequestId(state.newBuildRequest.id);
+      setSbActiveTab('my-requests');
+      setActiveService('Solution Build');
+      
+      const { newBuildRequest, ...cleanState } = state;
+      navigate(location.pathname, { replace: true, state: cleanState });
+    } else if (state.selectedRequestId) {
+      setActiveBuildRequestId(state.selectedRequestId);
+      setSbActiveTab('my-requests');
+      setActiveService('Solution Build');
+      
+      const { selectedRequestId, ...cleanState } = state;
+      navigate(location.pathname, { replace: true, state: cleanState });
+    }
+  }, [state.newBuildRequest, state.selectedRequestId]);
+
   const filteredBuildRequests = useMemo(() => {
-    let filtered = buildRequests.filter(
-      (r) => r.requestedBy === "Sarah Johnson" || r.requestedBy === "Current User"
-    );
+    let filtered = buildRequests;
     if (sbSearchQuery) {
       const q = sbSearchQuery.toLowerCase();
       filtered = filtered.filter(
@@ -1171,11 +1281,11 @@ export default function Stage2AppPage() {
     if (sbPriorityFilter !== "all") filtered = filtered.filter((r) => r.priority === sbPriorityFilter);
 
     return filtered;
-  }, [sbSearchQuery, sbStatusFilter, sbPriorityFilter]);
+  }, [buildRequests, sbSearchQuery, sbStatusFilter, sbPriorityFilter]);
 
   const selectedBuildRequest = useMemo(() =>
     buildRequests.find(r => r.id === activeBuildRequestId) || null
-    , [activeBuildRequestId]);
+    , [buildRequests, activeBuildRequestId]);
 
   const handleKnowledgeNotificationClick = (notification: MentionNotification) => {
     markMentionNotificationRead(notification.id);
@@ -1799,7 +1909,7 @@ export default function Stage2AppPage() {
                   className="text-gray-600 hover:text-gray-900"
                 >
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to {marketplaceLabel}
+                  Back to {activeService === "Solution Build" ? "Solution Build" : marketplaceLabel}
                 </Button>
                 <Button
                   variant="ghost"
@@ -1899,15 +2009,36 @@ export default function Stage2AppPage() {
                 />
               ) : activeService === "Solution Build" ? (
                 <BuildWorkspaceSidebar
-                  requests={filteredBuildRequests}
-                  activeRequestId={activeBuildRequestId}
-                  onSelectRequest={setActiveBuildRequestId}
+                  activeTab={sbActiveTab}
+                  onTabChange={setSbActiveTab}
                   searchQuery={sbSearchQuery}
-                  setSearchQuery={setSbSearchQuery}
+                  onSearchChange={setSbSearchQuery}
                   statusFilter={sbStatusFilter}
-                  setStatusFilter={setSbStatusFilter}
+                  onStatusFilterChange={setSbStatusFilter}
                   priorityFilter={sbPriorityFilter}
-                  setPriorityFilter={setSbPriorityFilter}
+                  onPriorityFilterChange={setSbPriorityFilter}
+                  showFilters={sbShowFilters}
+                  onToggleFilters={() => setSbShowFilters(!sbShowFilters)}
+                  activeFiltersCount={[sbStatusFilter, sbPriorityFilter].filter(f => f !== "all").length}
+                  onClearFilters={() => {
+                    setSbStatusFilter("all");
+                    setSbPriorityFilter("all");
+                  }}
+                  requests={filteredBuildRequests}
+                  selectedRequest={selectedBuildRequest}
+                  onSelectRequest={(req) => setActiveBuildRequestId(req.id)}
+                  getStatusColor={(status) => {
+                    const map: Record<string, string> = {
+                      intake: "bg-gray-100 text-gray-700",
+                      triage: "bg-blue-100 text-blue-700",
+                      queue: "bg-yellow-100 text-yellow-700",
+                      "in-progress": "bg-purple-100 text-purple-700",
+                      testing: "bg-orange-100 text-orange-700",
+                      deployed: "bg-green-100 text-green-700",
+                      closed: "bg-gray-100 text-gray-500",
+                    };
+                    return map[status] ?? "bg-gray-100 text-gray-600";
+                  }}
                 />
               ) : activeService === "Lifecycle Management" ? (
                 <div className="space-y-4">
@@ -2206,9 +2337,30 @@ export default function Stage2AppPage() {
               })()}
             </div>
           ) : activeService === "Solution Build" ? (
-            <BuildWorkspaceMain
-              selectedRequest={selectedBuildRequest}
-            />
+            selectedBuildRequest && sbActiveTab === "my-requests" ? (
+              <div className="h-full">
+                <BuildWorkspaceDetail selectedRequest={selectedBuildRequest} />
+              </div>
+            ) : (
+              <BuildWorkspaceMain
+                activeTab={sbActiveTab}
+                requests={filteredBuildRequests}
+                selectedRequest={selectedBuildRequest}
+                onSelectRequest={(req) => setActiveBuildRequestId(req.id)}
+                getStatusColor={(status) => {
+                  const map: Record<string, string> = {
+                    intake: "bg-gray-100 text-gray-700",
+                    triage: "bg-blue-100 text-blue-700",
+                    queue: "bg-yellow-100 text-yellow-700",
+                    "in-progress": "bg-purple-100 text-purple-700",
+                    testing: "bg-orange-100 text-orange-700",
+                    deployed: "bg-green-100 text-green-700",
+                    closed: "bg-gray-100 text-gray-500",
+                  };
+                  return map[status] ?? "bg-gray-100 text-gray-600";
+                }}
+              />
+            )
           ) : activeService === "Digital Intelligence" ? (
             <IntelligenceWorkspacePage activeSubService={activeSubService} />
           ) : activeService === "Support Services" && activeSubService ? (

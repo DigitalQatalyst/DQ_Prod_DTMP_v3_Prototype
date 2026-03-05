@@ -52,7 +52,6 @@ export function LoginModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onClose();
 
     const actorEmail = email.trim();
     const role = resolveRoleFromEmail(actorEmail);

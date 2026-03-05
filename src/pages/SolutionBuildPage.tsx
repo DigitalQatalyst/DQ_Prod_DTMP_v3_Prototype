@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { ChevronRight, Clock, Wrench, Users, TrendingUp, ArrowLeft, CheckCircle2, Check, ArrowRight, CheckCircle, Search } from "lucide-react";
 import { preBuiltSolutions, deliveryTeams } from "@/data/solutionBuild";
 import { solutionBuildFilters } from "@/data/solutionBuild/filters";
-import type { SolutionType as BuildSolutionType, BuildRequestType, BuildPriority } from "@/data/solutionBuild";
+import type { SolutionType as BuildSolutionType, BuildRequestType, BuildPriority, BuildRequestStatus } from "@/data/solutionBuild";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
@@ -181,10 +181,48 @@ export function SolutionBuildPage() {
   };
 
   const handleLoginSuccess = () => {
+    const newRequest: any = {
+      id: `BLD-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 900) + 100).padStart(3, '0')}`,
+      type: viewMode === 'custom-wizard' ? (wizardFormData.type as BuildRequestType) : 'pre-built',
+      status: 'intake' as BuildRequestStatus,
+      priority: (viewMode === 'custom-wizard' ? wizardFormData.priority : prebuiltFormData.priority) as BuildPriority,
+      name: viewMode === 'custom-wizard' ? wizardFormData.name : selectedSolution?.name || 'Pre-built Solution',
+      businessNeed: viewMode === 'custom-wizard' ? wizardFormData.businessNeed : selectedSolution?.description || '',
+      requestedBy: 'Current User',
+      sponsor: '',
+      department: viewMode === 'custom-wizard' ? wizardFormData.department : prebuiltFormData.department,
+      submittedAt: new Date().toISOString().split('T')[0],
+      requestedDate: new Date().toISOString().split('T')[0],
+      targetDate: wizardFormData.targetDate || undefined,
+      budget: { approved: 0, spent: 0 },
+      requirements: [],
+      progress: 0,
+      phases: [
+        { id: 'phase-1', name: 'Discovery' as const, status: 'not-started' as const, progress: 0, tasks: [] },
+        { id: 'phase-2', name: 'Design' as const, status: 'not-started' as const, progress: 0, tasks: [] },
+        { id: 'phase-3', name: 'Development' as const, status: 'not-started' as const, progress: 0, tasks: [] },
+        { id: 'phase-4', name: 'Testing' as const, status: 'not-started' as const, progress: 0, tasks: [] },
+        { id: 'phase-5', name: 'Deployment' as const, status: 'not-started' as const, progress: 0, tasks: [] }
+      ],
+      blockers: [],
+      deliverables: [],
+      documents: [],
+      messages: [
+        { id: 'msg-001', sender: 'System', content: 'Request submitted successfully. Our team will review within 2 business days.', timestamp: new Date().toISOString(), mentions: [] }
+      ],
+      description: viewMode === 'custom-wizard' ? wizardFormData.businessNeed : selectedSolution?.description || '',
+      assignedTeam: undefined
+    };
+
+    // Store in localStorage for persistence
+    const stored = JSON.parse(localStorage.getItem('buildRequests') || '[]');
+    localStorage.setItem('buildRequests', JSON.stringify([newRequest, ...stored]));
+
     navigate('/stage2', {
       state: {
         marketplace: 'solution-build',
-        autoSelectMyRequests: true
+        newBuildRequest: newRequest,
+        selectedRequestId: newRequest.id
       }
     });
   };

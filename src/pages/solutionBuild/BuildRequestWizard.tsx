@@ -114,9 +114,31 @@ export default function BuildRequestWizard() {
 
   const handleSubmit = () => {
     if (validateStep(4)) {
-      console.log('Form submitted:', formData);
-      // TODO: Save to data store
-      navigate('/stage2', { state: { marketplace: 'solution-build', action: 'requests' } });
+      const newRequest = {
+        id: `BLD-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 900) + 100).padStart(3, '0')}`,
+        name: formData.name,
+        status: 'intake' as const,
+        progress: 0,
+        department: formData.department,
+        priority: formData.priority as BuildPriority,
+        requestedDate: new Date().toISOString().split('T')[0],
+        targetDate: formData.targetDate || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        requestedBy: 'Sarah Johnson',
+        businessNeed: formData.businessNeed,
+        description: formData.requirements,
+        assignedTeam: `${formData.department} Team`,
+        type: formData.type as BuildRequestType,
+        submittedAt: new Date().toISOString(),
+      };
+      
+      console.log('Form submitted:', newRequest);
+      
+      navigate('/stage2', {
+        state: {
+          marketplace: 'solution-build',
+          newBuildRequest: newRequest,
+        },
+      });
     }
   };
 

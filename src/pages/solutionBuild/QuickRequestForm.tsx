@@ -21,9 +21,10 @@ interface QuickRequestFormProps {
     features?: string[];
   };
   onCustomize: () => void;
+  onSubmitSuccess?: () => void;
 }
 
-export default function QuickRequestForm({ solution, onCustomize }: QuickRequestFormProps) {
+export default function QuickRequestForm({ solution, onCustomize, onSubmitSuccess }: QuickRequestFormProps) {
   const navigate = useNavigate();
   const [department, setDepartment] = useState('');
   const [sponsor, setSponsor] = useState('');
@@ -42,6 +43,7 @@ export default function QuickRequestForm({ solution, onCustomize }: QuickRequest
     }
 
     console.log('Quick request submitted:', { solution: solution.id, department, sponsor, priority });
+    onSubmitSuccess?.();
     navigate('/stage2', { state: { marketplace: 'solution-build', action: 'requests' } });
   };
 

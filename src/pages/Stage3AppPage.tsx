@@ -40,7 +40,7 @@ type Stage3View =
   | "pending-review"
   | "team-capacity"
   | "analytics";
-type Stage3Scope = "all" | "learning-center" | "knowledge-center";
+type Stage3Scope = "all" | "learning-center" | "knowledge-center" | "solution-build";
 
 const viewLabels: Record<Stage3View, string> = {
   dashboard: "Dashboard",
@@ -106,7 +106,10 @@ export default function Stage3AppPage() {
     routeView && isStage3View(routeView) ? routeView : "dashboard"
   );
   const [searchQuery, setSearchQuery] = useState("");
-  const [requests, setRequests] = useState<Stage3Request[]>(() => [...stage3Requests]);
+  const [requests, setRequests] = useState<Stage3Request[]>(() => {
+    const stored = localStorage.getItem('stage3Requests');
+    return stored ? JSON.parse(stored) : [...stage3Requests];
+  });
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [selectedMemberId, setSelectedMemberId] = useState("");
   const [selectedNextStatus, setSelectedNextStatus] = useState<Stage3Request["status"] | "">("");
@@ -451,6 +454,7 @@ export default function Stage3AppPage() {
             <Button size="sm" variant={scope === "all" ? "default" : "outline"} className={scope === "all" ? "bg-orange-600 hover:bg-orange-700" : ""} onClick={() => setScope("all")}>All</Button>
             <Button size="sm" variant={scope === "learning-center" ? "default" : "outline"} className={scope === "learning-center" ? "bg-orange-600 hover:bg-orange-700" : ""} onClick={() => setScope("learning-center")}>Learning Center</Button>
             <Button size="sm" variant={scope === "knowledge-center" ? "default" : "outline"} className={scope === "knowledge-center" ? "bg-orange-600 hover:bg-orange-700" : ""} onClick={() => setScope("knowledge-center")}>Knowledge Center</Button>
+            <Button size="sm" variant={scope === "solution-build" ? "default" : "outline"} className={scope === "solution-build" ? "bg-orange-600 hover:bg-orange-700" : ""} onClick={() => setScope("solution-build")}>Solution Build</Button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
