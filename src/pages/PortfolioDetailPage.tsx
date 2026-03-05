@@ -87,7 +87,6 @@ const PortfolioDetailPage = () => {
   };
 
   const handleRequestClick = (card: RequestCard) => {
-    // Open the request form modal with the selected card
     setSelectedRequestCard(card);
     setShowRequestModal(true);
   };
@@ -111,10 +110,17 @@ const PortfolioDetailPage = () => {
       duration: 5000,
     });
 
-    // Navigate to Stage 2 after a short delay
-    setTimeout(() => {
-      window.location.href = '/stage2';
-    }, 1500);
+    // Navigate to Stage 2 -> Portfolio My Requests
+    navigate('/stage2/portfolio-management', {
+      state: {
+        marketplace: 'portfolio-management',
+        tab: 'my-requests',
+        cardId: request.serviceId,
+        serviceName: request.serviceName,
+        action: 'request-service',
+        submittedRequestId: request.id,
+      },
+    });
   };
 
   const handleRequestSubmit = (formData: RequestFormData) => {
@@ -915,6 +921,21 @@ const PortfolioDetailPage = () => {
           cardId: cardId || "",
           serviceName: service.title,
           action: "access service"
+        }}
+        onLoginSuccess={() => {
+          if (pendingRequestData) {
+            submitRequest(pendingRequestData);
+            setPendingRequestData(null);
+            return;
+          }
+          navigate('/stage2/portfolio-management', {
+            state: {
+              marketplace: 'portfolio-management',
+              tab: 'overview',
+              cardId,
+              serviceName: service.title,
+            },
+          });
         }}
       />
 

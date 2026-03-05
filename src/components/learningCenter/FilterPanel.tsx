@@ -11,10 +11,12 @@ interface FilterPanelProps {
   onClearAll: () => void;
   isOpen: boolean;
   onToggle: () => void;
+  onDesktopToggle?: () => void;
 }
 
 const filterLabels: Record<string, string> = {
   department: "Department",
+  departmentApplicability: "Department Applicability",
   category: "Category",
   provider: "Provider",
   level: "Level",
@@ -69,6 +71,15 @@ const filterLabels: Record<string, string> = {
   reportingLevel: "Reporting Level",
 };
 
+const toTitleCase = (raw: string) =>
+  raw
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/[-_]+/g, " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+
 export function FilterPanel({
   filters,
   selectedFilters,
@@ -76,10 +87,11 @@ export function FilterPanel({
   onClearAll,
   isOpen,
   onToggle,
+  onDesktopToggle,
 }: FilterPanelProps) {
   const hasActiveFilters = Object.values(selectedFilters).some(arr => arr.length > 0);
   const activeFilterCount = Object.values(selectedFilters).reduce((sum, arr) => sum + arr.length, 0);
-  
+
   // Track which filter groups are expanded (default: all collapsed)
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
@@ -107,15 +119,23 @@ export function FilterPanel({
         aria-label={`Filters${activeFilterCount > 0 ? ` (${activeFilterCount} active)` : ''}`}
         className={`
           fixed lg:relative inset-y-0 left-0 z-50 lg:z-0
-          w-72 bg-white border-r border-gray-200 p-6 overflow-y-auto
+          w-72 bg-white border-r border-gray-200 p-4 overflow-y-auto
           transform transition-transform duration-300 lg:transform-none
           ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
         `}
       >
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-2">
-            <SlidersHorizontal className="w-5 h-5 text-gray-700" aria-hidden="true" />
+            <button
+              type="button"
+              onClick={onDesktopToggle}
+              className="hidden lg:inline-flex p-1 rounded hover:bg-gray-100 text-gray-700"
+              aria-label="Toggle filters panel"
+            >
+              <SlidersHorizontal className="w-5 h-5" aria-hidden="true" />
+            </button>
+            <SlidersHorizontal className="w-5 h-5 text-gray-700 lg:hidden" aria-hidden="true" />
             <h2 className="text-lg font-bold text-gray-900">Filters</h2>
             {activeFilterCount > 0 && (
               <span className="sr-only">{activeFilterCount} filters active</span>
@@ -145,7 +165,7 @@ export function FilterPanel({
         {Object.entries(filters).map(([group, options]) => {
           const selectedCount = selectedFilters[group]?.length || 0;
           const isExpanded = expandedGroups[group] || false;
-          
+
           return (
             <Collapsible
               key={group}
@@ -155,7 +175,7 @@ export function FilterPanel({
             >
               <CollapsibleTrigger className="w-full flex items-center justify-between py-2 hover:bg-gray-50 rounded px-2 -mx-2 transition-colors group">
                 <span className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-                  {filterLabels[group] || group}
+                  {filterLabels[group] || toTitleCase(group)}
                   {selectedCount > 0 && (
                     <span className="text-xs font-normal bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">
                       {selectedCount}
@@ -168,7 +188,7 @@ export function FilterPanel({
                   <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-gray-700 transition-colors" />
                 )}
               </CollapsibleTrigger>
-              
+
               <CollapsibleContent className="pt-2">
                 <fieldset className="space-y-2">
                   <legend className="sr-only">{filterLabels[group] || group} options</legend>

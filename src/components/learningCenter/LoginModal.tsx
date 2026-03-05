@@ -4,6 +4,15 @@ import { X, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { setUserAuthenticated } from "@/data/sessionAuth";
+import { setSessionRole, isTOStage3Role, type SessionRole } from "@/data/sessionRole";
+
+const resolveRoleFromEmail = (email: string): SessionRole => {
+  const lower = email.toLowerCase().trim();
+  if (lower === "admin@to.dtmp.com") return "to-admin";
+  if (lower.endsWith("@to.dtmp.com")) return "to-ops";
+  return "business-user";
+};
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -14,10 +23,14 @@ interface LoginModalProps {
     cardId: string;
     serviceName: string;
     action: string;
+    formData?: Record<string, string>;
+    dashboardName?: string;
+    requestDescription?: string;
   };
+  onLoginSuccess?: () => void;
 }
 
-export function LoginModal({ isOpen, onClose, context }: LoginModalProps) {
+export function LoginModal({ isOpen, onClose, context, onLoginSuccess }: LoginModalProps) {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -26,11 +39,74 @@ export function LoginModal({ isOpen, onClose, context }: LoginModalProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Navigate to Stage 2 with context
-    navigate("/stage2", {
-      state: context,
-    });
     onClose();
+
+    // Persist auth state and role derived from email
+    const role = resolveRoleFromEmail(email);
+    setUserAuthenticated(true);
+    setSessionRole(role);
+
+    // Use custom callback if provided
+    if (onLoginSuccess) {
+      onLoginSuccess();
+      return;
+    }
+
+    // TO roles go straight to Stage 3
+    if (isTOStage3Role(role)) {
+      navigate("/stage3/dashboard");
+      return;
+    }
+
+    // Support Services uses a Stage 1 request form before entering Stage 2.
+    if (context.marketplace === "support-services" && context.action === "request-service") {
+      navigate("/marketplaces/support-services/new-request", {
+        state: context,
+      });
+      return;
+    }
+
+    // Solution Specs — "Make Request" action goes to the request form
+    if (context.marketplace === "solution-specs" && context.action === "Make Request") {
+      navigate("/marketplaces/solution-specs/request", {
+        state: {
+          specId: context.cardId,
+          serviceName: context.serviceName,
+        },
+      });
+      return;
+    }
+
+    // Solution Specs — other actions go to Stage 2 specs overview
+    if (context.marketplace === "solution-specs") {
+      navigate(`/stage2/specs/overview`, {
+        state: { fromStage1: true, specId: context.cardId },
+      });
+      return;
+    }
+
+    // Digital Intelligence request actions should land in Stage 2 -> My Requests.
+    if (
+      context.marketplace === "digital-intelligence" &&
+      context.action &&
+      context.action !== "View Analytics"
+    ) {
+      navigate("/stage2/intelligence/requests", {
+        state: {
+          ...context,
+          actorEmail: email.trim(),
+        },
+      });
+      return;
+    }
+
+    // Default: navigate to Stage 2 with context
+    navigate("/stage2", {
+      state: {
+        ...context,
+        actorEmail: email.trim(),
+      },
+    });
   };
 
   const handleOverlayClick = (e: React.MouseEvent) => {
@@ -78,7 +154,11 @@ export function LoginModal({ isOpen, onClose, context }: LoginModalProps) {
 
         {/* Description */}
         <p className="text-base text-muted-foreground text-center mb-8">
-          Please log in to continue with your enrollment
+          {context.marketplace === "solution-specs" && context.action === "Make Request"
+            ? `Log in to submit your request for "${context.serviceName}".`
+            : context.marketplace === "solution-specs"
+              ? "Log in to access this solution specification."
+              : "Please log in to continue with your enrollment"}
         </p>
 
         {/* Form */}
@@ -128,6 +208,17 @@ export function LoginModal({ isOpen, onClose, context }: LoginModalProps) {
             Sign up
           </button>
         </p>
+
+        {/* Demo credential hints */}
+        <div className="mt-5 border-t pt-4">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Demo credentials</p>
+          <div className="space-y-1 text-xs text-gray-500">
+            <p><span className="font-medium text-gray-700">TO Ops:</span> any@to.dtmp.com</p>
+            <p><span className="font-medium text-gray-700">TO Admin:</span> admin@to.dtmp.com</p>
+            <p><span className="font-medium text-gray-700">Business User:</span> any other email</p>
+            <p className="text-gray-400 mt-1">Password: any value</p>
+          </div>
+        </div>
       </div>
     </div>
   );
