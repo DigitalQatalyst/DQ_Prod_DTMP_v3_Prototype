@@ -953,3 +953,32 @@ Caused by:
 [2m1:09:18 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/index.css[22m
 [2m1:09:26 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/stage2/support/SupportLayout.tsx, /src/index.css[22m
 [2m1:11:17 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/index.css[22m
+[2m1:33:46 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/learningCenter/LoginModal.tsx, /src/index.css[22m
+[2m1:33:46 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/index.css[22m
+[2m1:33:46 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/TemplatesDetailPage.tsx, /src/pages/SupportNewRequestPage.tsx, /src/pages/SolutionBuildDetailPage.tsx, /src/pages/DigitalIntelligenceDetailPage.tsx, /src/pages/Stage3AppPage.tsx, /src/pages/Stage2AppPage.tsx[22m
+[2m1:33:46 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/MarketplacesPage.tsx, /src/components/sections/ResourceMarketplaces.tsx, /src/components/cards/MarketplaceCard.tsx[22m
+[2m1:33:46 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/learningCenter/LoginModal.tsx, /src/index.css[22m
+[2m1:33:46 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Stage2AppPage.tsx, /src/index.css[22m
+[2m1:33:46 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/TemplatesDetailPage.tsx, /src/pages/SupportNewRequestPage.tsx, /src/pages/SolutionBuildDetailPage.tsx, /src/pages/DigitalIntelligenceDetailPage.tsx, /src/pages/Stage3AppPage.tsx, /src/pages/Stage2AppPage.tsx[22m
+[2m1:33:46 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/stage2/templates/MyRequestsPage.tsx, /src/index.css[22m
+[2m1:33:46 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/stage2/templates/RequestDetailPage.tsx, /src/index.css[22m
+[2m1:33:46 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/stage2/templates/TemplatesOverview.tsx, /src/index.css[22m
+[2m1:33:46 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/TemplatesDetailPage.tsx, /src/index.css[22m
+[2m1:33:46 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/TemplatesDetailPage.tsx, /src/index.css[22m
+[2m11:30:10 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/learningCenter/LoginModal.tsx, /src/index.css[22m
+[2m11:30:10 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/stage2/build/BuildWorkspacePanels.tsx, /src/index.css[22m
+[2m11:30:10 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/SupportNewRequestPage.tsx, /src/pages/SolutionBuildDetailPage.tsx, /src/pages/DigitalIntelligenceDetailPage.tsx, /src/pages/Stage3AppPage.tsx, /src/pages/Stage2AppPage.tsx, /src/components/templates/DocumentRequestModal.tsx[22m
+[2m11:30:10 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/Stage3AppPage.tsx, /src/pages/Stage2AppPage.tsx, /src/pages/SupportNewRequestPage.tsx, /src/pages/SolutionBuildDetailPage.tsx, /src/pages/DigitalIntelligenceDetailPage.tsx, /src/components/templates/DocumentRequestModal.tsx[22m
+[2m11:30:10 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/SolutionBuildDetailPage.tsx, /src/index.css[22m
+[2m11:30:10 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/SolutionBuildPage.tsx, /src/index.css[22m
+[2m11:30:10 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Stage2AppPage.tsx, /src/index.css[22m
+[2m11:30:10 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/Stage3AppPage.tsx, /src/pages/Stage2AppPage.tsx, /src/pages/SupportNewRequestPage.tsx, /src/pages/SolutionBuildDetailPage.tsx, /src/pages/DigitalIntelligenceDetailPage.tsx, /src/components/templates/DocumentRequestModal.tsx[22m
+[2m11:30:10 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/pages/solutionBuild/BuildRequestWizard.tsx[22m
+[2m11:30:10 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Stage3AppPage.tsx, /src/index.css[22m
+[2m11:30:10 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/pages/solutionBuild/PreBuiltSolutionDetail.tsx[22m
+[2m11:30:10 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/pages/solutionBuild/PreBuiltSolutionDetail.tsx[22m
+[2m11:30:10 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/pages/solutionBuild/QuickRequestForm.tsx[22m
+[2m11:30:10 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Stage3AppPage.tsx, /src/index.css[22m
+[2m11:30:10 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/pages/stage2/solutionBuild/SolutionBuildWorkspacePage.tsx[22m
+[2m11:30:10 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/pages/solutionBuild/PreBuiltSolutionDetail.tsx[22m
+[2m11:30:10 AM[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/pages/solutionBuild/QuickRequestForm.tsx[22m

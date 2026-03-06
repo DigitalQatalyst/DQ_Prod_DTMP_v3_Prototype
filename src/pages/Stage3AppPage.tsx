@@ -40,7 +40,12 @@ type Stage3View =
   | "pending-review"
   | "team-capacity"
   | "analytics";
-type Stage3Scope = "all" | "learning-center" | "knowledge-center" | "solution-build";
+type Stage3Scope =
+  | "all"
+  | "learning-center"
+  | "knowledge-center"
+  | "solution-build"
+  | "support-services";
 
 const viewLabels: Record<Stage3View, string> = {
   dashboard: "Dashboard",
@@ -455,6 +460,7 @@ export default function Stage3AppPage() {
             <Button size="sm" variant={scope === "learning-center" ? "default" : "outline"} className={scope === "learning-center" ? "bg-orange-600 hover:bg-orange-700" : ""} onClick={() => setScope("learning-center")}>Learning Center</Button>
             <Button size="sm" variant={scope === "knowledge-center" ? "default" : "outline"} className={scope === "knowledge-center" ? "bg-orange-600 hover:bg-orange-700" : ""} onClick={() => setScope("knowledge-center")}>Knowledge Center</Button>
             <Button size="sm" variant={scope === "solution-build" ? "default" : "outline"} className={scope === "solution-build" ? "bg-orange-600 hover:bg-orange-700" : ""} onClick={() => setScope("solution-build")}>Solution Build</Button>
+            <Button size="sm" variant={scope === "support-services" ? "default" : "outline"} className={scope === "support-services" ? "bg-orange-600 hover:bg-orange-700" : ""} onClick={() => setScope("support-services")}>Support Services</Button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">

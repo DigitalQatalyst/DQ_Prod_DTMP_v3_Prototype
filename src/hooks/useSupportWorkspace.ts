@@ -6,6 +6,7 @@ import {
   type SupportTicket,
 } from "@/data/supportData";
 import { expertConsultancy, technicalSupport } from "@/data/supportServices";
+import { createSupportStage3Intake } from "@/data/stage3/intake";
 import type { NewSupportRequestForm } from "@/pages/stage2/support/supportWorkspaceConfig";
 
 interface UseSupportWorkspaceParams {
@@ -152,7 +153,23 @@ export function useSupportWorkspace({
       activityLog: [],
     };
     setSupportRequestsState((prev) => [newRequest, ...prev]);
-    setSupportSubmitMessage("Request submitted and added to My Tickets.");
+    const intake = createSupportStage3Intake({
+      serviceId: supportSelectedService.id,
+      serviceName: supportSelectedService.title,
+      requesterName: "You",
+      requesterEmail: "you@example.com",
+      requesterRole: "Support Services",
+      type: "service-request",
+      priority,
+      subject: supportSelectedService.title,
+      description: supportSelectedService.description,
+      category: supportSelectedService.type || "Support",
+    });
+    setSupportSubmitMessage(
+      intake
+        ? `Request submitted, added to My Tickets, and linked to TO Ops as ${intake.stage3.requestNumber}.`
+        : "Request submitted and added to My Tickets."
+    );
     setSupportAttachments([]);
     onNavigateToTickets();
   };
@@ -292,7 +309,24 @@ export function useSupportWorkspace({
     };
     setSupportRequestsState((prev) => [newRequest, ...prev]);
 
-    setNewRequestSuccess(`Request ${ticketId} was submitted and added to My Tickets.`);
+    const intake = createSupportStage3Intake({
+      serviceId: supportSelectedService?.id || cardId || "support-general",
+      serviceName: supportSelectedService?.title || "Support Services",
+      requesterName: "You",
+      requesterEmail: "you@example.com",
+      requesterRole: "Support Services",
+      type: newRequestForm.requestType,
+      priority: newRequestForm.priority,
+      subject,
+      description,
+      category: newRequestForm.category,
+    });
+
+    setNewRequestSuccess(
+      intake
+        ? `Request ${ticketId} was submitted, added to My Tickets, and linked to TO Ops as ${intake.stage3.requestNumber}.`
+        : `Request ${ticketId} was submitted and added to My Tickets.`
+    );
     setNewRequestForm({
       requestType: "incident",
       category: "Platform/Account",
