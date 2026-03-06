@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { SlidersHorizontal, Server, TrendingUp, FolderKanban } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -88,9 +88,15 @@ const SEARCH_PLACEHOLDERS: Record<TabValue, string> = {
 
 export default function DigitalIntelligencePage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedTab = searchParams.get("tab") as TabValue | null;
+  const initialTab: TabValue =
+    requestedTab && ["systems-portfolio", "digital-maturity", "projects-portfolio"].includes(requestedTab)
+      ? requestedTab
+      : "systems-portfolio";
 
   // --- State ---------------------------------------------------------------
-  const [activeTab, setActiveTab] = useState<TabValue>("systems-portfolio");
+  const [activeTab, setActiveTab] = useState<TabValue>(initialTab);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedFilters, setSelectedFilters] = useState<Record<string, string[]>>({});
@@ -158,10 +164,11 @@ export default function DigitalIntelligencePage() {
   // --- Tab switch handler (resets filters + search) ------------------------
   const handleTabChange = useCallback((tab: TabValue) => {
     setActiveTab(tab);
+    setSearchParams({ tab });
     setSelectedFilters({});
     setSearchQuery("");
     setDebouncedSearch("");
-  }, []);
+  }, [setSearchParams]);
 
   // --- Filter handlers -----------------------------------------------------
   const handleFilterChange = useCallback((group: string, value: string) => {
