@@ -46,15 +46,7 @@ export function Header() {
   };
 
   const handleAccessPlatform = () => {
-    if (isUserAuthenticated()) {
-      const role = getSessionRole();
-      if (isTOStage3Role(role)) {
-        navigate("/stage3/dashboard");
-        return;
-      }
-      setShowAccessLogin(true);
-      return;
-    }
+    // Always show login modal for platform access confirmation
     setShowAccessLogin(true);
   };
 
