@@ -234,6 +234,8 @@ const supportPriorityMap: Record<SupportRequestPriority, Stage3Priority> = {
 export const createSupportStage3Intake = (input: {
   serviceId: string;
   serviceName: string;
+  supportTicketId?: string;
+  supportServiceRequestId?: string;
   requesterName: string;
   requesterEmail: string;
   requesterRole: string;
@@ -247,6 +249,8 @@ export const createSupportStage3Intake = (input: {
   const request = addSupportTORequest({
     serviceId: input.serviceId,
     serviceName: input.serviceName,
+    supportTicketId: input.supportTicketId,
+    supportServiceRequestId: input.supportServiceRequestId,
     requesterName: input.requesterName,
     requesterRole: input.requesterRole,
     type: input.type,
