@@ -136,7 +136,7 @@ export default function Stage3AppPage() {
     if (!changeAsset) return null;
     const changeId = changeAsset.replace("learning-change:", "").trim();
     return changeId ? getLearningChangeSetById(changeId) ?? null : null;
-  }, [selectedRequest, requests]);
+  }, [selectedRequest]);
 
   useEffect(() => {
     if (!selectedRequestId) return;
@@ -281,6 +281,7 @@ export default function Stage3AppPage() {
     if (!selectedRequest || !selectedMemberId) return;
     const updated = assignStage3Request(selectedRequest.id, selectedMemberId);
     if (!updated) return;
+    syncMarketplaceRequestStatusFromStage3(updated);
     setRequests([...stage3Requests]);
   };
 
@@ -288,6 +289,7 @@ export default function Stage3AppPage() {
     if (!selectedRequest) return;
     const updated = unassignStage3Request(selectedRequest.id);
     if (!updated) return;
+    syncMarketplaceRequestStatusFromStage3(updated);
     setRequests([...stage3Requests]);
   };
 
