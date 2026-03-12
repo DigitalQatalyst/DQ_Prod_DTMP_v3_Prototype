@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ExternalLink, ArrowRight, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { allRequests, statusConfig, SpecRequest } from './SolutionSpecsOverview';
+import { getLiveSpecRequests, statusConfig, SpecRequest } from './SolutionSpecsOverview';
 
 type StatusFilter = SpecRequest['status'] | 'all';
 
@@ -19,6 +19,11 @@ export default function MyRequestsPage() {
   const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState<StatusFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [allRequests, setAllRequests] = useState<SpecRequest[]>(() => getLiveSpecRequests());
+
+  useEffect(() => {
+    setAllRequests(getLiveSpecRequests());
+  }, []);
 
   const filtered = allRequests.filter((req) => {
     const matchesStatus = activeFilter === 'all' || req.status === activeFilter;
