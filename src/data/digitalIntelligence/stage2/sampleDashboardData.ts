@@ -93,91 +93,203 @@ export const sampleDashboardData: Record<string, DashboardData> = {
     serviceId: 'system-health-analytics',
     dataSource: 'datadog',
     timeSeries: [
-      { timestamp: '2026-02-04', value: 98.5, label: 'Feb 4' },
-      { timestamp: '2026-02-05', value: 97.2, label: 'Feb 5' },
-      { timestamp: '2026-02-06', value: 99.1, label: 'Feb 6' },
-      { timestamp: '2026-02-07', value: 98.8, label: 'Feb 7' },
-      { timestamp: '2026-02-08', value: 96.5, label: 'Feb 8' },
-      { timestamp: '2026-02-09', value: 99.3, label: 'Feb 9' },
-      { timestamp: '2026-02-10', value: 98.9, label: 'Feb 10' },
-      { timestamp: '2026-02-11', value: 99.2, label: 'Feb 11' }
+      { timestamp: '2026-02-26', value: 99.2, label: 'Feb 26' },
+      { timestamp: '2026-02-27', value: 98.8, label: 'Feb 27' },
+      { timestamp: '2026-02-28', value: 99.5, label: 'Feb 28' },
+      { timestamp: '2026-03-01', value: 99.1, label: 'Mar 1' },
+      { timestamp: '2026-03-02', value: 97.8, label: 'Mar 2' },
+      { timestamp: '2026-03-03', value: 98.4, label: 'Mar 3' },
+      { timestamp: '2026-03-04', value: 99.6, label: 'Mar 4' },
+      { timestamp: '2026-03-05', value: 99.3, label: 'Mar 5' },
+      { timestamp: '2026-03-06', value: 98.9, label: 'Mar 6' },
+      { timestamp: '2026-03-07', value: 99.7, label: 'Mar 7' },
+      { timestamp: '2026-03-08', value: 96.2, label: 'Mar 8' },
+      { timestamp: '2026-03-09', value: 98.1, label: 'Mar 9' },
+      { timestamp: '2026-03-10', value: 99.4, label: 'Mar 10' },
+      { timestamp: '2026-03-11', value: 99.5, label: 'Mar 11' }
     ],
+    widgetData: {
+      'response-time': [
+        { name: 'Feb 26', value: 210 },
+        { name: 'Feb 27', value: 225 },
+        { name: 'Feb 28', value: 198 },
+        { name: 'Mar 1', value: 215 },
+        { name: 'Mar 2', value: 280 },
+        { name: 'Mar 3', value: 255 },
+        { name: 'Mar 4', value: 195 },
+        { name: 'Mar 5', value: 205 },
+        { name: 'Mar 6', value: 230 },
+        { name: 'Mar 7', value: 190 },
+        { name: 'Mar 8', value: 342 },
+        { name: 'Mar 9', value: 265 },
+        { name: 'Mar 10', value: 215 },
+        { name: 'Mar 11', value: 208 }
+      ],
+      'health-distribution': [
+        { name: 'Healthy', value: 8 },
+        { name: 'Warning', value: 2 },
+        { name: 'Degraded', value: 1 },
+        { name: 'Critical', value: 1 }
+      ],
+      'error-by-service': [
+        { name: 'API Gateway', value: 2.4 },
+        { name: 'Payment Service', value: 1.8 },
+        { name: 'Auth Service', value: 1.2 },
+        { name: 'Data Warehouse', value: 0.9 },
+        { name: 'CDN', value: 0.5 },
+        { name: 'Salesforce', value: 0.3 },
+        { name: 'SAP ERP', value: 0.2 },
+        { name: 'Azure Cloud', value: 0.1 }
+      ],
+      'performance-metrics': [
+        { name: 'CPU', value: 72 },
+        { name: 'Memory', value: 68 },
+        { name: 'Disk I/O', value: 85 },
+        { name: 'Network', value: 92 },
+        { name: 'Latency', value: 78 }
+      ],
+      'resource-utilization': [
+        { name: 'Feb 26', value: 65 },
+        { name: 'Feb 27', value: 72 },
+        { name: 'Feb 28', value: 58 },
+        { name: 'Mar 1', value: 68 },
+        { name: 'Mar 2', value: 82 },
+        { name: 'Mar 3', value: 75 },
+        { name: 'Mar 4', value: 62 },
+        { name: 'Mar 5', value: 67 },
+        { name: 'Mar 6', value: 71 },
+        { name: 'Mar 7', value: 60 },
+        { name: 'Mar 8', value: 88 },
+        { name: 'Mar 9', value: 76 },
+        { name: 'Mar 10', value: 64 },
+        { name: 'Mar 11', value: 61 }
+      ],
+      'incident-severity': [
+        { name: 'P1 - Critical', value: 2 },
+        { name: 'P2 - High', value: 5 },
+        { name: 'P3 - Medium', value: 12 },
+        { name: 'P4 - Low', value: 8 }
+      ]
+    },
     metrics: [
       {
         id: 'overall-uptime',
         label: 'Overall Uptime',
-        value: '98.4%',
+        value: '99.4%',
         trend: 'up',
-        trendValue: 0.3,
-        trendLabel: '+0.3% vs last week',
+        trendValue: 1.0,
+        trendLabel: '+1.0% vs last period',
         severity: 'success'
       },
       {
         id: 'critical-systems',
         label: 'Critical Systems Healthy',
-        value: '12/12',
-        trend: 'stable',
-        severity: 'success'
+        value: '11/12',
+        trend: 'down',
+        trendValue: -1,
+        trendLabel: '1 system degraded',
+        severity: 'warning'
       },
       {
         id: 'anomalies-detected',
         label: 'Anomalies Detected',
-        value: 3,
-        trend: 'down',
-        trendValue: -2,
-        trendLabel: '2 fewer than last week',
-        severity: 'info'
+        value: 7,
+        trend: 'up',
+        trendValue: 3,
+        trendLabel: '3 more than last week',
+        severity: 'warning'
       },
       {
         id: 'avg-response-time',
         label: 'Avg Response Time',
-        value: '245ms',
+        value: '218ms',
+        trend: 'down',
+        trendValue: -11,
+        trendLabel: '11% faster than last week',
+        severity: 'success'
+      },
+      {
+        id: 'error-rate',
+        label: 'Error Rate',
+        value: '0.34%',
         trend: 'up',
-        trendValue: 15,
-        trendLabel: '+15% slower',
+        trendValue: 0.12,
+        trendLabel: '+0.12% vs last week',
         severity: 'warning'
+      },
+      {
+        id: 'mttr',
+        label: 'Mean Time to Recovery',
+        value: '42 min',
+        trend: 'down',
+        trendValue: -18,
+        trendLabel: '18% faster resolution',
+        severity: 'success'
       }
     ],
     insights: [
       {
         id: 'insight-101',
-        type: 'info',
-        severity: 'low',
-        title: 'System Health Improving',
-        description: 'Overall system health has improved by 0.3% compared to last week. All critical systems are operating within normal parameters.',
-        confidence: 95,
-        actionable: false
+        type: 'alert',
+        severity: 'high',
+        title: 'API Gateway Degradation Detected',
+        description: 'API Gateway error rate spiked to 2.4% on Mar 8, correlating with a 96.2% uptime dip. Root cause identified as connection pool exhaustion during peak traffic (14:00-16:00 UTC). Similar pattern detected on Mar 2.',
+        confidence: 94,
+        actionable: true,
+        suggestedAction: 'Increase API Gateway connection pool size from 200 to 500 and enable auto-scaling triggers at 80% pool utilization.'
       },
       {
         id: 'insight-102',
-        type: 'alert',
+        type: 'prediction',
         severity: 'medium',
-        title: 'Increased Latency on API Gateway',
-        description: 'API Gateway response times have increased by 15% over the past 48 hours. This may impact user experience.',
-        confidence: 89,
+        title: 'Payment Service Latency Risk',
+        description: 'Payment Service response times have increased 22% over the last 7 days (from 180ms to 220ms). ML model predicts P95 latency will breach the 500ms SLA threshold within 5 days if the trend continues.',
+        confidence: 87,
         actionable: true,
-        suggestedAction: 'Review API Gateway logs and consider scaling up resources during peak hours.'
+        suggestedAction: 'Schedule database index optimization for the payments table and review recent schema changes deployed on Mar 5.'
       },
       {
         id: 'insight-103',
         type: 'recommendation',
-        severity: 'low',
-        title: 'Optimize Database Queries',
-        description: 'Database query performance has degraded by 8%. Analysis shows 3 slow queries consuming 60% of database time.',
+        severity: 'medium',
+        title: 'Resource Over-Provisioning on Azure Cloud',
+        description: 'Azure Cloud infrastructure utilization averages 61% with peaks at 76%. Current provisioning is 40% above actual demand. Right-sizing could save approximately $12,400/month without impacting SLAs.',
         confidence: 91,
         actionable: true,
-        suggestedAction: 'Review and optimize the top 3 slow queries identified in the performance report.'
+        suggestedAction: 'Review Azure VM sizing recommendations and implement reserved instance purchasing for steady-state workloads.'
+      },
+      {
+        id: 'insight-104',
+        type: 'info',
+        severity: 'low',
+        title: 'MTTR Improvement Trend',
+        description: 'Mean Time to Recovery has improved 18% over the past 30 days (from 51 min to 42 min). This improvement correlates with the deployment of automated runbooks for P1/P2 incidents on Feb 20.',
+        confidence: 96,
+        actionable: false
+      },
+      {
+        id: 'insight-105',
+        type: 'alert',
+        severity: 'medium',
+        title: 'Anomaly Cluster in Auth Service',
+        description: 'Authentication service logged 3 anomalous behavior patterns in the last 48 hours: unusual token refresh rates (+340%), geographically dispersed login attempts, and session duration outliers. No breach confirmed but warrants investigation.',
+        confidence: 82,
+        actionable: true,
+        suggestedAction: 'Escalate to Security Operations team for investigation. Enable enhanced audit logging and rate limiting on the auth endpoints.'
       }
     ],
     tableData: [
-      { system: 'SAP ERP', status: 'Healthy', uptime: '99.8%', lastIncident: '2 days ago', responseTime: '180ms' },
-      { system: 'Salesforce', status: 'Healthy', uptime: '99.5%', lastIncident: '5 days ago', responseTime: '220ms' },
-      { system: 'API Gateway', status: 'Warning', uptime: '97.2%', lastIncident: '2 hours ago', responseTime: '380ms' },
-      { system: 'Azure Cloud', status: 'Healthy', uptime: '99.9%', lastIncident: '7 days ago', responseTime: '150ms' },
-      { system: 'Data Warehouse', status: 'Healthy', uptime: '99.2%', lastIncident: '3 days ago', responseTime: '290ms' }
+      { system: 'SAP ERP', status: 'Healthy', uptime: '99.9%', cpu: '45%', memory: '62%', errorRate: '0.02%', responseTime: '165ms', lastIncident: '12 days ago', sla: '99.5%' },
+      { system: 'Salesforce', status: 'Healthy', uptime: '99.7%', cpu: '38%', memory: '55%', errorRate: '0.08%', responseTime: '195ms', lastIncident: '8 days ago', sla: '99.5%' },
+      { system: 'API Gateway', status: 'Warning', uptime: '97.8%', cpu: '78%', memory: '82%', errorRate: '2.40%', responseTime: '340ms', lastIncident: '3 hours ago', sla: '99.9%' },
+      { system: 'Azure Cloud', status: 'Healthy', uptime: '99.9%', cpu: '61%', memory: '58%', errorRate: '0.01%', responseTime: '120ms', lastIncident: '21 days ago', sla: '99.9%' },
+      { system: 'Data Warehouse', status: 'Healthy', uptime: '99.4%', cpu: '52%', memory: '71%', errorRate: '0.15%', responseTime: '280ms', lastIncident: '5 days ago', sla: '99.0%' },
+      { system: 'Payment Service', status: 'Warning', uptime: '98.6%', cpu: '72%', memory: '78%', errorRate: '1.80%', responseTime: '245ms', lastIncident: '1 day ago', sla: '99.9%' },
+      { system: 'Auth Service', status: 'Degraded', uptime: '97.2%', cpu: '85%', memory: '88%', errorRate: '1.20%', responseTime: '310ms', lastIncident: '6 hours ago', sla: '99.5%' },
+      { system: 'CDN', status: 'Healthy', uptime: '99.8%', cpu: '22%', memory: '35%', errorRate: '0.05%', responseTime: '45ms', lastIncident: '30 days ago', sla: '99.9%' }
     ],
-    generatedAt: '2026-02-11T10:00:00Z',
-    dataRange: { start: '2026-02-04', end: '2026-02-11' }
+    generatedAt: '2026-03-11T10:00:00Z',
+    dataRange: { start: '2026-02-26', end: '2026-03-11' }
   },
   'predictive-maintenance': {
     serviceId: 'predictive-maintenance',
@@ -275,6 +387,59 @@ export const sampleDashboardData: Record<string, DashboardData> = {
       { timestamp: '2025-Q4', value: 3.6, label: 'Q4 2025' },
       { timestamp: '2026-Q1', value: 3.8, label: 'Q1 2026' }
     ],
+    widgetData: {
+      'domain-scores': [
+        { name: 'Customer Exp.', value: 4.2 },
+        { name: 'Data & Analytics', value: 2.9 },
+        { name: 'Integration', value: 4.1 },
+        { name: 'Automation', value: 3.5 },
+        { name: 'Security', value: 4.0 },
+        { name: 'Cloud', value: 3.7 },
+        { name: 'DevOps', value: 3.9 },
+        { name: 'Architecture', value: 3.6 }
+      ],
+      'domain-comparison': [
+        { name: 'Customer Exp.', value: 4.2 },
+        { name: 'Integration', value: 4.1 },
+        { name: 'Security', value: 4.0 },
+        { name: 'DevOps', value: 3.9 },
+        { name: 'Cloud', value: 3.7 },
+        { name: 'Architecture', value: 3.6 },
+        { name: 'Automation', value: 3.5 },
+        { name: 'Data & Analytics', value: 2.9 }
+      ],
+      'maturity-distribution': [
+        { name: 'Optimized (4.0-5.0)', value: 3 },
+        { name: 'Established (3.5-3.9)', value: 3 },
+        { name: 'Developing (3.0-3.4)', value: 1 },
+        { name: 'Initial (< 3.0)', value: 1 }
+      ],
+      'sub-capability': [
+        { name: 'Data Governance', value: 2.5 },
+        { name: 'Data Quality Mgmt', value: 2.8 },
+        { name: 'Analytics Platforms', value: 3.2 },
+        { name: 'Data Literacy', value: 2.6 },
+        { name: 'Self-Service BI', value: 3.0 },
+        { name: 'Advanced Analytics', value: 2.4 },
+        { name: 'Data Architecture', value: 3.3 },
+        { name: 'ML/AI Readiness', value: 2.1 }
+      ],
+      'benchmark-trend': [
+        { name: 'Q1 2025', value: 58 },
+        { name: 'Q2 2025', value: 63 },
+        { name: 'Q3 2025', value: 68 },
+        { name: 'Q4 2025', value: 71 },
+        { name: 'Q1 2026', value: 73 }
+      ],
+      'capability-profile': [
+        { name: 'Strategy & Vision', value: 4.0 },
+        { name: 'Governance', value: 3.5 },
+        { name: 'People & Culture', value: 3.8 },
+        { name: 'Process', value: 3.6 },
+        { name: 'Technology', value: 3.9 },
+        { name: 'Innovation', value: 3.2 }
+      ]
+    },
     metrics: [
       {
         id: 'overall-maturity',
@@ -291,7 +456,7 @@ export const sampleDashboardData: Record<string, DashboardData> = {
         label: 'Domains Assessed',
         value: '8/8',
         trend: 'stable',
-        severity: 'info'
+        severity: 'success'
       },
       {
         id: 'improvement-areas',
@@ -310,49 +475,88 @@ export const sampleDashboardData: Record<string, DashboardData> = {
         trend: 'up',
         trendLabel: 'On track',
         severity: 'success'
+      },
+      {
+        id: 'maturity-velocity',
+        label: 'Maturity Velocity',
+        value: '+0.2',
+        unit: 'per quarter',
+        trend: 'stable',
+        trendLabel: 'Consistent growth rate',
+        severity: 'success'
+      },
+      {
+        id: 'industry-percentile',
+        label: 'Industry Percentile',
+        value: '73rd',
+        trend: 'up',
+        trendValue: 5,
+        trendLabel: 'Up from 68th last quarter',
+        severity: 'success'
       }
     ],
     insights: [
       {
         id: 'insight-301',
-        type: 'recommendation',
-        severity: 'medium',
-        title: 'Focus on Data & Analytics Domain',
-        description: 'Data & Analytics domain scored 2.9, significantly below the organizational average of 3.8. This represents the largest gap.',
-        confidence: 94,
+        type: 'alert',
+        severity: 'high',
+        title: 'Critical Gap: Data & Analytics Domain',
+        description: 'Data & Analytics scored 2.9/5.0, the lowest across all domains and 0.9 points below the organizational average. Sub-capability analysis reveals ML/AI Readiness (2.1) and Advanced Analytics (2.4) as the primary laggards. This gap is widening relative to industry benchmarks where peers average 3.6 in this domain.',
+        confidence: 96,
         actionable: true,
-        suggestedAction: 'Prioritize data governance initiatives and analytics capability building in Q2 2026.'
+        suggestedAction: 'Launch a Data & Analytics acceleration program in Q2 2026: (1) hire 2 senior data engineers, (2) deploy a centralized data governance framework, (3) pilot self-service BI for 3 business units.'
       },
       {
         id: 'insight-302',
+        type: 'recommendation',
+        severity: 'medium',
+        title: 'Quick Win: Automation Domain',
+        description: 'Automation domain (3.5) is 0.3 points below target. Analysis shows that implementing RPA for 5 identified manual processes could close 80% of this gap within one quarter. Estimated cost: $45K. Estimated annual savings: $180K.',
+        confidence: 89,
+        actionable: true,
+        suggestedAction: 'Prioritize RPA deployment for invoice processing, employee onboarding, report generation, ticket routing, and data reconciliation processes.'
+      },
+      {
+        id: 'insight-303',
         type: 'info',
         severity: 'low',
-        title: 'Strong Progress in Integration',
-        description: 'Integration domain improved from 3.2 to 4.1 this quarter, exceeding organizational average.',
+        title: 'Integration Domain: Best-in-Class Performance',
+        description: 'Integration domain improved from 3.2 to 4.1 (+28%) over the past year, now exceeding the industry 90th percentile (4.0). This success is attributed to the API-first strategy adopted in Q2 2025 and the deployment of the enterprise integration platform.',
         confidence: 98,
         actionable: false
       },
       {
-        id: 'insight-303',
+        id: 'insight-304',
         type: 'prediction',
+        severity: 'medium',
+        title: 'Year-End Target At Risk Without Data & Analytics Investment',
+        description: 'Current trajectory projects an overall maturity score of 4.0 by year-end, 0.2 points below the 4.2 target. The shortfall is entirely attributable to the Data & Analytics domain lag. With the recommended acceleration program, the model predicts achieving 4.15-4.25 by December 2026.',
+        confidence: 84,
+        actionable: true,
+        suggestedAction: 'Approve the Data & Analytics acceleration program budget and begin hiring in Q2 to stay on track for the 4.2 EOY target.'
+      },
+      {
+        id: 'insight-305',
+        type: 'recommendation',
         severity: 'low',
-        title: 'On Track for Year-End Target',
-        description: 'Current improvement velocity of 5.6% per quarter puts organization on track to achieve 4.2 target score by end of year.',
-        confidence: 86,
-        actionable: false
+        title: 'Architecture Modernization Opportunity',
+        description: 'Architecture domain (3.6) has stagnated for 2 quarters. Peer organizations advancing to microservices architecture average 4.2 in this domain. Adopting a progressive decoupling strategy for 3 monolithic applications could yield a 0.4-0.6 point improvement over 6 months.',
+        confidence: 81,
+        actionable: true,
+        suggestedAction: 'Commission an architecture modernization assessment focusing on the top 3 monolithic applications by usage volume.'
       }
     ],
     tableData: [
-      { domain: 'Customer Experience', score: 4.2, gap: 0, priority: 'Maintain', trend: '↑', change: '+0.3' },
-      { domain: 'Data & Analytics', score: 2.9, gap: 0.9, priority: 'High', trend: '→', change: '0.0' },
-      { domain: 'Integration', score: 4.1, gap: 0, priority: 'Maintain', trend: '↑', change: '+0.9' },
-      { domain: 'Automation', score: 3.5, gap: 0.3, priority: 'Medium', trend: '↑', change: '+0.2' },
-      { domain: 'Security', score: 4.0, gap: 0, priority: 'Maintain', trend: '→', change: '0.0' },
-      { domain: 'Cloud', score: 3.7, gap: 0.1, priority: 'Low', trend: '↑', change: '+0.1' },
-      { domain: 'DevOps', score: 3.9, gap: 0, priority: 'Maintain', trend: '↑', change: '+0.2' },
-      { domain: 'Architecture', score: 3.6, gap: 0.2, priority: 'Medium', trend: '→', change: '0.0' }
+      { domain: 'Customer Experience', currentScore: 4.2, targetScore: 4.2, gap: '0.0', priority: 'Maintain', trend: '↑ +0.3', industryAvg: 3.8, percentile: '82nd', actions: 'Sustain current initiatives' },
+      { domain: 'Integration', currentScore: 4.1, targetScore: 4.0, gap: '0.0', priority: 'Maintain', trend: '↑ +0.9', industryAvg: 3.5, percentile: '91st', actions: 'Share best practices across org' },
+      { domain: 'Security', currentScore: 4.0, targetScore: 4.0, gap: '0.0', priority: 'Maintain', trend: '→ 0.0', industryAvg: 3.9, percentile: '68th', actions: 'Monitor compliance requirements' },
+      { domain: 'DevOps', currentScore: 3.9, targetScore: 4.0, gap: '0.1', priority: 'Low', trend: '↑ +0.2', industryAvg: 3.7, percentile: '72nd', actions: 'Expand CI/CD to remaining teams' },
+      { domain: 'Cloud', currentScore: 3.7, targetScore: 4.0, gap: '0.3', priority: 'Medium', trend: '↑ +0.1', industryAvg: 3.8, percentile: '55th', actions: 'Accelerate cloud migration roadmap' },
+      { domain: 'Architecture', currentScore: 3.6, targetScore: 4.0, gap: '0.4', priority: 'Medium', trend: '→ 0.0', industryAvg: 3.7, percentile: '48th', actions: 'Initiate microservices pilot' },
+      { domain: 'Automation', currentScore: 3.5, targetScore: 3.8, gap: '0.3', priority: 'Medium', trend: '↑ +0.2', industryAvg: 3.4, percentile: '62nd', actions: 'Deploy RPA for top 5 processes' },
+      { domain: 'Data & Analytics', currentScore: 2.9, targetScore: 3.8, gap: '0.9', priority: 'High', trend: '→ 0.0', industryAvg: 3.6, percentile: '28th', actions: 'Launch acceleration program' }
     ],
-    generatedAt: '2026-02-11T10:00:00Z',
+    generatedAt: '2026-03-11T10:00:00Z',
     dataRange: { start: '2025-Q1', end: '2026-Q1' }
   },
   'project-success-prediction': {
