@@ -1,7 +1,14 @@
+import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ClipboardList, CheckCircle, Clock, AlertCircle, Eye, Download, BookOpen, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { solutionSpecs } from '@/data/blueprints/solutionSpecs';
+import {
+  getBlueprintTORequests,
+  seedSpecsDemoRequests,
+  type BlueprintTORequest,
+} from '@/data/blueprints/requestState';
+import { stage3Requests } from '@/data/stage3';
 
 // ── Shared request data (single source of truth) ──────────────────────────
 export interface SpecRequest {
@@ -67,6 +74,49 @@ export const statusConfig: Record<SpecRequest['status'], { label: string; color:
   'on-hold':      { label: 'On Hold',      color: 'bg-orange-100 text-orange-700 border-orange-200',  dot: 'bg-orange-400', icon: AlertCircle },
 };
 
+// ── Live data helpers ──────────────────────────────────────────────────────
+export const mapBlueprintToSpecRequest = (req: BlueprintTORequest): SpecRequest => {
+  let requestType = 'Custom Build';
+  try {
+    const parsed = JSON.parse(req.message);
+    if (parsed.requestType) requestType = parsed.requestType;
+  } catch {
+    // plain-text message — leave default
+  }
+
+  const statusMap: Record<string, SpecRequest['status']> = {
+    'Open':        'pending',
+    'In Review':   'under-review',
+    'In Progress': 'in-progress',
+    'Resolved':    'completed',
+    'On Hold':     'on-hold',
+  };
+
+  // Look up assignedTo from the linked Stage 3 request
+  let assignedTo: string | undefined;
+  if (req.stage3RequestId) {
+    const s3 = stage3Requests.find((r) => r.id === req.stage3RequestId);
+    assignedTo = s3?.assignedTo;
+  }
+
+  return {
+    id: req.id,
+    solutionName: req.itemTitle,
+    requestType,
+    submittedAt: req.createdAt.split('T')[0],
+    status: statusMap[req.status] ?? 'pending',
+    assignedTo,
+    specId: req.itemId && !req.itemId.startsWith('custom-') ? req.itemId : undefined,
+  };
+};
+
+export const getLiveSpecRequests = (): SpecRequest[] => {
+  seedSpecsDemoRequests();
+  return getBlueprintTORequests()
+    .filter((r) => r.marketplace === 'solution-specs')
+    .map(mapBlueprintToSpecRequest);
+};
+
 // ── Mock acquired specs ───────────────────────────────────────────────────
 const acquiredSpecIds = ['dbp-reference-architecture', 'customer-360-platform', 'enterprise-data-platform'];
 
@@ -82,26 +132,16 @@ export default function SolutionSpecsOverview() {
   const location = useLocation();
   const state = (location.state as LocationState) || {};
 
-  // Merge new request from form submission
-  const displayRequests: SpecRequest[] = state.fromRequest
-    ? [
-        {
-          id: `REQ-2026-${String(allRequests.length + 1).padStart(3, '0')}`,
-          solutionName: state.serviceName || 'New Request',
-          requestType: state.requestType
-            ? state.requestType.replace('-', ' ').replace(/\b\w/g, (c) => c.toUpperCase())
-            : 'Current Build',
-          submittedAt: new Date().toISOString().split('T')[0],
-          status: 'under-review',
-          specId: state.specId,
-        },
-        ...allRequests,
-      ]
-    : allRequests;
+  // Live requests from the persistent store (refreshed on every mount)
+  const [displayRequests, setDisplayRequests] = useState<SpecRequest[]>(() => getLiveSpecRequests());
+
+  useEffect(() => {
+    setDisplayRequests(getLiveSpecRequests());
+  }, []);
 
   // Request status counts
   const statusCounts = {
-    total: displayRequests.length,
+    total:          displayRequests.length,
     'under-review': displayRequests.filter((r) => r.status === 'under-review').length,
     'in-progress':  displayRequests.filter((r) => r.status === 'in-progress').length,
     'completed':    displayRequests.filter((r) => r.status === 'completed').length,
@@ -111,7 +151,7 @@ export default function SolutionSpecsOverview() {
 
   const acquiredSpecs = solutionSpecs.filter((s) => acquiredSpecIds.includes(s.id));
 
-  // 3 most recent requests across all users
+  // 3 most recent requests
   const recentRequests = [...displayRequests]
     .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
     .slice(0, 3);
@@ -166,7 +206,7 @@ export default function SolutionSpecsOverview() {
                   <div>
                     <p className="text-xs text-gray-400 uppercase font-semibold mb-0.5">Reference ID</p>
                     <p className="font-medium text-gray-900 font-mono text-xs">
-                      REQ-2026-{String(displayRequests.length).padStart(3, '0')}
+                      {displayRequests[0]?.id ?? '—'}
                     </p>
                   </div>
                 </div>

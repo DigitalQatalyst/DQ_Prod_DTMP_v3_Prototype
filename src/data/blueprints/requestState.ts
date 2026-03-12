@@ -1,6 +1,6 @@
 import { makeLocalStorageStore } from "@/data/shared/localStorageUtils";
 
-export type BlueprintRequestStatus = "Open" | "In Review" | "Resolved";
+export type BlueprintRequestStatus = "Open" | "In Review" | "In Progress" | "Resolved" | "On Hold";
 export type BlueprintMarketplace = "solution-specs" | "solution-build";
 
 export interface BlueprintTORequest {
@@ -106,4 +106,74 @@ export const linkBlueprintTORequestToStage3 = (
   });
   writeRequests(next);
   return updated;
+};
+
+export const seedSpecsDemoRequests = (): void => {
+  const existing = readRequests().filter((r) => r.marketplace === "solution-specs");
+  if (existing.length > 0) return;
+
+  const demo: BlueprintTORequest[] = [
+    {
+      id: "spec-req-2025-001",
+      itemId: "customer-360-platform",
+      itemTitle: "Customer Data Unification Platform",
+      marketplace: "solution-specs",
+      requesterName: "Amina TO",
+      requesterRole: "Portfolio Manager",
+      message: JSON.stringify({ requestType: "Current Build", timeline: "3 – 6 months" }),
+      status: "In Progress",
+      createdAt: "2026-02-10T00:00:00.000Z",
+      updatedAt: "2026-02-10T00:00:00.000Z",
+    },
+    {
+      id: "spec-req-2025-002",
+      itemId: "api-gateway-architecture",
+      itemTitle: "API Integration Hub Enhancement",
+      marketplace: "solution-specs",
+      requesterName: "Amina TO",
+      requesterRole: "Portfolio Manager",
+      message: JSON.stringify({ requestType: "Enhancement", timeline: "1 – 3 months" }),
+      status: "Resolved",
+      createdAt: "2026-02-05T00:00:00.000Z",
+      updatedAt: "2026-02-05T00:00:00.000Z",
+    },
+    {
+      id: "spec-req-2025-003",
+      itemId: "erp-crm-connector",
+      itemTitle: "ERP–CRM Connector",
+      marketplace: "solution-specs",
+      requesterName: "Amina TO",
+      requesterRole: "Portfolio Manager",
+      message: JSON.stringify({ requestType: "Integration", timeline: "3 – 6 months" }),
+      status: "In Review",
+      createdAt: "2026-01-28T00:00:00.000Z",
+      updatedAt: "2026-01-28T00:00:00.000Z",
+    },
+    {
+      id: "spec-req-2025-004",
+      itemId: "digital-workplace-revamp",
+      itemTitle: "Digital Workplace Revamp",
+      marketplace: "solution-specs",
+      requesterName: "Amina TO",
+      requesterRole: "Portfolio Manager",
+      message: JSON.stringify({ requestType: "Enhancement", timeline: "6 – 12 months" }),
+      status: "Open",
+      createdAt: "2026-01-15T00:00:00.000Z",
+      updatedAt: "2026-01-15T00:00:00.000Z",
+    },
+    {
+      id: "spec-req-2025-005",
+      itemId: "enterprise-data-platform",
+      itemTitle: "Data Governance Framework",
+      marketplace: "solution-specs",
+      requesterName: "Amina TO",
+      requesterRole: "Portfolio Manager",
+      message: JSON.stringify({ requestType: "Current Build", timeline: "6 – 12 months" }),
+      status: "On Hold",
+      createdAt: "2026-01-08T00:00:00.000Z",
+      updatedAt: "2026-01-08T00:00:00.000Z",
+    },
+  ];
+
+  writeRequests([...demo, ...readRequests()]);
 };

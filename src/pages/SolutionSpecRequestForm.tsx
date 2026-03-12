@@ -1,6 +1,11 @@
 import { useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import {
+  addBlueprintTORequest,
+  linkBlueprintTORequestToStage3,
+} from "@/data/blueprints/requestState";
+import { createStage3Request } from "@/data/stage3";
+import {
   ArrowLeft,
   ArrowRight,
   ChevronRight,
@@ -102,6 +107,49 @@ export default function SolutionSpecRequestForm() {
   };
 
   const handleSubmit = () => {
+    // Create a persisted blueprint request (Stage 2 store)
+    const blueprintRequest = addBlueprintTORequest({
+      itemId: state.specId ?? `custom-${Date.now()}`,
+      itemTitle: formData.solutionName,
+      marketplace: "solution-specs",
+      requesterName: "Amina TO",
+      requesterRole: "Portfolio Manager",
+      message: JSON.stringify({
+        requestType: formData.requestType,
+        timeline: formData.timeline,
+        businessNeed: formData.businessNeed,
+        requirements: formData.requirements,
+      }),
+    });
+
+    if (blueprintRequest) {
+      // Create linked Stage 3 request for the TO team
+      const stage3Request = createStage3Request({
+        type: "solution-specs",
+        title: `Solution Spec Build: ${formData.solutionName}`,
+        description: formData.businessNeed,
+        requester: {
+          name: "Amina TO",
+          email: "amina.to@dtmp.local",
+          department: "Transformation Office",
+          organization: "DTMP",
+        },
+        priority: "medium",
+        estimatedHours: 16,
+        tags: ["solution-specs", formData.requestType.replace("-", " ")],
+        relatedAssets: [`solution-spec-request:${blueprintRequest.id}`],
+        notes: [
+          `Request Type: ${formData.requestType}`,
+          `Timeline: ${formData.timeline}`,
+          `Business Need: ${formData.businessNeed}`,
+          `Requirements: ${formData.requirements}`,
+        ],
+      });
+
+      // Link blueprint record back to Stage 3
+      linkBlueprintTORequestToStage3(blueprintRequest.id, stage3Request.id);
+    }
+
     navigate("/stage2/specs/overview", {
       state: {
         fromRequest: true,
