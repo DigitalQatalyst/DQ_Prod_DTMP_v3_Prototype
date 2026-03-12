@@ -27,6 +27,10 @@ import {
   type DIRequestStatus,
 } from "@/data/digitalIntelligence/requestState";
 import {
+  updateDashboardRequestStatus,
+  type DashboardUpdateRequest,
+} from "@/data/digitalIntelligence/stage2";
+import {
   updatePortfolioRequestStatus,
   type PortfolioRequestStatus,
 } from "@/data/portfolio/requestState";
@@ -39,6 +43,16 @@ const mapStage3ToMarketplaceStatus = (
     return "In Review";
   }
   return "Open";
+};
+
+const mapStage3ToDIRequestStatus = (
+  status: Stage3RequestStatus
+): DashboardUpdateRequest["status"] => {
+  if (status === "completed") return "completed";
+  if (status === "cancelled") return "declined";
+  if (status === "in-progress") return "in-progress";
+  if (status === "assigned" || status === "pending-review" || status === "pending-user") return "under-review";
+  return "submitted";
 };
 
 const mapStage3ToBlueprintStatus = (status: Stage3RequestStatus): BlueprintRequestStatus => {
@@ -118,7 +132,10 @@ export const syncMarketplaceRequestStatusFromStage3 = (request: Stage3Request) =
     }
     if (asset.startsWith("di-request:")) {
       const requestId = asset.replace("di-request:", "").trim();
-      if (requestId) updateDITORequestStatus(requestId, mappedStatus as DIRequestStatus);
+      if (requestId) {
+        updateDITORequestStatus(requestId, mappedStatus as DIRequestStatus);
+        updateDashboardRequestStatus(requestId, mapStage3ToDIRequestStatus(request.status));
+      }
     }
     if (asset.startsWith("portfolio-request:")) {
       const requestId = asset.replace("portfolio-request:", "").trim();

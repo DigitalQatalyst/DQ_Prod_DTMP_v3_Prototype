@@ -66,7 +66,7 @@ function MetricWidget({ widget, metrics }: { widget: WidgetType; metrics: Dashbo
 }
 
 function ChartWidget({ widget, data }: { widget: WidgetType; data: DashboardData }) {
-  const chartData = data.timeSeries.map(point => ({
+  const chartData = data.widgetData?.[widget.id] || data.timeSeries.map(point => ({
     name: point.label || point.timestamp,
     value: point.value
   }));
