@@ -41,9 +41,18 @@ const mapStage3ToMarketplaceStatus = (
   return "Open";
 };
 
+const mapStage3ToBlueprintStatus = (status: Stage3RequestStatus): BlueprintRequestStatus => {
+  if (status === "completed") return "Resolved";
+  if (status === "in-progress" || status === "pending-review") return "In Progress";
+  if (status === "assigned" || status === "pending-user") return "In Review";
+  if (status === "on-hold" || status === "cancelled") return "On Hold";
+  return "Open";
+};
+
 export const syncMarketplaceRequestStatusFromStage3 = (request: Stage3Request) => {
   const linkedAssets = request.relatedAssets ?? [];
   const mappedStatus = mapStage3ToMarketplaceStatus(request.status);
+  const blueprintStatus = mapStage3ToBlueprintStatus(request.status);
   const supportSubjectFromTitle = request.title.replace(/^support:\s*/i, "").trim();
   let supportSyncedViaLinkedAsset = false;
 
@@ -97,11 +106,11 @@ export const syncMarketplaceRequestStatusFromStage3 = (request: Stage3Request) =
     }
     if (asset.startsWith("solution-spec-request:")) {
       const requestId = asset.replace("solution-spec-request:", "").trim();
-      if (requestId) updateBlueprintTORequestStatus(requestId, mappedStatus as BlueprintRequestStatus);
+      if (requestId) updateBlueprintTORequestStatus(requestId, blueprintStatus);
     }
     if (asset.startsWith("solution-build-request:")) {
       const requestId = asset.replace("solution-build-request:", "").trim();
-      if (requestId) updateBlueprintTORequestStatus(requestId, mappedStatus as BlueprintRequestStatus);
+      if (requestId) updateBlueprintTORequestStatus(requestId, blueprintStatus);
     }
     if (asset.startsWith("template-request:")) {
       const requestId = asset.replace("template-request:", "").trim();

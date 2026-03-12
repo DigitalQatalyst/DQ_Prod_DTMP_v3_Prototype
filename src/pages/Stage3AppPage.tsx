@@ -44,6 +44,7 @@ type Stage3Scope =
   | "all"
   | "learning-center"
   | "knowledge-center"
+  | "solution-specs"
   | "portfolio-management"
   | "solution-build"
   | "support-services";
@@ -463,6 +464,7 @@ export default function Stage3AppPage() {
             <Button size="sm" variant={scope === "all" ? "default" : "outline"} className={scope === "all" ? "bg-orange-600 hover:bg-orange-700" : ""} onClick={() => setScope("all")}>All</Button>
             <Button size="sm" variant={scope === "learning-center" ? "default" : "outline"} className={scope === "learning-center" ? "bg-orange-600 hover:bg-orange-700" : ""} onClick={() => setScope("learning-center")}>Learning Center</Button>
             <Button size="sm" variant={scope === "knowledge-center" ? "default" : "outline"} className={scope === "knowledge-center" ? "bg-orange-600 hover:bg-orange-700" : ""} onClick={() => setScope("knowledge-center")}>Knowledge Center</Button>
+            <Button size="sm" variant={scope === "solution-specs" ? "default" : "outline"} className={scope === "solution-specs" ? "bg-orange-600 hover:bg-orange-700" : ""} onClick={() => setScope("solution-specs")}>Solution Specs</Button>
             <Button size="sm" variant={scope === "portfolio-management" ? "default" : "outline"} className={scope === "portfolio-management" ? "bg-orange-600 hover:bg-orange-700" : ""} onClick={() => setScope("portfolio-management")}>Portfolio Management</Button>
             <Button size="sm" variant={scope === "solution-build" ? "default" : "outline"} className={scope === "solution-build" ? "bg-orange-600 hover:bg-orange-700" : ""} onClick={() => setScope("solution-build")}>Solution Build</Button>
             <Button size="sm" variant={scope === "support-services" ? "default" : "outline"} className={scope === "support-services" ? "bg-orange-600 hover:bg-orange-700" : ""} onClick={() => setScope("support-services")}>Support Services</Button>
