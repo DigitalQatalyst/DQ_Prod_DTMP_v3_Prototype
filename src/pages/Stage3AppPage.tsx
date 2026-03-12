@@ -45,6 +45,7 @@ type Stage3Scope =
   | "learning-center"
   | "knowledge-center"
   | "solution-specs"
+  | "portfolio-management"
   | "solution-build"
   | "support-services";
 
@@ -61,6 +62,7 @@ const viewLabels: Record<Stage3View, string> = {
 const requestTypeLabel: Record<Stage3Request["type"], string> = {
   "learning-center": "Learning Center",
   "knowledge-center": "Knowledge Center",
+  "portfolio-management": "Portfolio Management",
   "dtmp-templates": "Templates",
   "solution-specs": "Solution Specs",
   "solution-build": "Solution Build",
@@ -137,7 +139,7 @@ export default function Stage3AppPage() {
     if (!changeAsset) return null;
     const changeId = changeAsset.replace("learning-change:", "").trim();
     return changeId ? getLearningChangeSetById(changeId) ?? null : null;
-  }, [selectedRequest, requests]);
+  }, [selectedRequest]);
 
   useEffect(() => {
     if (!selectedRequestId) return;
@@ -282,6 +284,7 @@ export default function Stage3AppPage() {
     if (!selectedRequest || !selectedMemberId) return;
     const updated = assignStage3Request(selectedRequest.id, selectedMemberId);
     if (!updated) return;
+    syncMarketplaceRequestStatusFromStage3(updated);
     setRequests([...stage3Requests]);
   };
 
@@ -289,6 +292,7 @@ export default function Stage3AppPage() {
     if (!selectedRequest) return;
     const updated = unassignStage3Request(selectedRequest.id);
     if (!updated) return;
+    syncMarketplaceRequestStatusFromStage3(updated);
     setRequests([...stage3Requests]);
   };
 
@@ -461,6 +465,7 @@ export default function Stage3AppPage() {
             <Button size="sm" variant={scope === "learning-center" ? "default" : "outline"} className={scope === "learning-center" ? "bg-orange-600 hover:bg-orange-700" : ""} onClick={() => setScope("learning-center")}>Learning Center</Button>
             <Button size="sm" variant={scope === "knowledge-center" ? "default" : "outline"} className={scope === "knowledge-center" ? "bg-orange-600 hover:bg-orange-700" : ""} onClick={() => setScope("knowledge-center")}>Knowledge Center</Button>
             <Button size="sm" variant={scope === "solution-specs" ? "default" : "outline"} className={scope === "solution-specs" ? "bg-orange-600 hover:bg-orange-700" : ""} onClick={() => setScope("solution-specs")}>Solution Specs</Button>
+            <Button size="sm" variant={scope === "portfolio-management" ? "default" : "outline"} className={scope === "portfolio-management" ? "bg-orange-600 hover:bg-orange-700" : ""} onClick={() => setScope("portfolio-management")}>Portfolio Management</Button>
             <Button size="sm" variant={scope === "solution-build" ? "default" : "outline"} className={scope === "solution-build" ? "bg-orange-600 hover:bg-orange-700" : ""} onClick={() => setScope("solution-build")}>Solution Build</Button>
             <Button size="sm" variant={scope === "support-services" ? "default" : "outline"} className={scope === "support-services" ? "bg-orange-600 hover:bg-orange-700" : ""} onClick={() => setScope("support-services")}>Support Services</Button>
           </div>

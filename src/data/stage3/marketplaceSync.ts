@@ -6,9 +6,14 @@ import {
 } from "@/data/learningCenter/requestState";
 import { updateLearningChangeSetStatus } from "@/data/learningCenter/changeReviewState";
 import {
+  getSupportTORequestById,
   updateSupportTORequestStatus,
   type SupportRequestStatus,
 } from "@/data/supportServices/requestState";
+import {
+  syncStoredSupportRequestFromStage3,
+  syncStoredSupportTicketFromStage3,
+} from "@/data/supportServices/userSupportState";
 import {
   updateBlueprintTORequestStatus,
   type BlueprintRequestStatus,
@@ -21,10 +26,14 @@ import {
   updateDITORequestStatus,
   type DIRequestStatus,
 } from "@/data/digitalIntelligence/requestState";
+import {
+  updatePortfolioRequestStatus,
+  type PortfolioRequestStatus,
+} from "@/data/portfolio/requestState";
 
 const mapStage3ToMarketplaceStatus = (
   status: Stage3RequestStatus
-): TORequestStatus | LearningTORequestStatus => {
+): TORequestStatus | LearningTORequestStatus | PortfolioRequestStatus => {
   if (status === "completed") return "Resolved";
   if (status === "pending-review" || status === "in-progress" || status === "assigned") {
     return "In Review";
@@ -44,6 +53,8 @@ export const syncMarketplaceRequestStatusFromStage3 = (request: Stage3Request) =
   const linkedAssets = request.relatedAssets ?? [];
   const mappedStatus = mapStage3ToMarketplaceStatus(request.status);
   const blueprintStatus = mapStage3ToBlueprintStatus(request.status);
+  const supportSubjectFromTitle = request.title.replace(/^support:\s*/i, "").trim();
+  let supportSyncedViaLinkedAsset = false;
 
   for (const asset of linkedAssets) {
     if (asset.startsWith("knowledge-request:")) {
@@ -69,7 +80,29 @@ export const syncMarketplaceRequestStatusFromStage3 = (request: Stage3Request) =
     }
     if (asset.startsWith("support-request:")) {
       const requestId = asset.replace("support-request:", "").trim();
-      if (requestId) updateSupportTORequestStatus(requestId, mappedStatus as SupportRequestStatus);
+      if (!requestId) continue;
+      const syncedRequest =
+        updateSupportTORequestStatus(requestId, mappedStatus as SupportRequestStatus) ??
+        getSupportTORequestById(requestId);
+      if (!syncedRequest) continue;
+      supportSyncedViaLinkedAsset = true;
+
+      syncStoredSupportTicketFromStage3({
+        supportTicketId: syncedRequest.supportTicketId,
+        supportSubject: syncedRequest.subject || supportSubjectFromTitle,
+        supportDescription: syncedRequest.description,
+        stage3Status: request.status,
+        assignedTo: request.assignedTo,
+        assignedTeam: request.assignedTeam,
+        updatedAt: request.updatedAt,
+      });
+      syncStoredSupportRequestFromStage3({
+        supportServiceRequestId: syncedRequest.supportServiceRequestId,
+        supportTitle: syncedRequest.subject || supportSubjectFromTitle,
+        supportDescription: syncedRequest.description,
+        stage3Status: request.status,
+        updatedAt: request.updatedAt,
+      });
     }
     if (asset.startsWith("solution-spec-request:")) {
       const requestId = asset.replace("solution-spec-request:", "").trim();
@@ -87,5 +120,24 @@ export const syncMarketplaceRequestStatusFromStage3 = (request: Stage3Request) =
       const requestId = asset.replace("di-request:", "").trim();
       if (requestId) updateDITORequestStatus(requestId, mappedStatus as DIRequestStatus);
     }
+    if (asset.startsWith("portfolio-request:")) {
+      const requestId = asset.replace("portfolio-request:", "").trim();
+      if (requestId) updatePortfolioRequestStatus(requestId, mappedStatus as PortfolioRequestStatus);
+    }
+  }
+
+  if (!supportSyncedViaLinkedAsset && request.type === "support-services" && supportSubjectFromTitle) {
+    syncStoredSupportTicketFromStage3({
+      supportSubject: supportSubjectFromTitle,
+      stage3Status: request.status,
+      assignedTo: request.assignedTo,
+      assignedTeam: request.assignedTeam,
+      updatedAt: request.updatedAt,
+    });
+    syncStoredSupportRequestFromStage3({
+      supportTitle: supportSubjectFromTitle,
+      stage3Status: request.status,
+      updatedAt: request.updatedAt,
+    });
   }
 };
