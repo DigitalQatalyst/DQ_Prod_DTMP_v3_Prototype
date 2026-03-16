@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -7,13 +8,11 @@ import {
   AlertCircle,
   ExternalLink,
   ClipboardList,
-  User,
-  Calendar,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { allRequests, statusConfig } from './SolutionSpecsOverview';
+import { getLiveSpecRequests, statusConfig, type SpecRequest } from './SolutionSpecsOverview';
 
 const steps = [
   { id: 'pending',      label: 'Submitted' },
@@ -27,6 +26,11 @@ const stepOrder = steps.map((s) => s.id);
 export default function SpecsRequestDetailPage() {
   const { requestId } = useParams<{ requestId: string }>();
   const navigate = useNavigate();
+  const [allRequests, setAllRequests] = useState<SpecRequest[]>(() => getLiveSpecRequests());
+
+  useEffect(() => {
+    setAllRequests(getLiveSpecRequests());
+  }, []);
 
   const request = allRequests.find((r) => r.id === requestId);
 
