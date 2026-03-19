@@ -91,9 +91,16 @@ export function SolutionBuildPage() {
       );
     }
 
-    const specFilter = activeFilters.hasMatchingSpec as string[] | undefined;
-    if (specFilter && specFilter.includes("yes")) {
-      results = results.filter(b => !!b.fromSpecId);
+    const timelineFilter = activeFilters.timeline as string[] | undefined;
+    if (timelineFilter && timelineFilter.length > 0) {
+      results = results.filter(b => {
+        const w = b.timelineWeeks;
+        return timelineFilter.some(t =>
+          t === "short"  ? w <= 8  :
+          t === "medium" ? w >= 9 && w <= 16 :
+          t === "long"   ? w >= 17 : false
+        );
+      });
     }
 
     return results;

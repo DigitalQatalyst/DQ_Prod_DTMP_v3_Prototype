@@ -161,84 +161,80 @@ export function SolutionBuildDetailPage() {
           <span className="text-gray-900 font-medium truncate max-w-[300px]" aria-current="page">{build.title}</span>
         </nav>
 
+        {/* Hero — full width */}
+        <div className="bg-white border border-gray-200 rounded-xl p-8 mb-8">
+          {/* Thin stream accent line */}
+          <div className={`w-12 h-1 rounded-full ${colors.headerBg} mb-5`} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8">
+          {/* Badge row */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            <Badge className={`${colors.bg} ${colors.text} ${colors.border} border font-semibold`} variant="outline">
+              {build.solutionType}
+            </Badge>
+            <Badge variant="outline" className="text-gray-600">DEPLOY</Badge>
+            <Badge className={`${COMPLEXITY_COLORS[build.complexity]} text-xs font-semibold`} variant="outline">
+              {build.complexity} Complexity
+            </Badge>
+          </div>
 
-          {/* Left — main content */}
-          <div className="space-y-6">
+          <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-3 leading-tight">
+            {build.title}
+          </h1>
+          <p className="text-gray-600 text-base lg:text-lg leading-relaxed mb-6">
+            {build.fullDescription}
+          </p>
 
-            {/* Hero card */}
-            <div className="bg-white border border-gray-200 rounded-xl p-8">
-              {/* Thin stream accent line */}
-              <div className={`w-12 h-1 rounded-full ${colors.headerBg} mb-5`} />
-
-              {/* Badge row */}
-              <div className="flex flex-wrap gap-2 mb-4">
-                <Badge className={`${colors.bg} ${colors.text} ${colors.border} border font-semibold`} variant="outline">
-                  {build.solutionType}
-                </Badge>
-                <Badge variant="outline" className="text-gray-600">DEPLOY</Badge>
-                <Badge className={`${COMPLEXITY_COLORS[build.complexity]} text-xs font-semibold`} variant="outline">
-                  {build.complexity} Complexity
-                </Badge>
-              </div>
-
-              <div>
-                <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-3 leading-tight">
-                  {build.title}
-                </h1>
-                <p className="text-gray-600 text-base lg:text-lg leading-relaxed mb-6">
-                  {build.fullDescription}
-                </p>
-
-                {/* 5-column metadata strip */}
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 pb-6 border-b border-gray-100">
-                  <div>
-                    <dt className="flex items-center gap-1 text-xs font-semibold text-gray-500 uppercase mb-1">
-                      <Clock className="w-3 h-3" />Timeline
-                    </dt>
-                    <dd className="text-sm font-medium text-gray-900">{build.timeline}</dd>
-                  </div>
-                  <div>
-                    <dt className="flex items-center gap-1 text-xs font-semibold text-gray-500 uppercase mb-1">
-                      <BarChart3 className="w-3 h-3" />Complexity
-                    </dt>
-                    <dd className="text-sm font-medium text-gray-900">{build.complexity}</dd>
-                  </div>
-                  <div>
-                    <dt className="flex items-center gap-1 text-xs font-semibold text-gray-500 uppercase mb-1">
-                      <Rocket className="w-3 h-3" />Deployments
-                    </dt>
-                    <dd className="text-sm font-medium text-gray-900">{build.deploymentCount}</dd>
-                  </div>
-                  <div>
-                    <dt className="flex items-center gap-1 text-xs font-semibold text-gray-500 uppercase mb-1">
-                      <Users className="w-3 h-3" />Programme
-                    </dt>
-                    <dd className="text-sm font-medium text-gray-900 line-clamp-2">{build.programme}</dd>
-                  </div>
-                  <div>
-                    <dt className="flex items-center gap-1 text-xs font-semibold text-gray-500 uppercase mb-1">
-                      <Calendar className="w-3 h-3" />Updated
-                    </dt>
-                    <dd className="text-sm font-medium text-gray-900">
-                      {new Date(build.lastUpdated).toLocaleDateString("en-GB", { year: "numeric", month: "short", day: "numeric" })}
-                    </dd>
-                  </div>
-                </div>
-
-                {/* Tags */}
-                <div className="flex flex-wrap gap-2 pt-4">
-                  {build.tags.map(tag => (
-                    <span key={tag} className="bg-gray-100 text-gray-700 px-2.5 py-1 rounded-lg text-xs font-medium">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
+          {/* 5-column metadata strip */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 pb-6 border-b border-gray-100">
+            <div>
+              <dt className="flex items-center gap-1 text-xs font-semibold text-gray-500 uppercase mb-1">
+                <Clock className="w-3 h-3" />Timeline
+              </dt>
+              <dd className="text-sm font-medium text-gray-900">{build.timeline}</dd>
             </div>
+            <div>
+              <dt className="flex items-center gap-1 text-xs font-semibold text-gray-500 uppercase mb-1">
+                <BarChart3 className="w-3 h-3" />Complexity
+              </dt>
+              <dd className="text-sm font-medium text-gray-900">{build.complexity}</dd>
+            </div>
+            <div>
+              <dt className="flex items-center gap-1 text-xs font-semibold text-gray-500 uppercase mb-1">
+                <Rocket className="w-3 h-3" />Deployments
+              </dt>
+              <dd className="text-sm font-medium text-gray-900">{build.deploymentCount}</dd>
+            </div>
+            <div>
+              <dt className="flex items-center gap-1 text-xs font-semibold text-gray-500 uppercase mb-1">
+                <Users className="w-3 h-3" />Programme
+              </dt>
+              <dd className="text-sm font-medium text-gray-900 line-clamp-2">{build.programme}</dd>
+            </div>
+            <div>
+              <dt className="flex items-center gap-1 text-xs font-semibold text-gray-500 uppercase mb-1">
+                <Calendar className="w-3 h-3" />Updated
+              </dt>
+              <dd className="text-sm font-medium text-gray-900">
+                {new Date(build.lastUpdated).toLocaleDateString("en-GB", { year: "numeric", month: "short", day: "numeric" })}
+              </dd>
+            </div>
+          </div>
 
+          {/* Tags */}
+          <div className="flex flex-wrap gap-2 pt-4">
+            {build.tags.map(tag => (
+              <span key={tag} className="bg-gray-100 text-gray-700 px-2.5 py-1 rounded-lg text-xs font-medium">
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
 
+        {/* Two-column: tabs | sidebar */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_384px] gap-8">
+
+          {/* Left — tabs */}
+          <div>
             {/* Tabs */}
             <Tabs defaultValue="overview" className="bg-white border border-gray-200 rounded-xl overflow-hidden">
               <div className="border-b border-gray-200 px-6 pt-4">
@@ -386,55 +382,81 @@ export function SolutionBuildDetailPage() {
           </div>
 
           {/* Right — sticky sidebar */}
-          <div className="space-y-4">
-            <div className="bg-white border border-gray-200 rounded-xl p-6 sticky top-6">
-              <h3 className="text-sm font-semibold text-gray-900 mb-4 uppercase tracking-wide">Build Details</h3>
-              <dl className="space-y-3 text-sm mb-6">
-                <div className="flex justify-between">
-                  <dt className="text-gray-500">Timeline</dt>
-                  <dd className="font-medium text-gray-900">{build.timeline}</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-gray-500">Complexity</dt>
-                  <dd>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${COMPLEXITY_COLORS[build.complexity]}`}>
-                      {build.complexity}
-                    </span>
-                  </dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-gray-500">Deployments</dt>
-                  <dd className="font-medium text-gray-900">{build.deploymentCount}</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-gray-500">Delivery Team</dt>
-                  <dd className="font-medium text-gray-900">{build.deliveryTeam}</dd>
-                </div>
-              </dl>
+          <aside className="lg:w-96 flex-shrink-0">
+            <div className="lg:sticky lg:top-24 space-y-5">
+              <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-lg">
+                <h3 className="text-base font-semibold text-foreground mb-4">Build Details</h3>
 
-              {build.fromSpecId && (
-                <div className="mb-5 pb-5 border-b border-gray-100">
-                  <p className="text-xs text-gray-500 uppercase font-semibold mb-2">From Solution Spec</p>
-                  <button
-                    onClick={() => navigate(`/marketplaces/solution-specs/${build.fromSpecId}`)}
-                    className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 font-medium"
-                  >
-                    <Link2 className="w-3.5 h-3.5" />
-                    {build.fromSpecTitle}
-                  </button>
+                <table className="w-full mb-6">
+                  <tbody>
+                    <tr className="border-b border-gray-100">
+                      <td className="text-sm text-muted-foreground py-3 pr-4">
+                        <span className="flex items-center gap-2"><Clock className="h-3.5 w-3.5" />Timeline</span>
+                      </td>
+                      <td className="text-sm font-medium text-foreground py-3">{build.timeline}</td>
+                    </tr>
+                    <tr className="border-b border-gray-100">
+                      <td className="text-sm text-muted-foreground py-3 pr-4">
+                        <span className="flex items-center gap-2"><BarChart3 className="h-3.5 w-3.5" />Complexity</span>
+                      </td>
+                      <td className="py-3">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${COMPLEXITY_COLORS[build.complexity]}`}>
+                          {build.complexity}
+                        </span>
+                      </td>
+                    </tr>
+                    <tr className="border-b border-gray-100">
+                      <td className="text-sm text-muted-foreground py-3 pr-4">
+                        <span className="flex items-center gap-2"><Rocket className="h-3.5 w-3.5" />Deployments</span>
+                      </td>
+                      <td className="text-sm font-medium text-foreground py-3">{build.deploymentCount}</td>
+                    </tr>
+                    <tr className={build.fromSpecId ? "border-b border-gray-100" : ""}>
+                      <td className="text-sm text-muted-foreground py-3 pr-4">
+                        <span className="flex items-center gap-2"><Users className="h-3.5 w-3.5" />Delivery Team</span>
+                      </td>
+                      <td className="text-sm font-medium text-foreground py-3">{build.deliveryTeam}</td>
+                    </tr>
+                    {build.fromSpecId && (
+                      <tr>
+                        <td className="text-sm text-muted-foreground py-3 pr-4">
+                          <span className="flex items-center gap-2"><Link2 className="h-3.5 w-3.5" />From Spec</span>
+                        </td>
+                        <td className="py-3">
+                          <button
+                            onClick={() => navigate(`/marketplaces/solution-specs/${build.fromSpecId}`)}
+                            className="text-sm text-blue-600 hover:text-blue-700 font-medium text-left"
+                          >
+                            {build.fromSpecTitle}
+                          </button>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+
+                <div className="border-t border-gray-200 pt-5 mb-6">
+                  <h4 className="text-sm font-semibold text-foreground mb-3">Key Deliverables:</h4>
+                  <ul className="space-y-2">
+                    {build.keyDeliverables.map((item) => (
+                      <li key={item} className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-              )}
 
-              <Button
-                className="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold"
-                onClick={() => setShowRequestDialog(true)}
-              >
-                <Rocket className="w-4 h-4 mr-2" />
-                Request Build
-              </Button>
-
+                <Button
+                  onClick={() => setShowRequestDialog(true)}
+                  className="w-full bg-orange-600 hover:bg-orange-700 text-white py-4 text-base font-semibold transition-all hover:shadow-xl"
+                >
+                  Request Build
+                  <Rocket className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
             </div>
-          </div>
+          </aside>
         </div>
       </main>
 
