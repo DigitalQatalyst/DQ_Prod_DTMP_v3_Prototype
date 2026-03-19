@@ -383,35 +383,6 @@ export function SolutionBuildDetailPage() {
               </TabsContent>
             </Tabs>
 
-            {/* Related Builds */}
-            {relatedBuilds.length > 0 && (
-              <section className="bg-white border border-gray-200 rounded-xl p-6">
-                <h2 className="text-lg font-bold text-gray-900 mb-4">Related Builds — {build.solutionType} Stream</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {relatedBuilds.map(rel => {
-                    const relColors = STREAM_COLORS[rel.solutionType] ?? STREAM_COLORS["DBP"];
-                    return (
-                      <button
-                        key={rel.id}
-                        onClick={() => navigate(`/marketplaces/solution-build/${rel.id}`)}
-                        className="bg-white border border-gray-200 rounded-xl p-5 text-left transition-all hover:border-orange-300 hover:shadow-lg hover:-translate-y-0.5 duration-200 w-full"
-                        aria-label={`View ${rel.title}`}
-                      >
-                        <div className={`mb-3 inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border ${relColors.bg} ${relColors.text} ${relColors.border}`}>
-                          {rel.solutionType}
-                        </div>
-                        <div className="text-base font-bold text-gray-900 mb-2 group-hover:text-[hsl(var(--orange))] transition-colors line-clamp-2">{rel.title}</div>
-                        <p className="text-sm text-gray-500 line-clamp-2 mb-3">{rel.shortDescription}</p>
-                        <div className="flex gap-3 text-xs text-gray-400">
-                          <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{rel.timeline}</span>
-                          <span className="flex items-center gap-1"><BarChart3 className="w-3 h-3" />{rel.complexity}</span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
-            )}
           </div>
 
           {/* Right — sticky sidebar */}
@@ -466,6 +437,38 @@ export function SolutionBuildDetailPage() {
           </div>
         </div>
       </main>
+
+      {/* Related Builds — full-width bottom section, same pattern as Sol Specs */}
+      {relatedBuilds.length > 0 && (
+        <section className="bg-gray-50 py-16">
+          <div className="max-w-7xl mx-auto px-4">
+            <h2 className="text-2xl font-bold text-foreground mb-8">Related Builds — {build.solutionType} Stream</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {relatedBuilds.map(rel => {
+                const relColors = STREAM_COLORS[rel.solutionType] ?? STREAM_COLORS["DBP"];
+                return (
+                  <button
+                    key={rel.id}
+                    onClick={() => navigate(`/marketplaces/solution-build/${rel.id}`)}
+                    className="bg-white border border-gray-200 rounded-xl p-5 text-left transition-all hover:border-orange-300 hover:shadow-lg hover:-translate-y-0.5 duration-200 w-full"
+                    aria-label={`View ${rel.title}`}
+                  >
+                    <div className={`mb-3 inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border ${relColors.bg} ${relColors.text} ${relColors.border}`}>
+                      {rel.solutionType}
+                    </div>
+                    <div className="text-base font-bold text-gray-900 mb-2 line-clamp-2">{rel.title}</div>
+                    <p className="text-sm text-gray-500 line-clamp-2 mb-3">{rel.shortDescription}</p>
+                    <div className="flex gap-3 text-xs text-gray-400">
+                      <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{rel.timeline}</span>
+                      <span className="flex items-center gap-1"><BarChart3 className="w-3 h-3" />{rel.complexity}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
 
       <Footer />
 
