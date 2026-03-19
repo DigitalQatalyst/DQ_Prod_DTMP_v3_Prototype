@@ -464,10 +464,7 @@ export function SolutionBuildDetailPage() {
 
               <Button
                 className="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold"
-                onClick={() => {
-                  setSubmitted(false);
-                  setShowRequestDialog(true);
-                }}
+                onClick={() => setShowRequestDialog(true)}
               >
                 <Rocket className="w-4 h-4 mr-2" />
                 Request Build
@@ -495,14 +492,7 @@ export function SolutionBuildDetailPage() {
             <p className="text-sm text-muted-foreground mt-1">{build.title}</p>
           </DialogHeader>
 
-          {submitted ? (
-            <div className="flex flex-col items-center py-8 text-center">
-              <CheckCircle2 className="w-12 h-12 text-green-500 mb-3" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-1">Request Submitted!</h3>
-              <p className="text-sm text-gray-500">Redirecting to My Requests...</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
+          <div className="space-y-4">
               {/* Pre-filled read-only fields */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
@@ -671,7 +661,6 @@ export function SolutionBuildDetailPage() {
                 </Button>
               </div>
             </div>
-          )}
         </DialogContent>
       </Dialog>
 
