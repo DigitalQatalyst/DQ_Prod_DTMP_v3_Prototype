@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { LoginModal } from "@/components/learningCenter/LoginModal";
 import { FilterPanel, MobileFilterButton } from "@/components/learningCenter/FilterPanel";
+import { isUserAuthenticated } from "@/data/sessionAuth";
 import {
   Select,
   SelectContent,
@@ -30,6 +31,7 @@ export function SolutionBuildPage() {
   const [searchParams] = useSearchParams();
   const [viewMode, setViewMode] = useState<ViewMode>('catalog');
   const [searchQuery, setSearchQuery] = useState("");
+  const [isLoggedIn, setIsLoggedIn] = useState(isUserAuthenticated());
   const [showLogin, setShowLogin] = useState(false);
   const [selectedSolutionId, setSelectedSolutionId] = useState<string | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -130,6 +132,18 @@ export function SolutionBuildPage() {
   };
 
   const handleCustomBuildClick = () => {
+    if (!isLoggedIn) {
+      setShowLogin(true);
+      return;
+    }
+    setViewMode('custom-wizard');
+    setWizardStep(1);
+    window.scrollTo(0, 0);
+  };
+
+  const handleLoginSuccessForWizard = () => {
+    setShowLogin(false);
+    setIsLoggedIn(true);
     setViewMode('custom-wizard');
     setWizardStep(1);
     window.scrollTo(0, 0);
@@ -181,6 +195,13 @@ export function SolutionBuildPage() {
   };
 
   const handleLoginSuccess = () => {
+    if (viewMode === 'catalog') {
+      // User clicked custom build button, show wizard after login
+      handleLoginSuccessForWizard();
+      return;
+    }
+
+    // User submitted wizard form, create request
     const newRequest: any = {
       id: `BLD-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 900) + 100).padStart(3, '0')}`,
       type: viewMode === 'custom-wizard' ? (wizardFormData.type as BuildRequestType) : 'pre-built',
