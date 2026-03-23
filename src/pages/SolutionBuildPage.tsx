@@ -179,7 +179,7 @@ export function SolutionBuildPage() {
       return;
     }
 
-    setShowLogin(true);
+    handleLoginSuccess();
   };
 
   const handleWizardSubmit = () => {
@@ -191,17 +191,11 @@ export function SolutionBuildPage() {
       return;
     }
 
-    setShowLogin(true);
+    handleLoginSuccess();
   };
 
   const handleLoginSuccess = () => {
-    if (viewMode === 'catalog') {
-      // User clicked custom build button, show wizard after login
-      handleLoginSuccessForWizard();
-      return;
-    }
-
-    // User submitted wizard form, create request
+    // User submitted form, create request
     const newRequest: any = {
       id: `BLD-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 900) + 100).padStart(3, '0')}`,
       type: viewMode === 'custom-wizard' ? (wizardFormData.type as BuildRequestType) : 'pre-built',
@@ -225,6 +219,7 @@ export function SolutionBuildPage() {
         { id: 'phase-4', name: 'Testing' as const, status: 'not-started' as const, progress: 0, tasks: [] },
         { id: 'phase-5', name: 'Deployment' as const, status: 'not-started' as const, progress: 0, tasks: [] }
       ],
+      currentPhase: 'Scoping' as const,
       blockers: [],
       deliverables: [],
       documents: [],

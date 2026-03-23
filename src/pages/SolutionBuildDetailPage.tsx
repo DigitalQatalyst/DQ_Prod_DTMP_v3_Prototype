@@ -137,6 +137,7 @@ export function SolutionBuildDetailPage() {
       budget: { approved: 0, spent: 0 },
       requirements: [],
       progress: 0,
+      currentPhase: 'Scoping' as const,
       phases: [
         { id: 'phase-1', name: 'Discovery' as const, status: 'not-started' as const, progress: 0, tasks: [] },
         { id: 'phase-2', name: 'Design' as const, status: 'not-started' as const, progress: 0, tasks: [] },

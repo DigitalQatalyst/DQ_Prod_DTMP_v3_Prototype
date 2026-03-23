@@ -657,7 +657,7 @@ export const createBuildRequestStage3Intake = (input: {
   });
 
   // 3. Write the back-link onto the build request
-  linkBuildRequestToStage3(request.id, stage3.id);
+  const updatedRequest = linkBuildRequestToStage3(request.id, stage3.id);
 
-  return { request, stage3 };
+  return { request: updatedRequest || request, stage3 };
 };
