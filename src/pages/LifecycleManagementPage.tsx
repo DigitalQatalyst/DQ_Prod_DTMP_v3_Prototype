@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { Link, useNavigate } from "react-router-dom";
-import { ChevronRight, Eye, FileText, RefreshCw, SlidersHorizontal, TrendingUp, User, X } from "lucide-react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { BookOpen, ChevronRight, Eye, FileText, Info, RefreshCw, Settings2, SlidersHorizontal, TrendingUp, User, X } from "lucide-react";
+import LCInitiativeDetailPanel from "./lifecycle/LCInitiativeDetailPanel";
+import TemplatesLibrary from "./lifecycle/TemplatesLibrary";
+import { getSessionRole, isTOStage3Role } from "@/data/sessionRole";
 
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -61,7 +64,7 @@ import {
   type LCServiceType,
 } from "@/data/lifecycle/serviceRequestState";
 
-type Stage1Tab = "initiatives" | "start-initiative";
+type Stage1Tab = "initiatives" | "templates" | "start-initiative";
 
 const STATUS_BADGE_CLASSES: Record<InitiativeStatus, string> = {
   Active: "bg-teal-100 text-teal-700 border-teal-200",
@@ -115,6 +118,7 @@ export default function LifecycleManagementPage() {
   const [activeTab, setActiveTab] = useState<Stage1Tab>("initiatives");
 
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [initiatives, setInitiatives] = useState<Initiative[]>(() => getInitiatives());
   const refreshInitiatives = () => setInitiatives(getInitiatives());
@@ -237,6 +241,31 @@ export default function LifecycleManagementPage() {
   const [priority, setPriority] = useState<(typeof PRIORITY_OPTIONS)[number]>("Medium");
   const [additionalContext, setAdditionalContext] = useState("");
 
+  // ── Portfolio gap-state pre-fill ─────────────────────────────────────────────
+  // When navigating here from Portfolio Management ("Initiate in Lifecycle" CTA),
+  // location.state carries { openStartInitiative: true, prefill: {...} }.
+  useEffect(() => {
+    const state = location.state as {
+      openStartInitiative?: boolean;
+      prefill?: { name?: string; division?: string; objective?: string; scope?: string };
+    } | null;
+    if (!state?.openStartInitiative) return;
+
+    setActiveTab("start-initiative");
+
+    if (state.prefill) {
+      const { name, division, objective: obj, scope: sc } = state.prefill;
+      if (name) setInitiativeName(name);
+      if (division) setInitiativeDivision(division as Division);
+      if (obj) setObjective(obj);
+      if (sc) setScope(sc);
+    }
+
+    // Clear state so a back/forward doesn't re-trigger
+    window.history.replaceState({}, "");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.key]);
+
   const openInitiativeRequest = (framework: InitiativeFramework) => {
     setSelectedFramework(framework);
     setRequestModalOpen(true);
@@ -338,6 +367,11 @@ export default function LifecycleManagementPage() {
     });
   };
 
+  const isTOUser = isTOStage3Role(getSessionRole());
+
+  // ── Initiative Detail Panel ──────────────────────────────────────────────────
+  const [detailInitiative, setDetailInitiative] = useState<Initiative | null>(null);
+
   const getInitiativeProjectCount = (i: Initiative) => i.projects.length;
 
   return (
@@ -367,20 +401,31 @@ export default function LifecycleManagementPage() {
             The operational execution layer for DEWA transformation initiatives — from conception through delivery and verified outcome.
           </p>
 
-          <div className="flex flex-wrap gap-6 text-sm text-muted-foreground" role="list" aria-label="Lifecycle summary stats">
-            <span className="flex items-center gap-2" role="listitem">
-              <RefreshCw className="w-4 h-4" />
-              {portfolioSummary.activeInitiatives} Active Initiatives
-            </span>
-            <span className="flex items-center gap-2" role="listitem">
-              <TrendingUp className="w-4 h-4" />
-              {portfolioSummary.totalProjects} Projects in Delivery
-            </span>
-            <span className="flex items-center gap-2" role="listitem">
-              <span className="inline-flex h-6 items-center px-2 rounded bg-orange-50 border border-orange-100 text-orange-700 text-xs font-semibold">
-                EA Office Governed
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap gap-6 text-sm text-muted-foreground" role="list" aria-label="Lifecycle summary stats">
+              <span className="flex items-center gap-2" role="listitem">
+                <RefreshCw className="w-4 h-4" />
+                {portfolioSummary.activeInitiatives} Active Initiatives
               </span>
-            </span>
+              <span className="flex items-center gap-2" role="listitem">
+                <TrendingUp className="w-4 h-4" />
+                {portfolioSummary.totalProjects} Projects in Delivery
+              </span>
+              <span className="flex items-center gap-2" role="listitem">
+                <span className="inline-flex h-6 items-center px-2 rounded bg-orange-50 border border-orange-100 text-orange-700 text-xs font-semibold">
+                  EA Office Governed
+                </span>
+              </span>
+            </div>
+            {isTOUser && (
+              <button
+                onClick={() => navigate("/stage3/lifecycle-management/overview")}
+                className="flex items-center gap-2 text-xs bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm flex-shrink-0"
+              >
+                <Settings2 className="w-3.5 h-3.5" />
+                TO Operations Console
+              </button>
+            )}
           </div>
         </div>
       </section>
@@ -394,6 +439,13 @@ export default function LifecycleManagementPage() {
                 className="flex items-center gap-2 px-6 py-4 text-muted-foreground hover:text-foreground font-medium transition-colors relative rounded-none border-b-2 border-transparent data-[state=active]:border-orange-600 data-[state=active]:text-primary-navy bg-transparent"
               >
                 Initiatives
+              </TabsTrigger>
+              <TabsTrigger
+                value="templates"
+                className="flex items-center gap-2 px-6 py-4 text-muted-foreground hover:text-foreground font-medium transition-colors relative rounded-none border-b-2 border-transparent data-[state=active]:border-orange-600 data-[state=active]:text-primary-navy bg-transparent"
+              >
+                <BookOpen className="w-4 h-4" />
+                Templates Library
               </TabsTrigger>
               <TabsTrigger
                 value="start-initiative"
@@ -591,6 +643,14 @@ export default function LifecycleManagementPage() {
 
                           <div className="flex gap-2">
                             <Button
+                              variant="outline"
+                              className="flex-1 border-gray-200 text-gray-700 hover:bg-gray-50 text-xs"
+                              onClick={() => setDetailInitiative(initiative)}
+                            >
+                              <Info className="w-3.5 h-3.5" />
+                              Details
+                            </Button>
+                            <Button
                               className="flex-1 bg-teal-50 text-teal-800 border border-teal-200 hover:bg-teal-100 text-xs"
                               onClick={() => openSeeInsights(initiative)}
                             >
@@ -605,6 +665,24 @@ export default function LifecycleManagementPage() {
                               Request
                             </Button>
                           </div>
+                          {initiative.fromPortfolio && initiative.portfolioCardId && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full text-xs border-blue-200 text-blue-700 hover:bg-blue-50 mt-1"
+                              onClick={() =>
+                                navigate("/marketplaces/portfolio-management", {
+                                  state: {
+                                    tab: "operational-asset-digitisation",
+                                    highlightCardId: initiative.portfolioCardId,
+                                  },
+                                })
+                              }
+                            >
+                              <ChevronRight className="w-3.5 h-3.5 mr-1" />
+                              View in Portfolio
+                            </Button>
+                          )}
                         </CardContent>
                       </Card>
                     ))}
@@ -612,6 +690,10 @@ export default function LifecycleManagementPage() {
                 )}
               </div>
             </div>
+          </TabsContent>
+
+          <TabsContent value="templates" className="mt-0">
+            <TemplatesLibrary />
           </TabsContent>
 
           <TabsContent value="start-initiative" className="mt-0">
@@ -1001,6 +1083,15 @@ export default function LifecycleManagementPage() {
           role={drawerRole}
           onClose={closeSeeInsights}
           onChangeRole={handleChangeRole}
+        />,
+        document.body
+      )}
+
+      {/* Initiative Detail Panel — portal to guarantee overlay above all content */}
+      {detailInitiative && createPortal(
+        <LCInitiativeDetailPanel
+          initiative={detailInitiative}
+          onClose={() => setDetailInitiative(null)}
         />,
         document.body
       )}
