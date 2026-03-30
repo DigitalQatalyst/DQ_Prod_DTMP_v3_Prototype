@@ -615,7 +615,7 @@ export default function SupportKnowledgeArticlePage() {
             </div>
 
             <h1 className="text-xl font-bold text-gray-900">{article.title}</h1>
-            <p className="text-[13px] text-gray-700">{article.summary}</p>
+            <p className="text-sm text-gray-700">{article.summary}</p>
 
             <div className="flex flex-wrap gap-4 text-xs text-gray-600">
               <span className="inline-flex items-center gap-1">
@@ -644,7 +644,7 @@ export default function SupportKnowledgeArticlePage() {
           <div className="bg-white border border-gray-200 rounded-lg p-5 space-y-4 mt-4">
             <div>
               <h3 className="text-lg font-semibold text-gray-900">Step-by-step actions</h3>
-              <ul className="list-disc ml-5 mt-2 text-[13px] text-gray-700 space-y-1">
+              <ul className="list-disc ml-5 mt-2 text-sm text-gray-700 space-y-1">
                 {detailContent.stepByStepActions.map((step, index) => (
                   <li key={`${article.id}-step-${index}`}>{step}</li>
                 ))}
@@ -653,7 +653,7 @@ export default function SupportKnowledgeArticlePage() {
 
             <div>
               <h3 className="text-lg font-semibold text-gray-900">Key takeaways</h3>
-              <ul className="list-disc ml-5 mt-2 text-[13px] text-gray-700 space-y-1">
+              <ul className="list-disc ml-5 mt-2 text-sm text-gray-700 space-y-1">
                 {detailContent.keyTakeaways.map((point, index) => (
                   <li key={`${article.id}-takeaway-${index}`}>{point}</li>
                 ))}
@@ -662,22 +662,22 @@ export default function SupportKnowledgeArticlePage() {
 
             <div>
               <h3 className="text-lg font-semibold text-gray-900">Full guidance</h3>
-              <p className="text-[13px] text-gray-700 mt-2">{detailContent.fullGuidance}</p>
+              <p className="text-sm text-gray-700 mt-2">{detailContent.fullGuidance}</p>
             </div>
 
             <div>
               <h3 className="text-base font-semibold text-gray-900">Why this matters</h3>
-              <p className="text-[13px] text-gray-700 mt-1">{detailContent.whyThisMatters}</p>
+              <p className="text-sm text-gray-700 mt-1">{detailContent.whyThisMatters}</p>
             </div>
 
             <div>
               <h3 className="text-base font-semibold text-gray-900">Signals to watch</h3>
-              <p className="text-[13px] text-gray-700 mt-1">{detailContent.signalsToWatch}</p>
+              <p className="text-sm text-gray-700 mt-1">{detailContent.signalsToWatch}</p>
             </div>
 
             <div>
               <h3 className="text-base font-semibold text-gray-900">If issues persist</h3>
-              <p className="text-[13px] text-gray-700 mt-1">{detailContent.ifIssuesPersist}</p>
+              <p className="text-sm text-gray-700 mt-1">{detailContent.ifIssuesPersist}</p>
             </div>
           </div>
         </div>
