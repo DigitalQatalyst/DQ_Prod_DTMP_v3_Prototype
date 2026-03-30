@@ -622,7 +622,7 @@ export default function LifecycleManagementPage() {
                       return (
                         <div
                           key={initiative.id}
-                          onClick={() => setDetailInitiative(initiative)}
+                          onClick={() => navigate(`/marketplaces/lifecycle-management/initiative/${initiative.id}`)}
                           className="bg-white border border-gray-200 rounded-xl hover:shadow-xl hover:border-orange-300 hover:-translate-y-1 transition-all duration-300 cursor-pointer overflow-hidden"
                         >
                           {/* Gradient header */}
