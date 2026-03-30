@@ -16,10 +16,8 @@ import {
   Server,
   ShieldCheck,
 } from "lucide-react";
-import { createPortal } from "react-dom";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
-import { SeeInsightsDrawer } from "@/components/lifecycle/SeeInsightsDrawer";
 import { RoleSelectorModal } from "@/components/lifecycle/RoleSelectorModal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -254,7 +252,6 @@ export default function LCInitiativeDetailPage() {
   const [activeTab, setActiveTab] = useState<DetailTab>("overview");
 
   // ── See Insights ────────────────────────────────────────────────────────────
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerRole, setDrawerRole] = useState<LifecycleInsightsRole | null>(() => getLifecycleRole());
   const [roleModalOpen, setRoleModalOpen] = useState(false);
 
@@ -262,7 +259,7 @@ export default function LCInitiativeDetailPage() {
     const currentRole = getLifecycleRole();
     if (currentRole) {
       setDrawerRole(currentRole);
-      setDrawerOpen(true);
+      navigate(`/marketplaces/lifecycle-management/initiative/${id}/insights`);
     } else {
       setRoleModalOpen(true);
     }
@@ -271,7 +268,7 @@ export default function LCInitiativeDetailPage() {
   const handleRoleSelected = (role: LifecycleInsightsRole) => {
     setDrawerRole(role);
     setRoleModalOpen(false);
-    setDrawerOpen(true);
+    navigate(`/marketplaces/lifecycle-management/initiative/${id}/insights`);
   };
 
   // ── Request Service ─────────────────────────────────────────────────────────
@@ -334,7 +331,6 @@ export default function LCInitiativeDetailPage() {
     );
   }
 
-  const gradient = DIVISION_GRADIENT[initiative.division] ?? "from-orange-400 to-amber-500";
   const isActive = initiative.status === "Active" || initiative.status === "At Risk";
 
   return (
@@ -356,35 +352,35 @@ export default function LCInitiativeDetailPage() {
         </div>
       </div>
 
-      {/* Hero */}
-      <section className={`bg-gradient-to-br ${gradient} py-10 lg:py-14`}>
+      {/* Page header */}
+      <section className="bg-white border-b border-gray-200 py-8">
         <div className="max-w-7xl mx-auto px-4">
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3">
             <div className="flex flex-wrap items-center gap-2">
               <Badge className={`${STATUS_BADGE[initiative.status]} border text-xs`}>
                 {initiative.status}
               </Badge>
-              <span className="text-white/70 text-sm">{initiative.division}</span>
+              <span className="text-gray-500 text-sm">{initiative.division}</span>
               {initiative.fromPortfolio && (
-                <Badge className="bg-white/20 text-white border-white/30 text-xs backdrop-blur-sm">
+                <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs">
                   Portfolio Cross-Link
                 </Badge>
               )}
             </div>
-            <h1 className="text-3xl lg:text-4xl font-bold text-white leading-tight">
+            <h1 className="text-3xl lg:text-4xl font-bold text-foreground leading-tight">
               {initiative.name}
             </h1>
-            <p className="text-white/80 text-base max-w-3xl leading-relaxed">
+            <p className="text-muted-foreground text-base max-w-3xl leading-relaxed">
               {initiative.description}
             </p>
-            <div className="flex flex-wrap items-center gap-2 mt-1">
-              <Badge className="bg-white/20 text-white border-white/30 text-xs">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge className="bg-gray-100 text-gray-700 border border-gray-200 text-xs">
                 {initiative.type}
               </Badge>
-              <Badge className="bg-white/20 text-white border-white/30 text-xs">
+              <Badge className="bg-gray-100 text-gray-700 border border-gray-200 text-xs">
                 EA: {initiative.eaAlignmentScore === null ? "TBD" : `${initiative.eaAlignmentScore}%`}
               </Badge>
-              <Badge className="bg-white/20 text-white border-white/30 text-xs">
+              <Badge className="bg-gray-100 text-gray-700 border border-gray-200 text-xs">
                 {initiativeProjects.length} Projects
               </Badge>
             </div>
@@ -645,17 +641,6 @@ export default function LCInitiativeDetailPage() {
       </Tabs>
 
       <Footer />
-
-      {/* See Insights drawer */}
-      {drawerOpen && drawerRole && initiative && createPortal(
-        <SeeInsightsDrawer
-          initiative={initiative}
-          role={drawerRole}
-          onClose={() => setDrawerOpen(false)}
-          onChangeRole={() => { setDrawerOpen(false); setRoleModalOpen(true); }}
-        />,
-        document.body
-      )}
 
       {/* Role selector modal */}
       {roleModalOpen && (

@@ -1013,17 +1013,7 @@ export default function PortfolioManagementPage() {
                     card={card}
                     tab={activeTab}
                     highlighted={card.id === highlightCardId}
-                    onInsights={() => openInsights(card)}
-                    onRequestReport={() => {
-                      const title =
-                        activeTab === "application-portfolio" ? (card as AppCard).name
-                        : activeTab === "project-portfolio" ? (card as ProjectCard).name
-                        : activeTab === "transformation-initiatives" ? (card as InitiativeCard).name
-                        : activeTab === "technology-rationalisation" ? (card as RationalisationCard).overlapTitle
-                        : activeTab === "governance-health" ? (card as GovernanceCard).division
-                        : (card as OADCard).assetClassName;
-                      openRequestReport(card, title);
-                    }}
+                    onCardClick={() => navigate(`/marketplaces/portfolio-management/card/${activeTab}/${card.id}`)}
                     onInitiateInLifecycle={() => handleInitiateInLifecycle(card)}
                   />
                 ))}
@@ -1095,15 +1085,13 @@ function PMCard({
   card,
   tab,
   highlighted = false,
-  onInsights,
-  onRequestReport,
+  onCardClick,
   onInitiateInLifecycle,
 }: {
   card: AnyCard;
   tab: PMTab;
   highlighted?: boolean;
-  onInsights: () => void;
-  onRequestReport: () => void;
+  onCardClick: () => void;
   onInitiateInLifecycle: () => void;
 }) {
   const cfg = PM_TAB_CONFIG[tab];
@@ -1128,7 +1116,7 @@ function PMCard({
     (tab === "application-portfolio" && (card as AppCard).status === "No Initiative");
 
   return (
-    <div className={`bg-white rounded-xl border transition-all hover:border-orange-300 hover:shadow-xl hover:-translate-y-0.5 flex flex-col ${highlighted ? "border-blue-400 ring-2 ring-blue-300 shadow-lg" : isGapState ? "border-orange-200" : "border-gray-200"}`}>
+    <div onClick={onCardClick} className={`bg-white rounded-xl border transition-all hover:border-orange-300 hover:shadow-xl hover:-translate-y-0.5 flex flex-col cursor-pointer ${highlighted ? "border-blue-400 ring-2 ring-blue-300 shadow-lg" : isGapState ? "border-orange-200" : "border-gray-200"}`}>
       {/* Card header gradient */}
       <div className={`bg-gradient-to-r ${cfg.gradient} rounded-t-xl px-4 py-3`}>
         <p className="text-white font-semibold text-sm leading-snug line-clamp-2">
@@ -1178,20 +1166,6 @@ function PMCard({
 
         {/* Actions */}
         <div className="mt-auto pt-2 flex flex-wrap gap-1.5">
-          <button
-            onClick={onInsights}
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-lg border border-orange-200 transition-colors"
-          >
-            <Eye className="w-3.5 h-3.5" />
-            See Insights
-          </button>
-          <button
-            onClick={onRequestReport}
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg border border-gray-200 transition-colors"
-          >
-            <FileText className="w-3.5 h-3.5" />
-            Request Report
-          </button>
           {showInitiateBtn && (
             <button
               onClick={onInitiateInLifecycle}
