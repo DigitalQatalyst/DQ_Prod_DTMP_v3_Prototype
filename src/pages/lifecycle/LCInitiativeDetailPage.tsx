@@ -10,7 +10,6 @@ import {
   Clock,
   ExternalLink,
   Eye,
-  FileText,
   FolderKanban,
   Package,
   Server,
@@ -18,30 +17,13 @@ import {
 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
-import { RoleSelectorModal } from "@/components/lifecycle/RoleSelectorModal";
+import { LCInsightsLoginModal } from "@/components/lifecycle/LCInsightsLoginModal";
+import { isUserAuthenticated } from "@/data/sessionAuth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { toast } from "@/hooks/use-toast";
 import {
   getInitiatives,
   getProjects,
@@ -51,17 +33,9 @@ import {
   type Project,
 } from "@/data/shared/lifecyclePortfolioStore";
 import {
-  getDemoAccount,
   getLifecycleRole,
   type LifecycleInsightsRole,
-  LIFECYCLE_ROLE_LABELS,
 } from "@/data/shared/lifecycleRole";
-import {
-  INITIATIVE_LEVEL_SERVICES,
-  LC_SERVICE_SLA,
-  addLCRequest,
-  type LCServiceType,
-} from "@/data/lifecycle/serviceRequestState";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -227,8 +201,6 @@ const DIVISION_GRADIENT: Partial<Record<Division, string>> = {
 const fmtBudget = (b: number | null | undefined) =>
   b == null ? "TBC" : `AED ${(b / 1_000_000).toFixed(0)}M`;
 
-const PRIORITY_OPTIONS = ["Critical", "High", "Medium", "Low"] as const;
-
 const TABS: { id: DetailTab; label: string; icon: React.FC<{ className?: string }> }[] = [
   { id: "overview", label: "Overview", icon: Briefcase },
   { id: "projects", label: "Projects", icon: FolderKanban },
@@ -253,55 +225,20 @@ export default function LCInitiativeDetailPage() {
 
   // ── See Insights ────────────────────────────────────────────────────────────
   const [drawerRole, setDrawerRole] = useState<LifecycleInsightsRole | null>(() => getLifecycleRole());
-  const [roleModalOpen, setRoleModalOpen] = useState(false);
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
 
   const openSeeInsights = () => {
-    const currentRole = getLifecycleRole();
-    if (currentRole) {
-      setDrawerRole(currentRole);
+    if (isUserAuthenticated()) {
       navigate(`/marketplaces/lifecycle-management/initiative/${id}/insights`);
     } else {
-      setRoleModalOpen(true);
+      setLoginModalOpen(true);
     }
   };
 
-  const handleRoleSelected = (role: LifecycleInsightsRole) => {
+  const handleLoginSuccess = (role: LifecycleInsightsRole) => {
     setDrawerRole(role);
-    setRoleModalOpen(false);
+    setLoginModalOpen(false);
     navigate(`/marketplaces/lifecycle-management/initiative/${id}/insights`);
-  };
-
-  // ── Request Service ─────────────────────────────────────────────────────────
-  const [serviceModalOpen, setServiceModalOpen] = useState(false);
-  const [serviceType, setServiceType] = useState<LCServiceType>(INITIATIVE_LEVEL_SERVICES[0]);
-  const [servicePriority, setServicePriority] = useState<(typeof PRIORITY_OPTIONS)[number]>("Medium");
-  const [serviceNotes, setServiceNotes] = useState("");
-
-  const openRequestService = () => {
-    setServiceType(INITIATIVE_LEVEL_SERVICES[0]);
-    setServicePriority("Medium");
-    setServiceNotes("");
-    setServiceModalOpen(true);
-  };
-
-  const submitServiceRequest = () => {
-    if (!initiative) return;
-    const role = drawerRole ?? "initiative-owner";
-    const account = getDemoAccount(role);
-    addLCRequest({
-      serviceType,
-      initiativeId: initiative.id,
-      initiativeName: initiative.name,
-      submittedBy: account.name,
-      submittedByRole: LIFECYCLE_ROLE_LABELS[role],
-      status: "Submitted",
-      priority: servicePriority,
-      notes: serviceNotes.trim() || undefined,
-      slaHours: LC_SERVICE_SLA[serviceType],
-    });
-    setServiceModalOpen(false);
-    toast({ title: "Service request submitted", description: "Saved for the Stage 2 tracker." });
-    navigate("/stage2/lifecycle-management");
   };
 
   // ── Derived data ────────────────────────────────────────────────────────────
@@ -601,13 +538,6 @@ export default function LCInitiativeDetailPage() {
                 {/* CTA buttons */}
                 <div className="space-y-2">
                   <Button
-                    className="w-full bg-orange-600 hover:bg-orange-700 text-white"
-                    onClick={openRequestService}
-                  >
-                    <FileText className="w-4 h-4 mr-2" />
-                    Request Service
-                  </Button>
-                  <Button
                     variant="outline"
                     className="w-full border-orange-200 text-orange-700 hover:bg-orange-50"
                     onClick={openSeeInsights}
@@ -642,63 +572,13 @@ export default function LCInitiativeDetailPage() {
 
       <Footer />
 
-      {/* Role selector modal */}
-      {roleModalOpen && (
-        <RoleSelectorModal
-          onSelect={handleRoleSelected}
-          onClose={() => setRoleModalOpen(false)}
+      {/* Insights login modal */}
+      {loginModalOpen && (
+        <LCInsightsLoginModal
+          onSuccess={handleLoginSuccess}
+          onClose={() => setLoginModalOpen(false)}
         />
       )}
-
-      {/* Request Service dialog */}
-      <Dialog open={serviceModalOpen} onOpenChange={setServiceModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Request Service</DialogTitle>
-            <DialogDescription>Submit an initiative-level service request to the TO team.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-              <p className="text-xs text-slate-500 mb-0.5">Initiative</p>
-              <p className="text-sm font-semibold text-slate-900">{initiative.name}</p>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="sm:col-span-2">
-                <label className="text-sm font-medium text-foreground">Service Type</label>
-                <Select value={serviceType} onValueChange={(v) => setServiceType(v as LCServiceType)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {INITIATIVE_LEVEL_SERVICES.map((s) => (
-                      <SelectItem key={s} value={s}>{s}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-foreground">Priority</label>
-                <Select value={servicePriority} onValueChange={(v) => setServicePriority(v as any)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {PRIORITY_OPTIONS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-foreground">SLA (hours)</label>
-                <Input value={String(LC_SERVICE_SLA[serviceType])} readOnly />
-              </div>
-              <div className="sm:col-span-2">
-                <label className="text-sm font-medium text-foreground">Notes (optional)</label>
-                <Textarea value={serviceNotes} onChange={(e) => setServiceNotes(e.target.value)} placeholder="What do you need from the TO team?" />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setServiceModalOpen(false)}>Cancel</Button>
-            <Button className="bg-orange-600 hover:bg-orange-700 text-white" onClick={submitServiceRequest}>Submit Request</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   Activity,
@@ -20,6 +20,37 @@ import {
 import { Header } from "@/components/layout/Header";
 import { Progress } from "@/components/ui/progress";
 import { RoleSelectorModal } from "@/components/lifecycle/RoleSelectorModal";
+import {
+  isUserAuthenticated,
+  setUserAuthenticated,
+} from "@/data/sessionAuth";
+import {
+  INITIATIVE_LEVEL_SERVICES,
+  LC_SERVICE_SLA,
+  addLCRequest,
+  type LCServiceType,
+} from "@/data/lifecycle/serviceRequestState";
+import { toast } from "@/hooks/use-toast";
+import { Toaster } from "@/components/ui/toaster";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { FileText } from "lucide-react";
 import {
   getInitiatives,
   getProjects,
@@ -503,10 +534,47 @@ export default function LCInsightsPage() {
   const [activeSection, setActiveSection] = useState<InsightSection>("health");
   const [role, setRole] = useState<LifecycleInsightsRole | null>(() => getLifecycleRole());
   const [roleModalOpen, setRoleModalOpen] = useState(false);
+  const [serviceModalOpen, setServiceModalOpen] = useState(false);
+  const [serviceType, setServiceType] = useState<LCServiceType>(INITIATIVE_LEVEL_SERVICES[0]);
+  const [servicePriority, setServicePriority] = useState<"Critical" | "High" | "Medium" | "Low">("Medium");
+  const [serviceNotes, setServiceNotes] = useState("");
+
+  useEffect(() => {
+    if (!isUserAuthenticated()) {
+      navigate(`/marketplaces/lifecycle-management/initiative/${id}`);
+    }
+  }, [id, navigate]);
 
   const refresh = () => setProjects(id ? getProjects(id) : []);
   const isOwner = role === "initiative-owner";
   const account = role ? getDemoAccount(role) : null;
+
+  const openRequestService = () => {
+    setServiceType(INITIATIVE_LEVEL_SERVICES[0]);
+    setServicePriority("Medium");
+    setServiceNotes("");
+    setServiceModalOpen(true);
+  };
+
+  const submitServiceRequest = () => {
+    if (!initiative) return;
+    const currentRole = role ?? "general-staff";
+    const account = getDemoAccount(currentRole);
+    addLCRequest({
+      serviceType,
+      initiativeId: initiative.id,
+      initiativeName: initiative.name,
+      submittedBy: account.name,
+      submittedByRole: LIFECYCLE_ROLE_LABELS[currentRole],
+      status: "Submitted",
+      priority: servicePriority,
+      notes: serviceNotes.trim() || undefined,
+      slaHours: LC_SERVICE_SLA[serviceType],
+    });
+    setServiceModalOpen(false);
+    toast({ title: "Service request submitted", description: "Saved to your Stage 2 tracker." });
+    navigate("/stage2/lifecycle-management");
+  };
 
   if (!initiative) {
     return (
@@ -595,22 +663,89 @@ export default function LCInsightsPage() {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-6">
-          <h2 className="text-xl font-bold text-white">
-            {SECTIONS.find((s) => s.id === activeSection)?.label}
-          </h2>
-          <p className="text-sm text-slate-400 mt-0.5">
-            {activeSection === "health" && "Overall programme health, progress and key metrics"}
-            {activeSection === "projects" && "All projects linked to this initiative with RAG status"}
-            {activeSection === "budget" && "Budget allocation, spend tracking and forecast"}
-            {activeSection === "milestones" && "Aggregated milestone tracker across all projects"}
-            {activeSection === "risks" && "Risk register sorted by severity"}
-            {activeSection === "blockers" && "Open blockers requiring resolution or escalation"}
-            {activeSection === "team" && "Programme team and stakeholder contacts"}
-            {activeSection === "activity" && "Recent activity and audit log"}
-          </p>
+        <div className="flex flex-col lg:flex-row gap-8">
+
+          {/* Main content */}
+          <div className="flex-1 min-w-0">
+            <div className="mb-6">
+              <h2 className="text-xl font-bold text-white">
+                {SECTIONS.find((s) => s.id === activeSection)?.label}
+              </h2>
+              <p className="text-sm text-slate-400 mt-0.5">
+                {activeSection === "health" && "Overall programme health, progress and key metrics"}
+                {activeSection === "projects" && "All projects linked to this initiative with RAG status"}
+                {activeSection === "budget" && "Budget allocation, spend tracking and forecast"}
+                {activeSection === "milestones" && "Aggregated milestone tracker across all projects"}
+                {activeSection === "risks" && "Risk register sorted by severity"}
+                {activeSection === "blockers" && "Open blockers requiring resolution or escalation"}
+                {activeSection === "team" && "Programme team and stakeholder contacts"}
+                {activeSection === "activity" && "Recent activity and audit log"}
+              </p>
+            </div>
+            {renderSection()}
+          </div>
+
+          {/* Sidebar */}
+          <aside className="lg:w-72 flex-shrink-0">
+            <div className="lg:sticky lg:top-28 bg-slate-900 border border-white/10 rounded-xl p-5 space-y-5">
+
+              {/* Initiative summary */}
+              <div>
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Initiative</p>
+                <h3 className="text-sm font-bold text-white leading-snug mb-1">{initiative.name}</h3>
+                <p className="text-xs text-slate-400">{initiative.division}</p>
+              </div>
+
+              <div className="border-t border-white/10" />
+
+              {/* Key facts */}
+              <div className="space-y-2.5">
+                {[
+                  { label: "Status", value: initiative.status },
+                  { label: "Owner", value: initiative.owner },
+                  { label: "Type", value: initiative.type },
+                  { label: "Target Date", value: initiative.targetDate },
+                  { label: "EA Alignment", value: initiative.eaAlignmentScore !== null ? `${initiative.eaAlignmentScore}%` : "TBD" },
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex justify-between gap-2">
+                    <span className="text-xs text-slate-500 flex-shrink-0">{label}</span>
+                    <span className="text-xs text-slate-300 text-right font-medium">{value}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Progress */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-500">Progress</span>
+                  <span className="text-white font-semibold">{initiative.progress}%</span>
+                </div>
+                <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-teal-400 rounded-full transition-all"
+                    style={{ width: `${initiative.progress}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="border-t border-white/10" />
+
+              {/* Request Service CTA */}
+              <button
+                onClick={openRequestService}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold rounded-xl transition-colors"
+              >
+                <FileText className="w-4 h-4" />
+                Request Service
+              </button>
+
+              <p className="text-xs text-slate-500 text-center">
+                Viewing as <span className="text-teal-400">{role ? LIFECYCLE_ROLE_LABELS[role] : "Guest"}</span>
+              </p>
+            </div>
+          </aside>
+
         </div>
-        {renderSection()}
       </div>
 
       {roleModalOpen && (
@@ -619,6 +754,66 @@ export default function LCInsightsPage() {
           onClose={() => setRoleModalOpen(false)}
         />
       )}
+
+      {/* Request Service dialog */}
+      <Dialog open={serviceModalOpen} onOpenChange={setServiceModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Request Service</DialogTitle>
+            <DialogDescription>Submit an initiative-level service request to the TO team.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+              <p className="text-xs text-slate-500 mb-0.5">Initiative</p>
+              <p className="text-sm font-semibold text-slate-900">{initiative?.name}</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2">
+                <label className="text-sm font-medium text-foreground">Service Type</label>
+                <Select value={serviceType} onValueChange={(v) => setServiceType(v as LCServiceType)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {INITIATIVE_LEVEL_SERVICES.map((s) => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground">Priority</label>
+                <Select value={servicePriority} onValueChange={(v) => setServicePriority(v as any)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {(["Critical", "High", "Medium", "Low"] as const).map((p) => (
+                      <SelectItem key={p} value={p}>{p}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground">SLA (hours)</label>
+                <Input value={String(LC_SERVICE_SLA[serviceType])} readOnly />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="text-sm font-medium text-foreground">Notes (optional)</label>
+                <Textarea
+                  value={serviceNotes}
+                  onChange={(e) => setServiceNotes(e.target.value)}
+                  placeholder="What do you need from the TO team?"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setServiceModalOpen(false)}>Cancel</Button>
+            <Button className="bg-orange-600 hover:bg-orange-700 text-white" onClick={submitServiceRequest}>
+              Submit Request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Toaster />
     </div>
   );
 }
