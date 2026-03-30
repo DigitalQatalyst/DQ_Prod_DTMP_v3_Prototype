@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Progress } from "@/components/ui/progress";
-import { RoleSelectorModal } from "@/components/lifecycle/RoleSelectorModal";
+import { LCInsightsLoginModal } from "@/components/lifecycle/LCInsightsLoginModal";
 import {
   isUserAuthenticated,
   setUserAuthenticated,
@@ -749,8 +749,8 @@ export default function LCInsightsPage() {
       </div>
 
       {roleModalOpen && (
-        <RoleSelectorModal
-          onSelect={(r) => { setRole(r); setRoleModalOpen(false); }}
+        <LCInsightsLoginModal
+          onSuccess={(r) => { setRole(r); setRoleModalOpen(false); }}
           onClose={() => setRoleModalOpen(false)}
         />
       )}
