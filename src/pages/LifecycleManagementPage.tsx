@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { BookOpen, ChevronRight, Eye, FileText, Info, RefreshCw, Settings2, SlidersHorizontal, TrendingUp, User, X } from "lucide-react";
+import { Activity, BookOpen, Brain, ChevronRight, Cpu, Database, Eye, FileText, Globe, Layers, Leaf, Network, RefreshCw, Server, Settings2, Shield, SlidersHorizontal, TrendingUp, X, Zap } from "lucide-react";
 import LCInitiativeDetailPanel from "./lifecycle/LCInitiativeDetailPanel";
 import TemplatesLibrary from "./lifecycle/TemplatesLibrary";
 import { getSessionRole, isTOStage3Role } from "@/data/sessionRole";
@@ -33,8 +33,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-
 import { toast } from "@/hooks/use-toast";
 
 import {
@@ -112,6 +110,41 @@ const INITIATIVE_CARD_TYPE_COLORS = [
 function pickTypeBadgeClasses(type: string): string {
   const idx = type.length % INITIATIVE_CARD_TYPE_COLORS.length;
   return INITIATIVE_CARD_TYPE_COLORS[idx] ?? INITIATIVE_CARD_TYPE_COLORS[0];
+}
+
+const DIVISION_GRADIENT: Partial<Record<Division, string>> = {
+  Generation: "from-orange-400 to-amber-500",
+  Transmission: "from-blue-400 to-blue-600",
+  Distribution: "from-green-400 to-teal-500",
+  Water: "from-cyan-400 to-blue-500",
+  "Customer Services": "from-purple-400 to-violet-500",
+  "Corporate & Strategy": "from-slate-400 to-gray-600",
+  "Business Support & HR": "from-rose-400 to-pink-500",
+  "Innovation & AI": "from-violet-400 to-purple-600",
+  "DEWA Group Subsidiaries": "from-emerald-400 to-teal-600",
+  "All Divisions": "from-orange-400 to-red-500",
+};
+
+function getInitiativeIcon(type: InitiativeType) {
+  const map: Partial<Record<InitiativeType, typeof Activity>> = {
+    "Architecture Remediation": Network,
+    "Application Modernisation": Server,
+    "Technology Rationalisation": Layers,
+    "AI Deployment": Brain,
+    "EA Maturity Improvement": TrendingUp,
+    "DXP Programme": Globe,
+    "DWS Modernisation": Zap,
+    "IT/OT Convergence": Cpu,
+    "Net-Zero Technology": Leaf,
+    "Security Uplift": Shield,
+    "Data Platform": Database,
+    "Platform Deployment": Server,
+    "Digital": Globe,
+    "Operational": Activity,
+    "Strategic": TrendingUp,
+    "Innovation": Zap,
+  };
+  return map[type] ?? Activity;
 }
 
 export default function LifecycleManagementPage() {
@@ -583,109 +616,73 @@ export default function LifecycleManagementPage() {
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-                    {filteredInitiatives.map((initiative) => (
-                      <Card
-                        key={initiative.id}
-                        className="bg-white border border-gray-200 rounded-xl hover:border-teal-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden"
-                      >
-                        <CardContent className="p-5 space-y-4">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="text-xs text-gray-500 mb-2 truncate">{initiative.division}</p>
-                              <h3 className="text-base font-semibold text-gray-900 line-clamp-2">{initiative.name}</h3>
-                            </div>
-                            <Badge className={`${STATUS_BADGE_CLASSES[initiative.status]} border flex-shrink-0`}>
+                    {filteredInitiatives.map((initiative) => {
+                      const InitIcon = getInitiativeIcon(initiative.type as InitiativeType);
+                      return (
+                        <div
+                          key={initiative.id}
+                          onClick={() => setDetailInitiative(initiative)}
+                          className="bg-white border border-gray-200 rounded-xl hover:shadow-xl hover:border-orange-300 hover:-translate-y-1 transition-all duration-300 cursor-pointer overflow-hidden"
+                        >
+                          {/* Gradient header */}
+                          <div
+                            className={`h-32 bg-gradient-to-br ${DIVISION_GRADIENT[initiative.division] ?? "from-orange-400 to-amber-500"} flex items-center justify-center relative`}
+                          >
+                            <InitIcon className="w-12 h-12 text-white/40" />
+                            <span
+                              className={`absolute top-3 right-3 px-2.5 py-1 rounded-full text-xs font-semibold border ${STATUS_BADGE_CLASSES[initiative.status]}`}
+                            >
                               {initiative.status}
-                            </Badge>
-                          </div>
-
-                          {/* Owner + budget row */}
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1 truncate">
-                              <User className="w-3 h-3 flex-shrink-0" />
-                              <span className="truncate">{initiative.owner ?? "Unassigned"}</span>
                             </span>
-                            <span className="font-medium text-gray-700 flex-shrink-0 ml-2">
-                              {fmtBudget(initiative.budget)}
-                            </span>
-                          </div>
-
-                          <div className="flex flex-wrap items-center gap-2">
-                            <Badge variant="outline" className={`text-xs ${pickTypeBadgeClasses(initiative.type)} border`}>
-                              {initiative.type}
-                            </Badge>
-                            <Badge className={`text-xs ${initiative.eaAlignmentScore === null ? "bg-slate-100 text-slate-700 border-slate-200" : "bg-slate-50 text-slate-800 border-slate-200"} border`}>
-                              EA: {initiative.eaAlignmentScore === null ? "TBD" : `${initiative.eaAlignmentScore}%`}
-                            </Badge>
                             {initiative.fromPortfolio && (
-                              <Badge variant="outline" className="text-xs border-blue-200 bg-blue-50 text-blue-700">
+                              <span className="absolute top-3 left-3 bg-white/20 backdrop-blur-sm text-white px-2.5 py-1 rounded-full text-xs font-semibold">
                                 Portfolio
-                              </Badge>
+                              </span>
                             )}
                           </div>
 
-                          {(initiative.status === "Active" || initiative.status === "At Risk") && (
-                            <div className="space-y-1.5">
-                              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                <span>Progress</span>
-                                <span className="font-medium text-foreground">{initiative.progress}%</span>
-                              </div>
-                              <Progress value={initiative.progress} className="h-1.5" />
+                          {/* Card body */}
+                          <div className="p-4">
+                            <p className="text-xs text-gray-500 mb-2">{initiative.division}</p>
+                            <h3 className="text-base font-semibold text-gray-900 mb-2 line-clamp-2">
+                              {initiative.name}
+                            </h3>
+                            <p className="text-sm text-gray-600 mb-3 line-clamp-3">
+                              {initiative.description}
+                            </p>
+
+                            {/* Metadata strip */}
+                            <div className="flex flex-wrap items-center gap-2 mb-3">
+                              <Badge variant="outline" className={`text-xs ${pickTypeBadgeClasses(initiative.type)} border`}>
+                                {initiative.type}
+                              </Badge>
+                              <Badge className="text-xs bg-slate-50 text-slate-700 border border-slate-200">
+                                EA: {initiative.eaAlignmentScore === null ? "TBD" : `${initiative.eaAlignmentScore}%`}
+                              </Badge>
                             </div>
-                          )}
 
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span>{getInitiativeProjectCount(initiative)} projects</span>
-                            <span>Target: {initiative.targetDate}</span>
+                            {/* Bottom strip — progress bar or meta */}
+                            {(initiative.status === "Active" || initiative.status === "At Risk") ? (
+                              <div className="border-t border-gray-100 pt-3 space-y-1.5">
+                                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                  <span className="flex items-center gap-1">
+                                    <Activity className="w-3 h-3" />
+                                    {getInitiativeProjectCount(initiative)} projects
+                                  </span>
+                                  <span className="font-medium text-foreground">{initiative.progress}%</span>
+                                </div>
+                                <Progress value={initiative.progress} className="h-1.5" />
+                              </div>
+                            ) : (
+                              <div className="border-t border-gray-100 pt-3 flex items-center justify-between text-xs text-muted-foreground">
+                                <span>{getInitiativeProjectCount(initiative)} projects</span>
+                                <span>Target: {initiative.targetDate}</span>
+                              </div>
+                            )}
                           </div>
-
-                          <Separator />
-
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              className="flex-1 border-gray-200 text-gray-700 hover:bg-gray-50 text-xs"
-                              onClick={() => setDetailInitiative(initiative)}
-                            >
-                              <Info className="w-3.5 h-3.5" />
-                              Details
-                            </Button>
-                            <Button
-                              className="flex-1 bg-teal-50 text-teal-800 border border-teal-200 hover:bg-teal-100 text-xs"
-                              onClick={() => openSeeInsights(initiative)}
-                            >
-                              <Eye className="w-3.5 h-3.5" />
-                              Insights
-                            </Button>
-                            <Button
-                              className="flex-1 bg-orange-600 hover:bg-orange-700 text-white text-xs"
-                              onClick={() => openRequestService(initiative)}
-                            >
-                              <FileText className="w-3.5 h-3.5" />
-                              Request
-                            </Button>
-                          </div>
-                          {initiative.fromPortfolio && initiative.portfolioCardId && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="w-full text-xs border-blue-200 text-blue-700 hover:bg-blue-50 mt-1"
-                              onClick={() =>
-                                navigate("/marketplaces/portfolio-management", {
-                                  state: {
-                                    tab: "operational-asset-digitisation",
-                                    highlightCardId: initiative.portfolioCardId,
-                                  },
-                                })
-                              }
-                            >
-                              <ChevronRight className="w-3.5 h-3.5 mr-1" />
-                              View in Portfolio
-                            </Button>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -1092,6 +1089,16 @@ export default function LifecycleManagementPage() {
         <LCInitiativeDetailPanel
           initiative={detailInitiative}
           onClose={() => setDetailInitiative(null)}
+          onSeeInsights={() => {
+            const ini = detailInitiative;
+            setDetailInitiative(null);
+            openSeeInsights(ini);
+          }}
+          onRequestService={() => {
+            const ini = detailInitiative;
+            setDetailInitiative(null);
+            openRequestService(ini);
+          }}
         />,
         document.body
       )}
