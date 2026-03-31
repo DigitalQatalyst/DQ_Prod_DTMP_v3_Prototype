@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { ArrowLeft, Calendar, Clock, Eye, CheckCircle, Tag, ChevronRight } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, Eye, CheckCircle, Tag, ChevronRight, ArrowRight } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { knowledgeArticles, KnowledgeArticle } from "@/data/supportData";
@@ -580,6 +580,12 @@ export default function SupportKnowledgeArticlePage() {
 
   const detailContent = buildKnowledgeDetailContent(article);
 
+  const relatedArticles = useMemo(() => {
+    return knowledgeArticles
+      .filter((a) => a.id !== article.id && a.category === article.category)
+      .slice(0, 3);
+  }, [article.id, article.category]);
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Header />
@@ -680,6 +686,25 @@ export default function SupportKnowledgeArticlePage() {
               <p className="text-sm text-gray-700 mt-1">{detailContent.ifIssuesPersist}</p>
             </div>
           </div>
+
+          {relatedArticles.length > 0 && (
+            <div className="mt-6 bg-white border border-gray-200 rounded-lg p-5">
+              <h3 className="text-base font-semibold text-gray-900 mb-3">Related Articles</h3>
+              <div className="space-y-2">
+                {relatedArticles.map((related) => (
+                  <button
+                    key={related.id}
+                    type="button"
+                    onClick={() => navigate(`/marketplaces/support-services/knowledge/${related.id}`)}
+                    className="flex items-center gap-2 w-full text-left text-sm text-orange-600 hover:text-orange-700 py-1.5 group"
+                  >
+                    <ArrowRight className="w-3.5 h-3.5 flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
+                    {related.title}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </main>
       <Footer />
