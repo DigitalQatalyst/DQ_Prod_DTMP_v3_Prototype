@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Activity, AlertTriangle, ArrowLeft, BarChart2, Calendar,
@@ -9,7 +9,8 @@ import { Header } from "@/components/layout/Header";
 import { LCInsightsLoginModal } from "@/components/lifecycle/LCInsightsLoginModal";
 import { isUserAuthenticated } from "@/data/sessionAuth";
 import {
-  INITIATIVE_LEVEL_SERVICES, LC_SERVICE_SLA, addLCRequest, type LCServiceType,
+  INITIATIVE_LEVEL_SERVICES, LC_SERVICE_SLA, addEscalation, addLCRequest,
+  getLCRequestsByInitiative, type LCServiceType,
 } from "@/data/lifecycle/serviceRequestState";
 import { toast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
@@ -22,9 +23,12 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  getInitiatives, getProjects, updateMilestoneStatus, updateProjectRAG,
+  getInitiatives, getProjects, resolveBlocker, updateBlockerEscalation,
+  updateInitiativeBudgetSpent, updateInitiativeStatus, updateMilestoneStatus,
+  updateProjectRAG, updateRiskStatus,
   type Initiative, type Project, type RAGStatus, type MilestoneStatus,
 } from "@/data/shared/lifecyclePortfolioStore";
+import { addActivityEvent, getActivityEvents, type ActivityEvent } from "@/data/shared/activityEventStore";
 import {
   getLifecycleRole, getDemoAccount, type LifecycleInsightsRole, LIFECYCLE_ROLE_LABELS,
 } from "@/data/shared/lifecycleRole";
@@ -135,8 +139,9 @@ function StatCard({ label, value, sub, accent }: {
 
 // ── HEALTH ────────────────────────────────────────────────────────────────────
 
-function HealthSection({ initiative, projects, role }: {
+function HealthSection({ initiative, projects, role, onInitiativeStatusChange }: {
   initiative: Initiative; projects: Project[]; role: LifecycleInsightsRole | null;
+  onInitiativeStatusChange: (status: string) => void;
 }) {
   const days       = daysUntil(initiative.targetDate);
   const spentPct   = initiative.budget ? Math.round((initiative.budgetSpent / initiative.budget) * 100) : 0;
@@ -245,6 +250,19 @@ function HealthSection({ initiative, projects, role }: {
           <p className="font-bold">{overallRAG} — Overall Programme Health</p>
           <p className="text-xs opacity-70 mt-0.5">{initiative.status} · {initiative.division} · {initiative.type}</p>
         </div>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-slate-400">Initiative Status:</span>
+        <select
+          value={initiative.status}
+          onChange={(e) => onInitiativeStatusChange(e.target.value)}
+          className="bg-slate-800 border border-white/10 text-white text-xs rounded px-2 py-1"
+        >
+          {["Active", "Scoping", "At Risk", "On Hold", "Completed"].map((status) => (
+            <option key={status}>{status}</option>
+          ))}
+        </select>
       </div>
 
       {/* Attention Required */}
@@ -605,8 +623,22 @@ function ProjectsSection({ projects, isOwner, role, onRefresh }: {
 
 // ── BUDGET ────────────────────────────────────────────────────────────────────
 
-function BudgetSection({ initiative, projects, role }: {
+function BudgetSection({
+  initiative,
+  projects,
+  role,
+  budgetEditOpen,
+  budgetSpentInput,
+  onBudgetSpentInputChange,
+  onBudgetEditOpenChange,
+  onSaveBudgetSpent,
+}: {
   initiative: Initiative; projects: Project[]; role: LifecycleInsightsRole | null;
+  budgetEditOpen: boolean;
+  budgetSpentInput: string;
+  onBudgetSpentInputChange: (value: string) => void;
+  onBudgetEditOpenChange: (open: boolean) => void;
+  onSaveBudgetSpent: () => void;
 }) {
   const total     = initiative.budget ?? 0;
   const spent     = initiative.budgetSpent;
@@ -734,15 +766,45 @@ function BudgetSection({ initiative, projects, role }: {
           })}
         </div>
       </div>
+
+      <div className="bg-white/5 rounded-xl border border-white/10 p-4 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-xs text-slate-400">Update total spend (AED):</span>
+          <button
+            onClick={() => onBudgetEditOpenChange(!budgetEditOpen)}
+            className="text-xs text-blue-300 hover:text-blue-200"
+          >
+            {budgetEditOpen ? "Hide" : "Edit"}
+          </button>
+        </div>
+        {budgetEditOpen && (
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              value={budgetSpentInput}
+              onChange={(e) => onBudgetSpentInputChange(e.target.value)}
+              placeholder={String(initiative.budgetSpent)}
+              className="flex-1 bg-slate-800 border border-white/10 text-white text-xs rounded px-2 py-1.5"
+            />
+            <button
+              onClick={onSaveBudgetSpent}
+              className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded"
+            >
+              Save
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 // ── MILESTONES ────────────────────────────────────────────────────────────────
 
-function MilestonesSection({ projects, isOwner, role, onRefresh }: {
+function MilestonesSection({ projects, isOwner, role, onMilestoneStatusChange }: {
   projects: Project[]; isOwner: boolean;
-  role: LifecycleInsightsRole | null; onRefresh: () => void;
+  role: LifecycleInsightsRole | null;
+  onMilestoneStatusChange: (projectId: string, milestoneId: string, status: MilestoneStatus, name: string) => void;
 }) {
   const allMs = projects.flatMap(p =>
     p.milestones.map(m => ({ ...m, projectName: p.name, projectId: p.id }))
@@ -848,13 +910,16 @@ function MilestonesSection({ projects, isOwner, role, onRefresh }: {
                     )}
                   </div>
                 </div>
-                {isOwner && ms.status !== "Complete" && (
-                  <button
-                    onClick={() => { updateMilestoneStatus(ms.projectId, ms.id, "Complete"); onRefresh(); }}
-                    className="text-xs text-teal-400 hover:text-teal-300 px-2 py-0.5 rounded hover:bg-teal-500/10 transition-colors flex-shrink-0 font-medium mt-0.5"
+                {isOwner && (
+                  <select
+                    value={ms.status}
+                    onChange={(e) => onMilestoneStatusChange(ms.projectId, ms.id, e.target.value as MilestoneStatus, ms.name)}
+                    className="text-xs bg-slate-800 border border-white/10 text-slate-300 rounded px-1.5 py-0.5 flex-shrink-0 mt-0.5"
                   >
-                    Mark Complete
-                  </button>
+                    {["Not Started", "In Progress", "Complete", "Delayed"].map((status) => (
+                      <option key={status}>{status}</option>
+                    ))}
+                  </select>
                 )}
               </div>
             );
@@ -910,14 +975,16 @@ function MilestonesSection({ projects, isOwner, role, onRefresh }: {
 
 // ── RISKS ─────────────────────────────────────────────────────────────────────
 
-function RisksSection({ projects, role }: {
+function RisksSection({ projects, role, onRiskStatusChange, onRequestSupport }: {
   projects: Project[]; role: LifecycleInsightsRole | null;
+  onRiskStatusChange: (projectId: string, riskId: string, status: "Open" | "Mitigated" | "Accepted" | "Closed", title: string) => void;
+  onRequestSupport: (risk: Project["risks"][number] & { projectId: string }) => void;
 }) {
   const [expandedRisk, setExpandedRisk] = useState<string | null>(null);
 
   const SEV_ORDER = ["Critical", "High", "Medium", "Low"];
   const allRisks  = projects
-    .flatMap(p => p.risks.map(r => ({ ...r, projectName: p.name })))
+    .flatMap(p => p.risks.map(r => ({ ...r, projectName: p.name, projectId: p.id })))
     .sort((a, b) => SEV_ORDER.indexOf(a.severity) - SEV_ORDER.indexOf(b.severity));
 
   if (!allRisks.length)
@@ -1068,6 +1135,24 @@ function RisksSection({ projects, role }: {
                           <p className="text-xs text-teal-200 leading-relaxed">{r.mitigation}</p>
                         </div>
                       </div>
+                      <div className="flex items-center gap-2 pt-2 border-t border-white/10 flex-wrap">
+                        <span className="text-xs text-slate-500">Update status:</span>
+                        {(["Open", "Mitigated", "Accepted", "Closed"] as const).map((status) => (
+                          <button
+                            key={status}
+                            onClick={() => onRiskStatusChange(r.projectId, r.id, status, r.title)}
+                            className={`text-xs px-2 py-0.5 rounded border ${r.status === status ? "opacity-100" : "opacity-40 hover:opacity-70"} ${SEV_COLORS[r.severity]}`}
+                          >
+                            {status}
+                          </button>
+                        ))}
+                        <button
+                          onClick={() => onRequestSupport(r)}
+                          className="text-xs text-orange-400 hover:text-orange-300 border border-orange-500/30 px-2 py-0.5 rounded ml-auto"
+                        >
+                          Get TO Support
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1082,11 +1167,20 @@ function RisksSection({ projects, role }: {
 
 // ── BLOCKERS ──────────────────────────────────────────────────────────────────
 
-function BlockersSection({ projects, role }: {
-  projects: Project[]; role: LifecycleInsightsRole | null;
+function BlockersSection({ projects, role, initiative, accountName, onEscalateBlocker, onResolveBlocker }: {
+  projects: Project[]; role: LifecycleInsightsRole | null; initiative: Initiative;
+  accountName: string;
+  onEscalateBlocker: (
+    projectId: string,
+    blockerId: string,
+    title: string,
+    escalationStatus: "Escalated to TO" | "Escalated to Division Head",
+    whatIsNeeded: string
+  ) => void;
+  onResolveBlocker: (projectId: string, blockerId: string, title: string) => void;
 }) {
   const allBlockers = projects.flatMap(p =>
-    p.blockers.filter(b => !b.resolved).map(b => ({ ...b, projectName: p.name }))
+    p.blockers.filter(b => !b.resolved).map(b => ({ ...b, projectName: p.name, projectId: p.id }))
   );
 
   const daysOpen = (dateRaised: string) =>
@@ -1156,6 +1250,9 @@ function BlockersSection({ projects, role }: {
     const days = daysOpen(b.dateRaised);
     const isEscHigh = b.escalationStatus === "Escalated to Division Head";
     const isEscMid  = b.escalationStatus === "Escalated to TO";
+    const nextEscalation = b.escalationStatus === "Not Escalated"
+      ? "Escalated to TO"
+      : "Escalated to Division Head";
     return (
       <div className={`rounded-xl border p-4 ${
         isEscHigh ? "bg-red-500/5 border-red-500/20" :
@@ -1187,6 +1284,25 @@ function BlockersSection({ projects, role }: {
             <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${ESC_COLORS[b.escalationStatus]}`}>
               {b.escalationStatus}
             </span>
+            <div className="flex items-center gap-2 mt-3 flex-wrap">
+              {b.escalationStatus !== "Escalated to Division Head" && (
+                <button
+                  onClick={() => onEscalateBlocker(b.projectId, b.id, b.title, nextEscalation, b.whatIsNeeded)}
+                  className="text-xs text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded hover:bg-amber-500/10"
+                >
+                  Escalate to {nextEscalation.replace("Escalated to ", "")}
+                </button>
+              )}
+              <button
+                onClick={() => onResolveBlocker(b.projectId, b.id, b.title)}
+                className="text-xs text-green-400 border border-green-500/30 px-2 py-0.5 rounded hover:bg-green-500/10"
+              >
+                Mark Resolved
+              </button>
+              <span className="text-xs text-slate-500 ml-auto">
+                {initiative.name} Â· {accountName}
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -1414,7 +1530,7 @@ function TeamSection({ initiative, projects, role }: {
 
 // ── ACTIVITY ──────────────────────────────────────────────────────────────────
 
-function ActivitySection({ initiative, projects, role }: {
+function LegacyActivitySection({ initiative, projects, role }: {
   initiative: Initiative; projects: Project[]; role: LifecycleInsightsRole | null;
 }) {
   const allMsData    = projects.flatMap(p => p.milestones.map(m => ({ ...m, projectName: p.name, pmName: p.pmName })));
@@ -1484,7 +1600,7 @@ function ActivitySection({ initiative, projects, role }: {
           <div className="flex-1 min-w-0 pb-1">
             <p className="text-sm text-slate-200">
               <span className="font-semibold text-white">{ev.actor}</span>
-              <span className="text-slate-400"> · {ev.action}</span>
+              <span className="text-slate-400"> - {ev.action}</span>
             </p>
             {ev.note && (
               <p className="text-xs text-slate-500 mt-0.5 italic">{ev.note}</p>
@@ -1499,32 +1615,110 @@ function ActivitySection({ initiative, projects, role }: {
 
 // ── Main page ──────────────────────────────────────────────────────────────────
 
+function ActivitySection({ role, events }: {
+  role: LifecycleInsightsRole | null; events: ActivityEvent[];
+}) {
+  const colorByEventType: Record<ActivityEvent["eventType"], string> = {
+    milestone: "bg-green-400",
+    risk: "bg-orange-400",
+    blocker: "bg-amber-400",
+    escalation: "bg-red-400",
+    resolve: "bg-green-400",
+    budget: "bg-blue-400",
+    status: "bg-teal-400",
+    request: "bg-purple-400",
+    rag: "bg-yellow-400",
+    system: "bg-slate-400",
+  };
+
+  const shown = role === "general-staff" ? events.slice(0, 2) : events;
+
+  return (
+    <div className="bg-white/5 rounded-xl border border-white/10 overflow-hidden">
+      {!shown.length && (
+        <div className="px-5 py-8 text-center">
+          <p className="text-sm text-slate-400">No activity logged for this initiative yet.</p>
+        </div>
+      )}
+      {shown.map((ev, i) => (
+        <div key={ev.id} className="flex gap-4 px-5 py-4 border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
+          <div className="flex flex-col items-center gap-0 flex-shrink-0 w-3 mt-1.5">
+            <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${colorByEventType[ev.eventType]}`} />
+            {i < shown.length - 1 && (
+              <div className="w-px flex-1 bg-white/10 mt-1" style={{ minHeight: 16 }} />
+            )}
+          </div>
+          <div className="flex-1 min-w-0 pb-1">
+            <p className="text-sm text-slate-200">
+              <span className="font-semibold text-white">{ev.actor}</span>
+              <span className="text-slate-400"> - {ev.action}</span>
+            </p>
+            {ev.note && (
+              <p className="text-xs text-slate-500 mt-0.5 italic">{ev.note}</p>
+            )}
+            <p className="text-xs text-slate-600 mt-1">{relTime(ev.timestamp)}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function LCInsightsPage() {
   const { id }   = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const initiative = useMemo(() => getInitiatives().find(i => i.id === id) ?? null, [id]);
+  const [initiative,       setInitiative]       = useState<Initiative | null>(() => getInitiatives().find(i => i.id === id) ?? null);
   const [projects,         setProjects]         = useState<Project[]>(() => id ? getProjects(id) : []);
   const [activeSection,    setActiveSection]    = useState<InsightSection>("health");
   const [role,             setRole]             = useState<LifecycleInsightsRole | null>(() => getLifecycleRole());
   const [roleModalOpen,    setRoleModalOpen]    = useState(false);
+  const [activityKey,      setActivityKey]      = useState(0);
   const [serviceModalOpen, setServiceModalOpen] = useState(false);
   const [serviceType,      setServiceType]      = useState<LCServiceType>(INITIATIVE_LEVEL_SERVICES[0]);
   const [servicePriority,  setServicePriority]  = useState<"Critical" | "High" | "Medium" | "Low">("Medium");
   const [serviceNotes,     setServiceNotes]     = useState("");
+  const [requests,         setRequests]         = useState(() => initiative ? getLCRequestsByInitiative(initiative.id) : []);
+  const [serviceSource,    setServiceSource]    = useState<{ type: "risk" | "blocker" | "initiative"; id: string; name: string } | null>(null);
+  const [resolveTarget,    setResolveTarget]    = useState<{ projectId: string; blockerId: string; title: string } | null>(null);
+  const [resolveNote,      setResolveNote]      = useState("");
+  const [resolveModalOpen, setResolveModalOpen] = useState(false);
+  const [budgetEditOpen,   setBudgetEditOpen]   = useState(false);
+  const [budgetSpentInput, setBudgetSpentInput] = useState("");
 
   useEffect(() => {
     if (!isUserAuthenticated()) navigate(`/marketplaces/lifecycle-management/initiative/${id}`);
   }, [id, navigate]);
 
-  const refresh  = () => setProjects(id ? getProjects(id) : []);
+  const refresh = () => {
+    setInitiative(getInitiatives().find((item) => item.id === id) ?? null);
+    setProjects(id ? getProjects(id) : []);
+  };
   const isOwner  = role === "initiative-owner";
   const account  = role ? getDemoAccount(role) : null;
+
+  useEffect(() => {
+    setInitiative(getInitiatives().find((item) => item.id === id) ?? null);
+    setProjects(id ? getProjects(id) : []);
+  }, [id]);
+
+  useEffect(() => {
+    setRequests(initiative ? getLCRequestsByInitiative(initiative.id) : []);
+  }, [initiative]);
+
+  const logAndRefresh = (event: Omit<ActivityEvent, "id" | "timestamp">) => {
+    if (!initiative) return;
+    addActivityEvent(event);
+    refresh();
+    setActivityKey((key) => key + 1);
+    setRequests(getLCRequestsByInitiative(initiative.id));
+  };
 
   const openRequestService = () => {
     setServiceType(INITIATIVE_LEVEL_SERVICES[0]);
     setServicePriority("Medium");
     setServiceNotes("");
+    setServiceSource(initiative ? { type: "initiative", id: initiative.id, name: initiative.name } : null);
     setServiceModalOpen(true);
   };
 
@@ -1536,8 +1730,22 @@ export default function LCInsightsPage() {
       serviceType, initiativeId: initiative.id, initiativeName: initiative.name,
       submittedBy: acc.name, submittedByRole: LIFECYCLE_ROLE_LABELS[r],
       status: "Submitted", priority: servicePriority,
-      notes: serviceNotes.trim() || undefined, slaHours: LC_SERVICE_SLA[serviceType],
+      notes: serviceNotes.trim() || undefined,
+      sourceType: serviceSource?.type,
+      sourceId: serviceSource?.id,
+      sourceName: serviceSource?.name,
+      slaHours: LC_SERVICE_SLA[serviceType],
     });
+    addActivityEvent({
+      initiativeId: initiative.id,
+      actor: acc.name,
+      action: "Service request submitted",
+      note: `${serviceType}${serviceSource ? ` â€” ${serviceSource.type}: ${serviceSource.name}` : ""}`,
+      eventType: "request",
+      sourceType: "service-request",
+    });
+    setRequests(getLCRequestsByInitiative(initiative.id));
+    setServiceSource(null);
     setServiceModalOpen(false);
     toast({ title: "Service request submitted", description: "Saved to your Stage 2 tracker." });
     navigate("/stage2/lifecycle-management");
@@ -1557,16 +1765,137 @@ export default function LCInsightsPage() {
     );
   }
 
+  const handleInitiativeStatusChange = (status: string) => {
+    updateInitiativeStatus(initiative.id, status as Initiative["status"]);
+    logAndRefresh({
+      initiativeId: initiative.id,
+      actor: account?.name ?? initiative.owner,
+      action: "Initiative status updated",
+      note: status,
+      eventType: "status",
+      sourceType: "initiative",
+      sourceId: initiative.id,
+    });
+  };
+
+  const handleMilestoneStatusChange = (projectId: string, milestoneId: string, status: MilestoneStatus, name: string) => {
+    updateMilestoneStatus(projectId, milestoneId, status);
+    logAndRefresh({
+      initiativeId: initiative.id,
+      actor: account?.name ?? initiative.owner,
+      action: `Milestone status → ${status}`,
+      note: name,
+      eventType: "milestone",
+      sourceType: "milestone",
+      sourceId: milestoneId,
+    });
+  };
+
+  const handleRiskStatusChange = (
+    projectId: string,
+    riskId: string,
+    status: "Open" | "Mitigated" | "Accepted" | "Closed",
+    title: string
+  ) => {
+    updateRiskStatus(projectId, riskId, status);
+    logAndRefresh({
+      initiativeId: initiative.id,
+      actor: account?.name ?? initiative.owner,
+      action: `Risk status → ${status}`,
+      note: title,
+      eventType: "risk",
+      sourceType: "risk",
+      sourceId: riskId,
+    });
+  };
+
+  const handleRiskSupportRequest = (risk: Project["risks"][number] & { projectId: string }) => {
+    setServiceType("Risk Assessment");
+    setServicePriority(risk.severity === "Critical" ? "Critical" : risk.severity === "High" ? "High" : "Medium");
+    setServiceNotes(`Risk: ${risk.title}\nImpact: ${risk.impact}\nCurrent mitigation: ${risk.mitigation}`);
+    setServiceSource({ type: "risk", id: risk.id, name: risk.title });
+    setServiceModalOpen(true);
+  };
+
+  const handleEscalateBlocker = (
+    projectId: string,
+    blockerId: string,
+    title: string,
+    escalationStatus: "Escalated to TO" | "Escalated to Division Head",
+    whatIsNeeded: string
+  ) => {
+    updateBlockerEscalation(projectId, blockerId, escalationStatus);
+    addEscalation({
+      title,
+      type: "Blocker",
+      initiativeId: initiative.id,
+      initiativeName: initiative.name,
+      raisedBy: account?.name ?? initiative.owner,
+      dateRaised: new Date().toISOString().split("T")[0],
+      severity: "High",
+      whatIsNeeded,
+    });
+    logAndRefresh({
+      initiativeId: initiative.id,
+      actor: account?.name ?? initiative.owner,
+      action: `Blocker escalated to ${escalationStatus.replace("Escalated to ", "")}`,
+      note: title,
+      eventType: "escalation",
+      sourceType: "blocker",
+      sourceId: blockerId,
+    });
+  };
+
+  const handleResolveBlocker = (projectId: string, blockerId: string, title: string) => {
+    setResolveTarget({ projectId, blockerId, title });
+    setResolveNote("");
+    setResolveModalOpen(true);
+  };
+
+  const confirmResolveBlocker = () => {
+    if (!resolveTarget) return;
+    resolveBlocker(resolveTarget.projectId, resolveTarget.blockerId, resolveNote.trim());
+    logAndRefresh({
+      initiativeId: initiative.id,
+      actor: account?.name ?? initiative.owner,
+      action: "Blocker resolved",
+      note: `${resolveTarget.title}${resolveNote.trim() ? ` â€” ${resolveNote.trim()}` : ""}`,
+      eventType: "resolve",
+      sourceType: "blocker",
+      sourceId: resolveTarget.blockerId,
+    });
+    setResolveModalOpen(false);
+    setResolveTarget(null);
+    setResolveNote("");
+  };
+
+  const saveInitiativeBudgetSpent = () => {
+    const value = Number(budgetSpentInput);
+    if (Number.isNaN(value) || value < 0) return;
+    updateInitiativeBudgetSpent(initiative.id, value);
+    logAndRefresh({
+      initiativeId: initiative.id,
+      actor: account?.name ?? initiative.owner,
+      action: "Budget spend updated",
+      note: `New total: ${fmt(value)}`,
+      eventType: "budget",
+      sourceType: "initiative",
+      sourceId: initiative.id,
+    });
+    setBudgetSpentInput("");
+    setBudgetEditOpen(false);
+  };
+
   const renderSection = () => {
     switch (activeSection) {
-      case "health":     return <HealthSection     initiative={initiative} projects={projects} role={role} />;
+      case "health":     return <HealthSection     initiative={initiative} projects={projects} role={role} onInitiativeStatusChange={handleInitiativeStatusChange} />;
       case "projects":   return <ProjectsSection   projects={projects} isOwner={isOwner} role={role} onRefresh={refresh} />;
-      case "budget":     return <BudgetSection     initiative={initiative} projects={projects} role={role} />;
-      case "milestones": return <MilestonesSection projects={projects} isOwner={isOwner} role={role} onRefresh={refresh} />;
-      case "risks":      return <RisksSection      projects={projects} role={role} />;
-      case "blockers":   return <BlockersSection   projects={projects} role={role} />;
+      case "budget":     return <BudgetSection     initiative={initiative} projects={projects} role={role} budgetEditOpen={budgetEditOpen} budgetSpentInput={budgetSpentInput} onBudgetSpentInputChange={setBudgetSpentInput} onBudgetEditOpenChange={setBudgetEditOpen} onSaveBudgetSpent={saveInitiativeBudgetSpent} />;
+      case "milestones": return <MilestonesSection projects={projects} isOwner={isOwner} role={role} onMilestoneStatusChange={handleMilestoneStatusChange} />;
+      case "risks":      return <RisksSection      projects={projects} role={role} onRiskStatusChange={handleRiskStatusChange} onRequestSupport={handleRiskSupportRequest} />;
+      case "blockers":   return <BlockersSection   projects={projects} role={role} initiative={initiative} accountName={account?.name ?? initiative.owner} onEscalateBlocker={handleEscalateBlocker} onResolveBlocker={handleResolveBlocker} />;
       case "team":       return <TeamSection       initiative={initiative} projects={projects} role={role} />;
-      case "activity":   return <ActivitySection   initiative={initiative} projects={projects} role={role} />;
+      case "activity":   return <ActivitySection   role={role} events={getActivityEvents(initiative.id)} key={activityKey} />;
     }
   };
 
@@ -1678,6 +2007,35 @@ export default function LCInsightsPage() {
                   <div className="h-full bg-teal-400 rounded-full" style={{ width: `${initiative.progress}%` }} />
                 </div>
               </div>
+              {requests.length > 0 && (
+                <div className="border-t border-white/10 pt-4 space-y-2">
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">My Requests</p>
+                  {requests.slice(0, 4).map((request) => (
+                    <div key={request.id} className="bg-white/5 rounded-lg p-2.5 space-y-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-xs text-slate-200 font-medium leading-tight">{request.serviceType}</p>
+                        <span className={`text-xs px-1.5 py-0.5 rounded flex-shrink-0 font-medium ${
+                          request.status === "Delivered" || request.status === "Completed" ? "bg-green-500/20 text-green-300" :
+                          request.status === "In Progress" ? "bg-blue-500/20 text-blue-300" :
+                          request.status === "Assigned" ? "bg-purple-500/20 text-purple-300" :
+                          "bg-slate-500/20 text-slate-300"
+                        }`}>
+                          {request.status}
+                        </span>
+                      </div>
+                      {request.sourceName && <p className="text-xs text-slate-500">â†³ {request.sourceName}</p>}
+                      {(request.status === "Delivered" || request.status === "Completed") && (
+                        <button
+                          onClick={() => navigate("/stage2/lifecycle-management")}
+                          className="text-xs text-teal-400 hover:text-teal-300 flex items-center gap-1 mt-0.5"
+                        >
+                          View in Stage 2 â†’
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="border-t border-white/10" />
               <button
                 onClick={openRequestService}
@@ -1714,6 +2072,14 @@ export default function LCInsightsPage() {
               <p className="text-xs text-slate-500 mb-0.5">Initiative</p>
               <p className="text-sm font-semibold text-slate-900">{initiative.name}</p>
             </div>
+            {serviceSource && (
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                <p className="text-xs text-orange-600 mb-0.5">Source Context</p>
+                <p className="text-sm font-semibold text-slate-900">
+                  {serviceSource.type}: {serviceSource.name}
+                </p>
+              </div>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2">
                 <label className="text-sm font-medium text-foreground">Service Type</label>
@@ -1763,6 +2129,49 @@ export default function LCInsightsPage() {
             <button onClick={submitServiceRequest}
               className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold rounded-lg transition-colors">
               Submit Request
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={resolveModalOpen} onOpenChange={setResolveModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Resolve Blocker</DialogTitle>
+            <DialogDescription>Add a resolution note before closing this blocker.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+              <p className="text-xs text-slate-500 mb-0.5">Blocker</p>
+              <p className="text-sm font-semibold text-slate-900">{resolveTarget?.title ?? "Selected blocker"}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground">Resolution Note</label>
+              <Textarea
+                placeholder="Describe what was done to resolve this blocker..."
+                value={resolveNote}
+                onChange={(e) => setResolveNote(e.target.value)}
+                className="resize-none"
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <button
+              onClick={() => {
+                setResolveModalOpen(false);
+                setResolveTarget(null);
+                setResolveNote("");
+              }}
+              className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmResolveBlocker}
+              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-colors"
+            >
+              Confirm Resolve
             </button>
           </DialogFooter>
         </DialogContent>

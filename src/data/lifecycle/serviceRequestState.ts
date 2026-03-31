@@ -44,6 +44,9 @@ export interface LCServiceRequest {
   status: LCRequestStatus;
   priority: "Critical" | "High" | "Medium" | "Low";
   notes?: string;
+  sourceType?: "risk" | "blocker" | "initiative";
+  sourceId?: string;
+  sourceName?: string;
   assignedTo?: string;
   deliveredAt?: string;
   deliverableTitle?: string;

@@ -85,6 +85,13 @@ export default function LCStage2Overview() {
       .slice(0, 5);
   }, [requests]);
 
+  const deliveredRequests: LCServiceRequest[] = useMemo(() => {
+    return [...requests]
+      .filter((r) => r.status === "Delivered" || r.status === "Completed")
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      .slice(0, 5);
+  }, [requests]);
+
   return (
     <div className="p-6 space-y-6">
       <div>
@@ -189,6 +196,9 @@ export default function LCStage2Overview() {
                         Initiative: {r.initiativeName}
                         {r.projectName ? ` · Project: ${r.projectName}` : ""}
                       </p>
+                      {r.sourceName && (
+                        <p className="text-xs text-gray-400 mt-0.5">â†³ From {r.sourceType}: {r.sourceName}</p>
+                      )}
                       <p className="text-xs text-gray-500 mt-1">{new Date(r.submittedAt).toLocaleDateString()}</p>
                     </div>
                     <Badge className={`text-xs border ${getStatusColor(r.status)}`}>
@@ -198,6 +208,50 @@ export default function LCStage2Overview() {
                 ))}
               </div>
             )}
+
+            <div className="pt-2 border-t border-gray-200">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900">Delivered</h3>
+                  <p className="text-xs text-gray-500 mt-0.5">Recent completed or delivered requests.</p>
+                </div>
+                <Badge variant="outline" className="text-xs border-gray-200">
+                  {deliveredRequests.length} listed
+                </Badge>
+              </div>
+
+              {deliveredRequests.length === 0 ? (
+                <p className="text-sm text-gray-500">No delivered requests yet.</p>
+              ) : (
+                <div className="space-y-3">
+                  {deliveredRequests.map((r) => (
+                    <div key={r.id} className="p-3 border border-gray-200 rounded-lg">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 line-clamp-1">{r.serviceType}</p>
+                          <p className="text-xs text-gray-500 mt-1 line-clamp-1">
+                            Initiative: {r.initiativeName}
+                            {r.projectName ? ` Â· Project: ${r.projectName}` : ""}
+                          </p>
+                          {r.sourceName && (
+                            <p className="text-xs text-gray-400 mt-0.5">â†³ From {r.sourceType}: {r.sourceName}</p>
+                          )}
+                        </div>
+                        <Badge className={`text-xs border ${getStatusColor(r.status)}`}>
+                          {r.status}
+                        </Badge>
+                      </div>
+                      <button
+                        onClick={() => { window.location.href = `/marketplaces/lifecycle-management/initiative/${r.initiativeId}/insights`; }}
+                        className="text-xs text-teal-600 hover:text-teal-800 font-medium mt-2 flex items-center gap-1"
+                      >
+                        View in Lifecycle â†’
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
