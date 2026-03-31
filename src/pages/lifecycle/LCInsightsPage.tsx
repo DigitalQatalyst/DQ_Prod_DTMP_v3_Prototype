@@ -40,6 +40,17 @@ const RAG_COLORS: Record<RAGStatus, string> = {
   Amber: "bg-amber-500/20 text-amber-300 border-amber-500/30",
   Red:   "bg-red-500/20 text-red-300 border-red-500/30",
 };
+
+const SECTION_DESC: Record<InsightSection, Record<LifecycleInsightsRole, string>> = {
+  health:     { "initiative-owner": "Is this initiative under control? Review governed health, delivery pressure, risks, blockers, budget use, and overall progress.", "senior-stakeholder": "Is the programme healthy enough to stay on course? Review executive health signals at a glance.", "general-staff": "What is the current initiative status and how far through delivery are we?" },
+  projects:   { "initiative-owner": "Which delivery workstreams are moving the initiative outcome? Review every linked project with live RAG, milestones, risks, and blockers.", "senior-stakeholder": "Which projects are carrying delivery risk and which ones remain on track?", "general-staff": "Which projects sit under this initiative?" },
+  budget:     { "initiative-owner": "Are we financially on track? Review allocation, spend, commitments, variance, and intervention signals across projects.", "senior-stakeholder": "What is the executive budget position for this initiative?", "general-staff": "How much of the initiative budget has been used?" },
+  milestones: { "initiative-owner": "What is due, delayed, or complete across the initiative? Review milestone movement and schedule pressure.", "senior-stakeholder": "Which milestones are complete and which ones need attention?", "general-staff": "What milestones are coming up next?" },
+  risks:      { "initiative-owner": "What could derail delivery? Review the governed risk register, mitigation posture, and support needs.", "senior-stakeholder": "Which risks matter most right now?", "general-staff": "What major risks are currently recorded?" },
+  blockers:   { "initiative-owner": "What needs intervention now? Review open blockers, escalation status, and what is required to unblock delivery.", "senior-stakeholder": "Which blockers are escalated and where is intervention required?", "general-staff": "What blockers are currently affecting this initiative?" },
+  team:       { "initiative-owner": "Who is accountable for delivery? Review programme leadership, project ownership, workload, and EA support context.", "senior-stakeholder": "Who owns delivery and who supports governance?", "general-staff": "Who is leading this initiative?" },
+  activity:   { "initiative-owner": "What has happened and what evidence exists? Review the initiative's governed activity history and support actions.", "senior-stakeholder": "What recent activity should leadership know about?", "general-staff": "What has happened recently on this initiative?" },
+};
 const RAG_DOT: Record<RAGStatus, string> = {
   Green: "bg-green-400", Amber: "bg-amber-400", Red: "bg-red-400",
 };
@@ -96,7 +107,7 @@ const SECTIONS: { id: InsightSection; label: string; icon: React.FC<{ className?
   { id: "activity",   label: "Activity",   icon: Zap         },
 ];
 
-const SECTION_DESC: Record<InsightSection, Record<LifecycleInsightsRole, string>> = {
+const LEGACY_SECTION_DESC: Record<InsightSection, Record<LifecycleInsightsRole, string>> = {
   health:     { "initiative-owner": "Full programme health — RAG, all metrics, budget utilisation, open risks and blockers, project summary", "senior-stakeholder": "Executive health dashboard — key numbers at a glance", "general-staff": "Initiative status and overall progress" },
   projects:   { "initiative-owner": "All linked projects — expand any row for milestones, budget, open risks and blockers, with live RAG controls", "senior-stakeholder": "Project health overview — RAG distribution and progress bars", "general-staff": "Projects linked to this initiative" },
   budget:     { "initiative-owner": "Full budget breakdown — allocation, spend, committed, variance and per-project health with visual bars", "senior-stakeholder": "Budget headline — total, spend and variance", "general-staff": "Budget utilisation summary" },
@@ -108,6 +119,8 @@ const SECTION_DESC: Record<InsightSection, Record<LifecycleInsightsRole, string>
 };
 
 // ── Shared atoms ───────────────────────────────────────────────────────────────
+
+void LEGACY_SECTION_DESC;
 
 function DashStat({ label, value, sub, accent = "bg-white/5 border-white/10", icon: Icon }: {
   label: string; value: string; sub?: string; accent?: string;

@@ -22,7 +22,6 @@ import {
   Cpu,
   Zap,
   LayoutGrid,
-  Settings2,
 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -48,7 +47,6 @@ import {
   type GovernanceCard,
   type OADCard,
 } from "@/data/portfolioManagement";
-import { getSessionRole, isTOStage3Role } from "@/data/sessionRole";
 
 // ── Role system ──────────────────────────────────────────────────────────
 
@@ -616,8 +614,6 @@ function RequestReportModal({
 export default function PortfolioManagementPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const isTOUser = isTOStage3Role(getSessionRole());
-
   const [activeTab, setActiveTab] = useState<PMTab>("application-portfolio");
   const [highlightCardId, setHighlightCardId] = useState<string | null>(null);
 
@@ -842,6 +838,9 @@ export default function PortfolioManagementPage() {
                 EA maturity, and operational asset digitisation progress. The Corporate EA Office's
                 control tower.
               </p>
+              <p className="text-sm text-orange-700 max-w-2xl mt-3 leading-relaxed">
+                Portfolio Management shows where enterprise attention is needed. Move into Lifecycle Management when DEWA needs a governed execution response, active intervention, and accountable delivery tracking.
+              </p>
             </div>
             <div className="flex flex-col items-end gap-4">
               <div className="flex gap-6">
@@ -856,15 +855,6 @@ export default function PortfolioManagementPage() {
                   </div>
                 ))}
               </div>
-              {isTOUser && (
-                <button
-                  onClick={() => navigate("/stage3/portfolio-management/overview")}
-                  className="flex items-center gap-2 text-xs bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm"
-                >
-                  <Settings2 className="w-3.5 h-3.5" />
-                  TO Operations Console
-                </button>
-              )}
             </div>
           </div>
         </div>
