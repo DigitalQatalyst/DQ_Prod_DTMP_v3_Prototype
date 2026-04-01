@@ -54,7 +54,7 @@ Make the first impression more institutional, governance-led, and specific to DE
 
 This sharpens the user's first understanding of what Lifecycle is for and prevents it from reading as just another delivery dashboard.
 
-### 2. Introduce a visible lifecycle journey model
+### 2. Introduce a visible lifecycle journey model `[Done]`
 
 **Goal**
 
@@ -79,7 +79,7 @@ Make the "lifecycle" concept explicit in the UX instead of forcing users to infe
 
 This makes Lifecycle feel like a governed progression model rather than a collection of unrelated panels.
 
-### 3. Make intervention a first-class concept
+### 3. Make intervention a first-class concept `[Done]`
 
 **Goal**
 
@@ -131,7 +131,7 @@ Reduce the "dashboard tabs" feel and make each section answer a clear managerial
 
 This makes the page feel more like an operating console and less like a passive reporting surface.
 
-### 5. Increase ownership and accountability signals
+### 5. Increase ownership and accountability signals `[Done]`
 
 **Goal**
 
@@ -154,7 +154,7 @@ Make it obvious who owns the initiative, who owns project execution, and who is 
 
 Accountability is central to the positioning. Without it, Lifecycle risks feeling like a reporting layer instead of a governed execution environment.
 
-### 6. Strengthen the evidence-of-governance feel
+### 6. Strengthen the evidence-of-governance feel `[Done]`
 
 **Goal**
 
@@ -182,7 +182,7 @@ Make lifecycle actions feel recorded, auditable, and institutionally meaningful.
 
 This gives Lifecycle institutional weight. It tells the user the platform is recording governed progress, intervention, and decision history.
 
-### 7. Make Portfolio-to-Lifecycle provenance explicit
+### 7. Make Portfolio-to-Lifecycle provenance explicit `[Done]`
 
 **Goal**
 
@@ -206,7 +206,7 @@ Show that Lifecycle is often the formal response to a portfolio-level finding, g
 This strengthens the narrative connection between the two marketplaces and reinforces the operating model:
 Portfolio identifies, Lifecycle executes.
 
-### 8. Make service requests feel like formal support channels
+### 8. Make service requests feel like formal support channels `[Done]`
 
 **Goal**
 
@@ -342,9 +342,9 @@ These changes improve understanding immediately and strengthen demos without req
 
 ### Phase 2: Lifecycle identity
 
-- Task 2. Introduce a visible lifecycle journey model
-- Task 3. Make intervention a first-class concept
-- Task 5. Increase ownership and accountability signals
+- Task 2. Introduce a visible lifecycle journey model `[Done]`
+- Task 3. Make intervention a first-class concept `[Done]`
+- Task 5. Increase ownership and accountability signals `[Done]`
 
 **Why next**
 
@@ -352,9 +352,9 @@ These establish the strongest unique identity for Lifecycle as a governed execut
 
 ### Phase 3: Governance credibility
 
-- Task 6. Strengthen the evidence-of-governance feel
-- Task 7. Make Portfolio-to-Lifecycle provenance explicit
-- Task 8. Make service requests feel like formal support channels
+- Task 6. Strengthen the evidence-of-governance feel `[Done]`
+- Task 7. Make Portfolio-to-Lifecycle provenance explicit `[Done]`
+- Task 8. Make service requests feel like formal support channels `[Done]`
 
 **Why next**
 

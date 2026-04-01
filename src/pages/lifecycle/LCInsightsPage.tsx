@@ -51,6 +51,30 @@ const SECTION_DESC: Record<InsightSection, Record<LifecycleInsightsRole, string>
   team:       { "initiative-owner": "Who is accountable for delivery? Review programme leadership, project ownership, workload, and EA support context.", "senior-stakeholder": "Who owns delivery and who supports governance?", "general-staff": "Who is leading this initiative?" },
   activity:   { "initiative-owner": "What has happened and what evidence exists? Review the initiative's governed activity history and support actions.", "senior-stakeholder": "What recent activity should leadership know about?", "general-staff": "What has happened recently on this initiative?" },
 };
+
+const LIFECYCLE_JOURNEY = [
+  { id: "scoping", label: "Scoping", note: "Define scope and governance path" },
+  { id: "governed", label: "Governed", note: "Confirm ownership and controls" },
+  { id: "delivery", label: "In Delivery", note: "Run workstreams and reporting" },
+  { id: "intervention", label: "Intervention", note: "Resolve blockers, escalations, and major risk" },
+  { id: "stabilised", label: "Stabilised", note: "Steady delivery and close issues" },
+  { id: "completed", label: "Completed", note: "Exit with evidence and closure" },
+] as const;
+
+const getLifecycleStageIndex = (
+  initiative: Initiative,
+  projectCount: number,
+  openRisks: number,
+  escalatedBlockers: number,
+  openRequests: number
+) => {
+  if (initiative.status === "Completed") return 5;
+  if (initiative.status === "Scoping") return 0;
+  if (initiative.status === "At Risk" || escalatedBlockers > 0 || openRisks > 2 || openRequests > 0) return 3;
+  if (initiative.progress >= 75 && openRisks <= 1 && escalatedBlockers === 0) return 4;
+  if (projectCount > 0) return 2;
+  return 1;
+};
 const RAG_DOT: Record<RAGStatus, string> = {
   Green: "bg-green-400", Amber: "bg-amber-400", Red: "bg-red-400",
 };
@@ -146,6 +170,30 @@ function StatCard({ label, value, sub, accent }: {
       <p className="text-xs text-slate-400 mb-1">{label}</p>
       <p className="text-2xl font-bold text-white">{value}</p>
       {sub && <p className="text-xs text-slate-400 mt-0.5">{sub}</p>}
+    </div>
+  );
+}
+
+function InterventionStat({ label, value, tone }: { label: string; value: number; tone: "red" | "amber" | "blue" | "neutral" }) {
+  const toneClass =
+    tone === "red" ? "bg-red-500/10 border-red-400/20 text-red-200" :
+    tone === "amber" ? "bg-amber-500/10 border-amber-400/20 text-amber-200" :
+    tone === "blue" ? "bg-blue-500/10 border-blue-400/20 text-blue-200" :
+    "bg-white/5 border-white/10 text-slate-200";
+
+  return (
+    <div className={`rounded-xl border p-3 ${toneClass}`}>
+      <p className="text-xs uppercase tracking-wider opacity-80">{label}</p>
+      <p className="text-2xl font-bold mt-1">{value}</p>
+    </div>
+  );
+}
+
+function SidebarMetric({ label, value, tone }: { label: string; value: string; tone: "default" | "warn" }) {
+  return (
+    <div className={`rounded-lg border px-2.5 py-2 ${tone === "warn" ? "bg-amber-500/10 border-amber-400/20" : "bg-slate-950/40 border-white/5"}`}>
+      <p className="text-[10px] uppercase tracking-wider text-slate-500">{label}</p>
+      <p className={`text-xs font-semibold mt-1 ${tone === "warn" ? "text-amber-200" : "text-slate-200"}`}>{value}</p>
     </div>
   );
 }
@@ -1662,6 +1710,19 @@ function ActivitySection({ role, events }: {
             )}
           </div>
           <div className="flex-1 min-w-0 pb-1">
+            <div className="flex flex-wrap items-center gap-2 mb-1.5">
+              <span className="text-[10px] uppercase tracking-wide text-slate-300 bg-white/10 border border-white/10 rounded-full px-2 py-0.5">
+                Governance Record
+              </span>
+              <span className="text-[10px] uppercase tracking-wide text-slate-400 bg-slate-800 border border-white/5 rounded-full px-2 py-0.5">
+                {ev.eventType}
+              </span>
+              {ev.sourceType && (
+                <span className="text-[10px] uppercase tracking-wide text-slate-400 bg-slate-800 border border-white/5 rounded-full px-2 py-0.5">
+                  Source: {ev.sourceType}
+                </span>
+              )}
+            </div>
             <p className="text-sm text-slate-200">
               <span className="font-semibold text-white">{ev.actor}</span>
               <span className="text-slate-400"> - {ev.action}</span>
@@ -1669,7 +1730,9 @@ function ActivitySection({ role, events }: {
             {ev.note && (
               <p className="text-xs text-slate-500 mt-0.5 italic">{ev.note}</p>
             )}
-            <p className="text-xs text-slate-600 mt-1">{relTime(ev.timestamp)}</p>
+            <p className="text-xs text-slate-600 mt-1">
+              {relTime(ev.timestamp)} | {new Date(ev.timestamp).toLocaleString()}
+            </p>
           </div>
         </div>
       ))}
@@ -1899,6 +1962,21 @@ export default function LCInsightsPage() {
     setBudgetEditOpen(false);
   };
 
+  const openRisks = projects.flatMap((project) => project.risks).filter((risk) => risk.status === "Open");
+  const criticalOpenRisks = openRisks.filter((risk) => risk.severity === "Critical");
+  const openBlockers = projects.flatMap((project) => project.blockers).filter((blocker) => !blocker.resolved);
+  const escalatedBlockers = openBlockers.filter((blocker) => blocker.escalationStatus !== "Not Escalated");
+  const delayedMilestones = projects.flatMap((project) => project.milestones).filter((milestone) => milestone.status === "Delayed");
+  const openRequests = requests.filter((request) => !["Delivered", "Completed"].includes(request.status));
+  const projectManagers = [...new Set(projects.map((project) => project.pmName))].filter(Boolean);
+  const lifecycleStageIndex = getLifecycleStageIndex(
+    initiative,
+    projects.length,
+    openRisks.length,
+    escalatedBlockers.length,
+    openRequests.length
+  );
+
   const renderSection = () => {
     switch (activeSection) {
       case "health":     return <HealthSection     initiative={initiative} projects={projects} role={role} onInitiativeStatusChange={handleInitiativeStatusChange} />;
@@ -1985,6 +2063,59 @@ export default function LCInsightsPage() {
                   : "Select a role to see role-appropriate insights"}
               </p>
             </div>
+            <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl p-4 mb-6 space-y-3">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                  <p className="text-xs font-semibold text-orange-300 uppercase tracking-wider">Lifecycle Journey</p>
+                  <p className="text-sm text-orange-100 mt-1">
+                    {LIFECYCLE_JOURNEY[lifecycleStageIndex].label} - {LIFECYCLE_JOURNEY[lifecycleStageIndex].note}
+                  </p>
+                </div>
+                <span className="text-xs text-orange-200 bg-white/10 border border-white/10 px-2.5 py-1 rounded-full">
+                  Current Stage: {LIFECYCLE_JOURNEY[lifecycleStageIndex].label}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 xl:grid-cols-6 gap-2">
+                {LIFECYCLE_JOURNEY.map((stage, index) => {
+                  const isCurrent = index === lifecycleStageIndex;
+                  const isComplete = index < lifecycleStageIndex;
+                  return (
+                    <div
+                      key={stage.id}
+                      className={`rounded-lg border px-3 py-2 text-xs ${
+                        isCurrent
+                          ? "bg-orange-400/20 border-orange-300/40 text-white"
+                          : isComplete
+                          ? "bg-white/10 border-white/10 text-orange-100"
+                          : "bg-slate-900/50 border-white/5 text-slate-400"
+                      }`}
+                    >
+                      <p className="font-semibold">{stage.label}</p>
+                      <p className="mt-1 leading-snug opacity-80">{stage.note}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            {(criticalOpenRisks.length > 0 || escalatedBlockers.length > 0 || openRequests.length > 0 || delayedMilestones.length > 0) && (
+              <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6">
+                <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+                  <div>
+                    <p className="text-xs font-semibold text-red-300 uppercase tracking-wider">Intervention Required</p>
+                    <p className="text-sm text-red-100 mt-1">These signals indicate that the initiative currently needs support, escalation, or closer governance attention.</p>
+                  </div>
+                  <span className="text-xs text-red-200 bg-white/10 border border-white/10 px-2.5 py-1 rounded-full">
+                    TO Attention Queue
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+                  <InterventionStat label="Critical Risks" value={criticalOpenRisks.length} tone={criticalOpenRisks.length > 0 ? "red" : "neutral"} />
+                  <InterventionStat label="Escalated Blockers" value={escalatedBlockers.length} tone={escalatedBlockers.length > 0 ? "amber" : "neutral"} />
+                  <InterventionStat label="Open Requests" value={openRequests.length} tone={openRequests.length > 0 ? "blue" : "neutral"} />
+                  <InterventionStat label="Delayed Milestones" value={delayedMilestones.length} tone={delayedMilestones.length > 0 ? "amber" : "neutral"} />
+                </div>
+              </div>
+            )}
             {renderSection()}
           </div>
 
@@ -2011,6 +2142,14 @@ export default function LCInsightsPage() {
                   </div>
                 ))}
               </div>
+              {initiative.fromPortfolio && (
+                <div className="bg-blue-500/10 rounded-xl border border-blue-500/20 p-3 space-y-1.5">
+                  <p className="text-xs font-semibold text-blue-300 uppercase tracking-wider">Portfolio Provenance</p>
+                  <p className="text-xs text-blue-100 leading-relaxed">
+                    This initiative was raised from Portfolio Management and is now being governed here as the formal execution response.
+                  </p>
+                </div>
+              )}
               <div className="space-y-1.5">
                 <div className="flex justify-between text-xs">
                   <span className="text-slate-500">Progress</span>
@@ -2020,9 +2159,21 @@ export default function LCInsightsPage() {
                   <div className="h-full bg-teal-400 rounded-full" style={{ width: `${initiative.progress}%` }} />
                 </div>
               </div>
+              <div className="bg-white/5 rounded-xl border border-white/10 p-3 space-y-3">
+                <div>
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Accountability</p>
+                  <p className="text-xs text-slate-500 mt-1">Keep ownership and intervention load visible while navigating the initiative.</p>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <SidebarMetric label="Owner" value={initiative.owner} tone="default" />
+                  <SidebarMetric label="PM Leads" value={String(projectManagers.length)} tone="default" />
+                  <SidebarMetric label="Escalated" value={String(escalatedBlockers.length)} tone={escalatedBlockers.length > 0 ? "warn" : "default"} />
+                  <SidebarMetric label="Open Requests" value={String(openRequests.length)} tone={openRequests.length > 0 ? "warn" : "default"} />
+                </div>
+              </div>
               {requests.length > 0 && (
                 <div className="border-t border-white/10 pt-4 space-y-2">
-                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">My Requests</p>
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Support Requests</p>
                   {requests.slice(0, 4).map((request) => (
                     <div key={request.id} className="bg-white/5 rounded-lg p-2.5 space-y-1">
                       <div className="flex items-start justify-between gap-2">
@@ -2036,6 +2187,17 @@ export default function LCInsightsPage() {
                           {request.status}
                         </span>
                       </div>
+                      <p className="text-[11px] text-slate-500">
+                        Workflow owner: {request.assignedTo || "TO intake"}
+                      </p>
+                      <p className="text-[11px] text-slate-500">
+                        SLA: {request.slaHours}h
+                      </p>
+                      {request.sourceName && (
+                        <p className="text-xs text-slate-500">
+                          Source context: {request.sourceType || "initiative"} - {request.sourceName}
+                        </p>
+                      )}
                       {request.sourceName && <p className="text-xs text-slate-500">â†³ {request.sourceName}</p>}
                       {(request.status === "Delivered" || request.status === "Completed") && (
                         <button
@@ -2054,7 +2216,7 @@ export default function LCInsightsPage() {
                 onClick={openRequestService}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold rounded-xl transition-colors"
               >
-                <FileText className="w-4 h-4" />Request Service
+                <FileText className="w-4 h-4" />Request TO Support
               </button>
               <p className="text-xs text-slate-500 text-center">
                 Viewing as{" "}
@@ -2073,12 +2235,14 @@ export default function LCInsightsPage() {
         />
       )}
 
-      {/* Request Service dialog */}
+      {/* Request TO Support dialog */}
       <Dialog open={serviceModalOpen} onOpenChange={setServiceModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Request Service</DialogTitle>
-            <DialogDescription>Submit an initiative-level service request to the TO team.</DialogDescription>
+            <DialogTitle>Request TO Support</DialogTitle>
+            <DialogDescription>
+              Open a formal support channel for this initiative. The request will be tracked through the TO workflow with source context, ownership, and response status.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
@@ -2087,9 +2251,12 @@ export default function LCInsightsPage() {
             </div>
             {serviceSource && (
               <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                <p className="text-xs text-orange-600 mb-0.5">Source Context</p>
+                <p className="text-xs text-orange-600 mb-0.5">Support Trigger</p>
                 <p className="text-sm font-semibold text-slate-900">
                   {serviceSource.type}: {serviceSource.name}
+                </p>
+                <p className="text-xs text-orange-700 mt-1">
+                  This request stays linked to the originating delivery issue for traceability.
                 </p>
               </div>
             )}
@@ -2125,7 +2292,7 @@ export default function LCInsightsPage() {
               <div className="sm:col-span-2">
                 <label className="text-sm font-medium text-foreground">Notes</label>
                 <Textarea
-                  placeholder="Describe what you need and any relevant context..."
+                  placeholder="Describe the support needed, why it is required now, and any delivery impact or recovery context..."
                   value={serviceNotes}
                   onChange={e => setServiceNotes(e.target.value)}
                   className="resize-none"

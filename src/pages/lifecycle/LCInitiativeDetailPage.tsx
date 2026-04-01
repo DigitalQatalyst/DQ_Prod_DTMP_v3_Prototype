@@ -24,6 +24,8 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { getActivityEvents } from "@/data/shared/activityEventStore";
+import { getLCRequestsByInitiative } from "@/data/lifecycle/serviceRequestState";
 import {
   getInitiatives,
   getProjects,
@@ -210,6 +212,30 @@ const TABS: { id: DetailTab; label: string; icon: React.FC<{ className?: string 
   { id: "retirement", label: "Retirement", icon: Archive },
 ];
 
+const LIFECYCLE_JOURNEY = [
+  { id: "scoping", label: "Scoping", note: "Define initiative scope and governance path" },
+  { id: "governed", label: "Governed", note: "Confirm ownership, alignment, and controls" },
+  { id: "delivery", label: "In Delivery", note: "Run workstreams, milestones, and reporting" },
+  { id: "intervention", label: "Intervention", note: "Resolve escalations, blockers, and major risks" },
+  { id: "stabilised", label: "Stabilised", note: "Close down open issues and steady delivery" },
+  { id: "completed", label: "Completed", note: "Exit with delivery evidence and closure" },
+] as const;
+
+const getLifecycleStageIndex = (
+  initiative: Initiative,
+  projectCount: number,
+  openRisks: number,
+  escalatedBlockers: number,
+  openRequests: number
+) => {
+  if (initiative.status === "Completed") return 5;
+  if (initiative.status === "Scoping") return 0;
+  if (initiative.status === "At Risk" || escalatedBlockers > 0 || openRisks > 2 || openRequests > 0) return 3;
+  if (initiative.progress >= 75 && openRisks <= 1 && escalatedBlockers === 0) return 4;
+  if (projectCount > 0) return 2;
+  return 1;
+};
+
 // ── Component ──────────────────────────────────────────────────────────────────
 
 export default function LCInitiativeDetailPage() {
@@ -251,6 +277,8 @@ export default function LCInitiativeDetailPage() {
   const complianceChecks = useMemo(() => (initiative ? getComplianceChecks(initiative) : []), [initiative]);
   const products = useMemo(() => (initiative ? getProducts(initiative) : []), [initiative]);
   const retirements = useMemo(() => (initiative ? getRetirements(initiative) : []), [initiative]);
+  const activityEvents = useMemo(() => (initiative ? getActivityEvents(initiative.id) : []), [initiative]);
+  const requests = useMemo(() => (initiative ? getLCRequestsByInitiative(initiative.id) : []), [initiative]);
 
   // ── Not found ───────────────────────────────────────────────────────────────
   if (!initiative) {
@@ -269,6 +297,20 @@ export default function LCInitiativeDetailPage() {
   }
 
   const isActive = initiative.status === "Active" || initiative.status === "At Risk";
+  const openRisks = initiativeProjects.flatMap((project) => project.risks).filter((risk) => risk.status === "Open").length;
+  const openCriticalRisks = initiativeProjects.flatMap((project) => project.risks).filter((risk) => risk.status === "Open" && risk.severity === "Critical").length;
+  const openBlockers = initiativeProjects.flatMap((project) => project.blockers).filter((blocker) => !blocker.resolved).length;
+  const escalatedBlockers = initiativeProjects.flatMap((project) => project.blockers).filter((blocker) => !blocker.resolved && blocker.escalationStatus !== "Not Escalated").length;
+  const delayedMilestones = initiativeProjects.flatMap((project) => project.milestones).filter((milestone) => milestone.status === "Delayed").length;
+  const projectManagers = [...new Set(initiativeProjects.map((project) => project.pmName))].filter(Boolean);
+  const openRequests = requests.filter((request) => !["Delivered", "Completed"].includes(request.status)).length;
+  const lifecycleStageIndex = getLifecycleStageIndex(
+    initiative,
+    initiativeProjects.length,
+    openRisks,
+    escalatedBlockers,
+    openRequests
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -300,7 +342,7 @@ export default function LCInitiativeDetailPage() {
               <span className="text-gray-500 text-sm">{initiative.division}</span>
               {initiative.fromPortfolio && (
                 <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs">
-                  Portfolio Cross-Link
+                  Raised from Portfolio
                 </Badge>
               )}
             </div>
@@ -320,6 +362,68 @@ export default function LCInitiativeDetailPage() {
               <Badge className="bg-gray-100 text-gray-700 border border-gray-200 text-xs">
                 {initiativeProjects.length} Projects
               </Badge>
+            </div>
+            {initiative.fromPortfolio && (
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+                <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Portfolio Provenance</p>
+                <p className="text-sm text-blue-900 mt-1">
+                  This initiative was raised from Portfolio Management and now acts as the governed execution response.
+                </p>
+              </div>
+            )}
+
+            <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 space-y-3">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                  <p className="text-xs font-semibold text-orange-700 uppercase tracking-wide">Lifecycle Journey</p>
+                  <p className="text-sm text-orange-900 mt-1">
+                    {LIFECYCLE_JOURNEY[lifecycleStageIndex].label} â€” {LIFECYCLE_JOURNEY[lifecycleStageIndex].note}
+                  </p>
+                </div>
+                <Badge className="bg-white text-orange-700 border border-orange-200 text-xs">
+                  Current Stage: {LIFECYCLE_JOURNEY[lifecycleStageIndex].label}
+                </Badge>
+              </div>
+              <div className="grid grid-cols-2 lg:grid-cols-6 gap-2">
+                {LIFECYCLE_JOURNEY.map((stage, index) => {
+                  const isCurrent = index === lifecycleStageIndex;
+                  const isComplete = index < lifecycleStageIndex;
+                  return (
+                    <div
+                      key={stage.id}
+                      className={`rounded-lg border px-3 py-2 text-xs ${
+                        isCurrent
+                          ? "bg-orange-100 border-orange-300 text-orange-900"
+                          : isComplete
+                          ? "bg-white border-orange-200 text-orange-700"
+                          : "bg-white/70 border-orange-100 text-orange-500"
+                      }`}
+                    >
+                      <p className="font-semibold">{stage.label}</p>
+                      <p className="mt-1 opacity-80 leading-snug">{stage.note}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Accountable Owner</p>
+                <p className="text-sm font-semibold text-gray-900 mt-1">{initiative.owner}</p>
+              </div>
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Project Managers</p>
+                <p className="text-sm font-semibold text-gray-900 mt-1">{projectManagers.length}</p>
+              </div>
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Open Risks</p>
+                <p className={`text-sm font-semibold mt-1 ${openCriticalRisks > 0 ? "text-red-700" : "text-gray-900"}`}>{openRisks}</p>
+              </div>
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Escalated Blockers</p>
+                <p className={`text-sm font-semibold mt-1 ${escalatedBlockers > 0 ? "text-amber-700" : "text-gray-900"}`}>{escalatedBlockers}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -385,6 +489,28 @@ export default function LCInitiativeDetailPage() {
                     <StatTile label="Projects" value={initiativeProjects.length} />
                     <StatTile label="Applications" value={applications.length} />
                     <StatTile label="Compliance Checks" value={complianceChecks.filter((c) => c.status !== "Not Assessed").length} />
+                  </div>
+
+                  <div className="bg-orange-50 border border-orange-100 rounded-xl p-5">
+                    <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900">Intervention Snapshot</h3>
+                        <p className="text-sm text-gray-600 mt-1">Signals that tell you whether delivery needs governance intervention right now.</p>
+                      </div>
+                      <Badge className={`${escalatedBlockers > 0 || openCriticalRisks > 0 ? "bg-amber-100 text-amber-800 border-amber-200" : "bg-green-100 text-green-700 border-green-200"} border text-xs`}>
+                        {escalatedBlockers > 0 || openCriticalRisks > 0 ? "Intervention Active" : "Stable Delivery"}
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+                      <StatTile label="Open Risks" value={openRisks} />
+                      <StatTile label="Critical Risks" value={openCriticalRisks} />
+                      <StatTile label="Open Blockers" value={openBlockers} />
+                      <StatTile label="Escalated" value={escalatedBlockers} />
+                      <StatTile label="Open Requests" value={openRequests} />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-4">
+                      Delayed milestones: {delayedMilestones}. Recent governed activity recorded: {activityEvents.length}.
+                    </p>
                   </div>
                 </div>
               </TabsContent>
@@ -533,6 +659,19 @@ export default function LCInitiativeDetailPage() {
                   </div>
                 )}
 
+                <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 space-y-3">
+                  <div>
+                    <p className="text-xs font-semibold text-orange-700 uppercase tracking-wide">Accountability & Intervention</p>
+                    <p className="text-sm text-gray-700 mt-1">Make ownership and pressure visible before opening the detailed insights workspace.</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <MiniMetric label="Owner" value={initiative.owner} tone="default" />
+                    <MiniMetric label="PM Leads" value={String(projectManagers.length)} tone="default" />
+                    <MiniMetric label="Escalated Blockers" value={String(escalatedBlockers)} tone={escalatedBlockers > 0 ? "warn" : "default"} />
+                    <MiniMetric label="Open Requests" value={String(openRequests)} tone={openRequests > 0 ? "warn" : "default"} />
+                  </div>
+                </div>
+
                 <Separator />
 
                 {/* CTA buttons */}
@@ -599,6 +738,15 @@ function StatTile({ label, value }: { label: string; value: number }) {
     <div className="bg-orange-50 border border-orange-100 rounded-xl py-3">
       <p className="text-xl font-bold text-orange-700">{value}</p>
       <p className="text-xs text-orange-600 mt-0.5">{label}</p>
+    </div>
+  );
+}
+
+function MiniMetric({ label, value, tone }: { label: string; value: string; tone: "default" | "warn" }) {
+  return (
+    <div className={`rounded-lg px-3 py-2 border ${tone === "warn" ? "bg-amber-50 border-amber-200" : "bg-white border-gray-200"}`}>
+      <p className="text-[11px] text-gray-500 uppercase tracking-wide">{label}</p>
+      <p className={`text-sm font-semibold mt-1 ${tone === "warn" ? "text-amber-800" : "text-gray-900"}`}>{value}</p>
     </div>
   );
 }

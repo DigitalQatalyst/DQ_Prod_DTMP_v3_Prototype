@@ -626,7 +626,7 @@ export default function LifecycleManagementPage() {
                             </span>
                             {initiative.fromPortfolio && (
                               <span className="absolute top-3 left-3 bg-white/20 backdrop-blur-sm text-white px-2.5 py-1 rounded-full text-xs font-semibold">
-                                Portfolio
+                                Raised from Portfolio
                               </span>
                             )}
                           </div>
@@ -640,6 +640,14 @@ export default function LifecycleManagementPage() {
                             <p className="text-sm text-gray-600 mb-3 line-clamp-3">
                               {initiative.description}
                             </p>
+                            {initiative.fromPortfolio && (
+                              <div className="mb-3 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2">
+                                <p className="text-xs font-medium text-blue-800">Portfolio provenance</p>
+                                <p className="text-xs text-blue-700 mt-1">
+                                  Initiated as the governed execution response to a portfolio-level signal or finding.
+                                </p>
+                              </div>
+                            )}
 
                             {/* Metadata strip */}
                             <div className="flex flex-wrap items-center gap-2 mb-3">

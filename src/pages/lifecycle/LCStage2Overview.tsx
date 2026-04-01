@@ -96,7 +96,7 @@ export default function LCStage2Overview() {
     <div className="p-6 space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Lifecycle Management - My Workspace</h1>
-        <p className="text-gray-500 mt-1">Track your submitted service requests and initiative ownership.</p>
+        <p className="text-gray-500 mt-1">Track formal TO support requests, delivery responses, and initiative ownership.</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
@@ -177,7 +177,7 @@ export default function LCStage2Overview() {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">My Active Requests</h2>
-                <p className="text-sm text-gray-500 mt-1">Last 5 active submissions.</p>
+                <p className="text-sm text-gray-500 mt-1">Open support channels currently moving through the TO workflow.</p>
               </div>
               <Badge variant="outline" className="text-xs border-gray-200">
                 {lastActiveRequests.length} listed
@@ -213,7 +213,7 @@ export default function LCStage2Overview() {
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <h3 className="text-sm font-semibold text-gray-900">Delivered</h3>
-                  <p className="text-xs text-gray-500 mt-0.5">Recent completed or delivered requests.</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Support outcomes that have been completed or delivered back to you.</p>
                 </div>
                 <Badge variant="outline" className="text-xs border-gray-200">
                   {deliveredRequests.length} listed
