@@ -99,6 +99,34 @@ export default function LCStage2Overview() {
         <p className="text-gray-500 mt-1">Track formal TO support requests, delivery responses, and initiative ownership.</p>
       </div>
 
+      <Card className="border-slate-200 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white">
+        <CardContent className="p-6">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="max-w-3xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-300">How This Workspace Works</p>
+              <h2 className="text-lg font-semibold mt-2">Stage 2 is the support and response layer for governed initiatives.</h2>
+              <p className="text-sm text-slate-300 mt-2 leading-relaxed">
+                Initiatives stay in Lifecycle as the strategic execution wrapper. This workspace tracks the formal TO support channels,
+                shows which requests are active, and records what outcomes came back into delivery.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 min-w-[280px]">
+              {[
+                { label: "Initiative", value: "Governed delivery context" },
+                { label: "Support request", value: "Formal TO workflow item" },
+                { label: "Delivered item", value: "Support response returned to delivery" },
+                { label: "Open in Lifecycle", value: "Return to the initiative execution view" },
+              ].map((item) => (
+                <div key={item.label} className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-wide text-slate-400">{item.label}</p>
+                  <p className="text-xs text-slate-100 mt-1">{item.value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
         <Card>
           <CardContent className="pt-6">

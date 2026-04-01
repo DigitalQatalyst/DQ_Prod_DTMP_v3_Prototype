@@ -302,8 +302,13 @@ export default function LCInitiativeDetailPage() {
   const openBlockers = initiativeProjects.flatMap((project) => project.blockers).filter((blocker) => !blocker.resolved).length;
   const escalatedBlockers = initiativeProjects.flatMap((project) => project.blockers).filter((blocker) => !blocker.resolved && blocker.escalationStatus !== "Not Escalated").length;
   const delayedMilestones = initiativeProjects.flatMap((project) => project.milestones).filter((milestone) => milestone.status === "Delayed").length;
+  const totalMilestones = initiativeProjects.flatMap((project) => project.milestones).length;
+  const completedMilestones = initiativeProjects.flatMap((project) => project.milestones).filter((milestone) => milestone.status === "Complete").length;
+  const resolvedBlockers = initiativeProjects.flatMap((project) => project.blockers).filter((blocker) => blocker.resolved).length;
   const projectManagers = [...new Set(initiativeProjects.map((project) => project.pmName))].filter(Boolean);
   const openRequests = requests.filter((request) => !["Delivered", "Completed"].includes(request.status)).length;
+  const completedRequests = requests.filter((request) => ["Delivered", "Completed"].includes(request.status)).length;
+  const isCompleted = initiative.status === "Completed";
   const lifecycleStageIndex = getLifecycleStageIndex(
     initiative,
     initiativeProjects.length,
@@ -362,6 +367,11 @@ export default function LCInitiativeDetailPage() {
               <Badge className="bg-gray-100 text-gray-700 border border-gray-200 text-xs">
                 {initiativeProjects.length} Projects
               </Badge>
+              {isCompleted && (
+                <Badge className="bg-green-100 text-green-700 border border-green-200 text-xs">
+                  Closure Evidence Available
+                </Badge>
+              )}
             </div>
             {initiative.fromPortfolio && (
               <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
@@ -425,6 +435,42 @@ export default function LCInitiativeDetailPage() {
                 <p className={`text-sm font-semibold mt-1 ${escalatedBlockers > 0 ? "text-amber-700" : "text-gray-900"}`}>{escalatedBlockers}</p>
               </div>
             </div>
+
+            {isCompleted && (
+              <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-5 space-y-4">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div>
+                    <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wide">Outcome Summary</p>
+                    <h2 className="text-lg font-semibold text-emerald-950 mt-1">This initiative has reached governed closure.</h2>
+                    <p className="text-sm text-emerald-900 mt-1">
+                      Closure indicates that delivery completed, major issues were resolved, and the initiative can be evidenced as an executed outcome rather than an active intervention case.
+                    </p>
+                  </div>
+                  <Badge className="bg-white text-emerald-700 border border-emerald-200 text-xs">
+                    Verified Outcome
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                  <StatTile label="Milestones Closed" value={completedMilestones} />
+                  <StatTile label="Blockers Resolved" value={resolvedBlockers} />
+                  <StatTile label="Support Requests Closed" value={completedRequests} />
+                  <StatTile label="Governance Events" value={activityEvents.length} />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {[
+                    { label: "Delivery complete", done: initiative.progress >= 100 || completedMilestones === totalMilestones },
+                    { label: "Key milestones closed", done: totalMilestones > 0 && completedMilestones === totalMilestones },
+                    { label: "Major blockers resolved", done: openBlockers === 0 },
+                    { label: "Support workflow closed", done: openRequests === 0 },
+                  ].map((item) => (
+                    <div key={item.label} className={`rounded-lg border px-3 py-2 ${item.done ? "bg-white border-emerald-200 text-emerald-900" : "bg-amber-50 border-amber-200 text-amber-900"}`}>
+                      <p className="text-xs font-semibold">{item.done ? "Confirmed" : "Review Required"}</p>
+                      <p className="text-sm mt-1">{item.label}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -471,6 +517,23 @@ export default function LCInitiativeDetailPage() {
                     <Metric label="Budget Spent" value={fmtBudget(initiative.budgetSpent)} />
                     <Metric label="Target Date" value={initiative.targetDate} />
                     <Metric label="EA Alignment" value={initiative.eaAlignmentScore === null ? "TBD" : `${initiative.eaAlignmentScore}%`} />
+                  </div>
+
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">How Lifecycle Works</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                      {[
+                        { label: "Initiative", value: "The governed execution wrapper for a strategic response." },
+                        { label: "Project", value: "A delivery stream that moves the initiative toward outcome." },
+                        { label: "Risk / Blocker", value: "Threats or dependencies that may trigger intervention." },
+                        { label: "Support / Escalation", value: "Formal TO support and intervention paths when delivery needs help." },
+                      ].map((item) => (
+                        <div key={item.label} className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+                          <p className="text-xs font-semibold text-slate-700">{item.label}</p>
+                          <p className="text-xs text-slate-500 mt-1 leading-relaxed">{item.value}</p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
                   {isActive && (
@@ -669,6 +732,18 @@ export default function LCInitiativeDetailPage() {
                     <MiniMetric label="PM Leads" value={String(projectManagers.length)} tone="default" />
                     <MiniMetric label="Escalated Blockers" value={String(escalatedBlockers)} tone={escalatedBlockers > 0 ? "warn" : "default"} />
                     <MiniMetric label="Open Requests" value={String(openRequests)} tone={openRequests > 0 ? "warn" : "default"} />
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+                  <div>
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Lifecycle Object Model</p>
+                    <p className="text-sm text-gray-700 mt-1">Use this page to understand the initiative as a governed unit, then move into Insights to manage risks, blockers, support requests, and evidence.</p>
+                  </div>
+                  <div className="grid grid-cols-1 gap-2">
+                    <MiniMetric label="Initiative" value="Strategic response wrapper" tone="default" />
+                    <MiniMetric label="Projects" value="Execution workstreams" tone="default" />
+                    <MiniMetric label="Support" value="Formal TO workflow" tone="default" />
                   </div>
                 </div>
 

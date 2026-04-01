@@ -1967,8 +1967,13 @@ export default function LCInsightsPage() {
   const openBlockers = projects.flatMap((project) => project.blockers).filter((blocker) => !blocker.resolved);
   const escalatedBlockers = openBlockers.filter((blocker) => blocker.escalationStatus !== "Not Escalated");
   const delayedMilestones = projects.flatMap((project) => project.milestones).filter((milestone) => milestone.status === "Delayed");
+  const totalMilestones = projects.flatMap((project) => project.milestones).length;
+  const completedMilestones = projects.flatMap((project) => project.milestones).filter((milestone) => milestone.status === "Complete").length;
+  const resolvedBlockers = projects.flatMap((project) => project.blockers).filter((blocker) => blocker.resolved).length;
   const openRequests = requests.filter((request) => !["Delivered", "Completed"].includes(request.status));
+  const completedRequests = requests.filter((request) => ["Delivered", "Completed"].includes(request.status));
   const projectManagers = [...new Set(projects.map((project) => project.pmName))].filter(Boolean);
+  const isCompleted = initiative.status === "Completed";
   const lifecycleStageIndex = getLifecycleStageIndex(
     initiative,
     projects.length,
@@ -2063,6 +2068,30 @@ export default function LCInsightsPage() {
                   : "Select a role to see role-appropriate insights"}
               </p>
             </div>
+            <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-6">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                  <p className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Lifecycle Model</p>
+                  <p className="text-sm text-slate-200 mt-1">Read this initiative as a governed delivery system, not a standalone dashboard.</p>
+                </div>
+                <span className="text-xs text-slate-300 bg-slate-800 border border-white/10 px-2.5 py-1 rounded-full">
+                  Official Execution View
+                </span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 mt-4">
+                {[
+                  { label: "Initiative", value: "Strategic execution wrapper" },
+                  { label: "Projects", value: "Delivery streams under governance" },
+                  { label: "Risks / Blockers", value: "Signals that may require intervention" },
+                  { label: "Support / Escalation", value: "Formal TO response path" },
+                ].map((item) => (
+                  <div key={item.label} className="rounded-lg border border-white/10 bg-slate-950/50 px-3 py-2">
+                    <p className="text-[11px] uppercase tracking-wide text-slate-500">{item.label}</p>
+                    <p className="text-xs text-slate-200 mt-1 leading-relaxed">{item.value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
             <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl p-4 mb-6 space-y-3">
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div>
@@ -2113,6 +2142,40 @@ export default function LCInsightsPage() {
                   <InterventionStat label="Escalated Blockers" value={escalatedBlockers.length} tone={escalatedBlockers.length > 0 ? "amber" : "neutral"} />
                   <InterventionStat label="Open Requests" value={openRequests.length} tone={openRequests.length > 0 ? "blue" : "neutral"} />
                   <InterventionStat label="Delayed Milestones" value={delayedMilestones.length} tone={delayedMilestones.length > 0 ? "amber" : "neutral"} />
+                </div>
+              </div>
+            )}
+            {isCompleted && (
+              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 mb-6 space-y-4">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div>
+                    <p className="text-xs font-semibold text-emerald-300 uppercase tracking-wider">Closure Evidence</p>
+                    <p className="text-sm text-emerald-100 mt-1">
+                      This initiative is presented as a verified outcome with delivery, support, and governance evidence.
+                    </p>
+                  </div>
+                  <span className="text-xs text-emerald-200 bg-white/10 border border-white/10 px-2.5 py-1 rounded-full">
+                    Verified Closure
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+                  <InterventionStat label="Milestones Closed" value={completedMilestones} tone="neutral" />
+                  <InterventionStat label="Blockers Resolved" value={resolvedBlockers} tone="neutral" />
+                  <InterventionStat label="Requests Closed" value={completedRequests.length} tone="blue" />
+                  <InterventionStat label="Governance Events" value={getActivityEvents(initiative.id).length} tone="neutral" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {[
+                    { label: "Delivery complete", done: initiative.progress >= 100 || (totalMilestones > 0 && completedMilestones === totalMilestones) },
+                    { label: "Key milestones closed", done: totalMilestones > 0 && completedMilestones === totalMilestones },
+                    { label: "Major blockers resolved", done: openBlockers.length === 0 },
+                    { label: "Support workflow closed", done: openRequests.length === 0 },
+                  ].map((item) => (
+                    <div key={item.label} className={`rounded-lg border px-3 py-2 ${item.done ? "bg-white/10 border-emerald-400/20 text-emerald-100" : "bg-amber-500/10 border-amber-400/20 text-amber-100"}`}>
+                      <p className="text-xs font-semibold">{item.done ? "Confirmed" : "Review Required"}</p>
+                      <p className="text-sm mt-1">{item.label}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -2169,6 +2232,25 @@ export default function LCInsightsPage() {
                   <SidebarMetric label="PM Leads" value={String(projectManagers.length)} tone="default" />
                   <SidebarMetric label="Escalated" value={String(escalatedBlockers.length)} tone={escalatedBlockers.length > 0 ? "warn" : "default"} />
                   <SidebarMetric label="Open Requests" value={String(openRequests.length)} tone={openRequests.length > 0 ? "warn" : "default"} />
+                </div>
+              </div>
+              <div className="bg-slate-950/50 rounded-xl border border-white/10 p-3 space-y-3">
+                <div>
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Object Model</p>
+                  <p className="text-xs text-slate-500 mt-1">Use the sidebar as a quick guide to what each object means in Lifecycle.</p>
+                </div>
+                <div className="space-y-2">
+                  {[
+                    "Initiative = governed strategic response",
+                    "Project = delivery workstream",
+                    "Risk / Blocker = threat or dependency",
+                    "Support request = formal TO channel",
+                    "Escalation = intervention path",
+                  ].map((item) => (
+                    <div key={item} className="rounded-lg border border-white/5 bg-white/5 px-2.5 py-2 text-xs text-slate-300">
+                      {item}
+                    </div>
+                  ))}
                 </div>
               </div>
               {requests.length > 0 && (

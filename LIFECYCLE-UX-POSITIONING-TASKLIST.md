@@ -234,7 +234,7 @@ Present TO support requests as a structured intervention path, not just a conven
 
 This makes TO support feel like part of DEWA's transformation governance model rather than an isolated request feature.
 
-### 9. Give completion and closure more narrative weight
+### 9. Give completion and closure more narrative weight `[Done]`
 
 **Goal**
 
@@ -258,7 +258,7 @@ Make "Completed" mean governed closure with evidence, not just a green status.
 
 This gives Lifecycle a full beginning-to-end narrative arc and reinforces the idea of verified outcomes.
 
-### 10. Clarify the object model in the UX
+### 10. Clarify the object model in the UX `[Done]`
 
 **Goal**
 
@@ -282,7 +282,7 @@ Reduce confusion between initiative, project, risk, blocker, service request, an
 
 This makes the product model easier to understand and makes the governance structure feel intentional.
 
-### 11. Strengthen visual tone to feel more official and operational
+### 11. Strengthen visual tone to feel more official and operational `[Done]`
 
 **Goal**
 
@@ -362,9 +362,9 @@ These deepen the operating-model story and make the workflow feel institutionall
 
 ### Phase 4: Narrative closure
 
-- Task 9. Give completion and closure more narrative weight
-- Task 10. Clarify the object model in the UX
-- Task 11. Strengthen visual tone to feel more official and operational
+- Task 9. Give completion and closure more narrative weight `[Done]`
+- Task 10. Clarify the object model in the UX `[Done]`
+- Task 11. Strengthen visual tone to feel more official and operational `[Done]`
 
 **Why last**
 

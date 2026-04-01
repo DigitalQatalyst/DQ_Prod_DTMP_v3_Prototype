@@ -582,6 +582,31 @@ export default function LifecycleManagementPage() {
 
               {/* Main grid */}
               <div className="flex-1 min-w-0">
+                <div className="mb-5 rounded-2xl border border-slate-200 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 p-5 text-white shadow-sm">
+                  <div className="flex items-start justify-between gap-4 flex-wrap">
+                    <div className="max-w-3xl">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-300">Governed Operating Model</p>
+                      <h2 className="text-lg font-semibold mt-2">Lifecycle turns portfolio signals into governed execution.</h2>
+                      <p className="text-sm text-slate-300 mt-2 leading-relaxed">
+                        Each initiative is the strategic execution wrapper. Projects deliver the work, risks and blockers expose delivery threats,
+                        support requests bring TO into the workflow, and escalations create the formal intervention path.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 min-w-[280px]">
+                      {[
+                        { label: "Initiative", value: "Governed execution wrapper" },
+                        { label: "Project", value: "Delivery stream inside the initiative" },
+                        { label: "Risk / Blocker", value: "Threat or dependency requiring action" },
+                        { label: "Support Request", value: "Formal TO support channel" },
+                      ].map((item) => (
+                        <div key={item.label} className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+                          <p className="text-[11px] uppercase tracking-wide text-slate-400">{item.label}</p>
+                          <p className="text-xs text-slate-100 mt-1 leading-snug">{item.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
                 <div className="flex items-center justify-between mb-4">
                   <p className="text-sm text-gray-500">
                     {filteredInitiatives.length} of {initiatives.length} initiatives
@@ -657,6 +682,11 @@ export default function LifecycleManagementPage() {
                               <Badge className="text-xs bg-slate-50 text-slate-700 border border-slate-200">
                                 EA: {initiative.eaAlignmentScore === null ? "TBD" : `${initiative.eaAlignmentScore}%`}
                               </Badge>
+                              {initiative.status === "Completed" && (
+                                <Badge className="text-xs bg-green-50 text-green-700 border border-green-200">
+                                  Closure Recorded
+                                </Badge>
+                              )}
                             </div>
 
                             {/* Bottom strip — progress bar or meta */}
