@@ -212,30 +212,6 @@ const TABS: { id: DetailTab; label: string; icon: React.FC<{ className?: string 
   { id: "retirement", label: "Retirement", icon: Archive },
 ];
 
-const LIFECYCLE_JOURNEY = [
-  { id: "scoping", label: "Scoping", note: "Define initiative scope and governance path" },
-  { id: "governed", label: "Governed", note: "Confirm ownership, alignment, and controls" },
-  { id: "delivery", label: "In Delivery", note: "Run workstreams, milestones, and reporting" },
-  { id: "intervention", label: "Intervention", note: "Resolve escalations, blockers, and major risks" },
-  { id: "stabilised", label: "Stabilised", note: "Close down open issues and steady delivery" },
-  { id: "completed", label: "Completed", note: "Exit with delivery evidence and closure" },
-] as const;
-
-const getLifecycleStageIndex = (
-  initiative: Initiative,
-  projectCount: number,
-  openRisks: number,
-  escalatedBlockers: number,
-  openRequests: number
-) => {
-  if (initiative.status === "Completed") return 5;
-  if (initiative.status === "Scoping") return 0;
-  if (initiative.status === "At Risk" || escalatedBlockers > 0 || openRisks > 2 || openRequests > 0) return 3;
-  if (initiative.progress >= 75 && openRisks <= 1 && escalatedBlockers === 0) return 4;
-  if (projectCount > 0) return 2;
-  return 1;
-};
-
 // ── Component ──────────────────────────────────────────────────────────────────
 
 export default function LCInitiativeDetailPage() {
@@ -309,14 +285,6 @@ export default function LCInitiativeDetailPage() {
   const openRequests = requests.filter((request) => !["Delivered", "Completed"].includes(request.status)).length;
   const completedRequests = requests.filter((request) => ["Delivered", "Completed"].includes(request.status)).length;
   const isCompleted = initiative.status === "Completed";
-  const lifecycleStageIndex = getLifecycleStageIndex(
-    initiative,
-    initiativeProjects.length,
-    openRisks,
-    escalatedBlockers,
-    openRequests
-  );
-
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -382,7 +350,7 @@ export default function LCInitiativeDetailPage() {
               </div>
             )}
 
-            <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 space-y-3">
+            <div className="hidden bg-orange-50 border border-orange-100 rounded-xl p-4 space-y-3">
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div>
                   <p className="text-xs font-semibold text-orange-700 uppercase tracking-wide">Lifecycle Journey</p>
@@ -417,7 +385,7 @@ export default function LCInitiativeDetailPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div className="hidden grid grid-cols-1 md:grid-cols-4 gap-3">
               <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
                 <p className="text-xs text-gray-500 uppercase tracking-wide">Accountable Owner</p>
                 <p className="text-sm font-semibold text-gray-900 mt-1">{initiative.owner}</p>
@@ -519,23 +487,6 @@ export default function LCInitiativeDetailPage() {
                     <Metric label="EA Alignment" value={initiative.eaAlignmentScore === null ? "TBD" : `${initiative.eaAlignmentScore}%`} />
                   </div>
 
-                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">How Lifecycle Works</p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
-                      {[
-                        { label: "Initiative", value: "The governed execution wrapper for a strategic response." },
-                        { label: "Project", value: "A delivery stream that moves the initiative toward outcome." },
-                        { label: "Risk / Blocker", value: "Threats or dependencies that may trigger intervention." },
-                        { label: "Support / Escalation", value: "Formal TO support and intervention paths when delivery needs help." },
-                      ].map((item) => (
-                        <div key={item.label} className="rounded-lg border border-slate-200 bg-white px-3 py-2">
-                          <p className="text-xs font-semibold text-slate-700">{item.label}</p>
-                          <p className="text-xs text-slate-500 mt-1 leading-relaxed">{item.value}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
                   {isActive && (
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-sm">
@@ -548,33 +499,6 @@ export default function LCInitiativeDetailPage() {
 
                   <Separator />
 
-                  <div className="grid grid-cols-3 gap-3 text-center">
-                    <StatTile label="Projects" value={initiativeProjects.length} />
-                    <StatTile label="Applications" value={applications.length} />
-                    <StatTile label="Compliance Checks" value={complianceChecks.filter((c) => c.status !== "Not Assessed").length} />
-                  </div>
-
-                  <div className="bg-orange-50 border border-orange-100 rounded-xl p-5">
-                    <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900">Intervention Snapshot</h3>
-                        <p className="text-sm text-gray-600 mt-1">Signals that tell you whether delivery needs governance intervention right now.</p>
-                      </div>
-                      <Badge className={`${escalatedBlockers > 0 || openCriticalRisks > 0 ? "bg-amber-100 text-amber-800 border-amber-200" : "bg-green-100 text-green-700 border-green-200"} border text-xs`}>
-                        {escalatedBlockers > 0 || openCriticalRisks > 0 ? "Intervention Active" : "Stable Delivery"}
-                      </Badge>
-                    </div>
-                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-                      <StatTile label="Open Risks" value={openRisks} />
-                      <StatTile label="Critical Risks" value={openCriticalRisks} />
-                      <StatTile label="Open Blockers" value={openBlockers} />
-                      <StatTile label="Escalated" value={escalatedBlockers} />
-                      <StatTile label="Open Requests" value={openRequests} />
-                    </div>
-                    <p className="text-xs text-gray-500 mt-4">
-                      Delayed milestones: {delayedMilestones}. Recent governed activity recorded: {activityEvents.length}.
-                    </p>
-                  </div>
                 </div>
               </TabsContent>
 
@@ -722,31 +646,6 @@ export default function LCInitiativeDetailPage() {
                   </div>
                 )}
 
-                <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 space-y-3">
-                  <div>
-                    <p className="text-xs font-semibold text-orange-700 uppercase tracking-wide">Accountability & Intervention</p>
-                    <p className="text-sm text-gray-700 mt-1">Make ownership and pressure visible before opening the detailed insights workspace.</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <MiniMetric label="Owner" value={initiative.owner} tone="default" />
-                    <MiniMetric label="PM Leads" value={String(projectManagers.length)} tone="default" />
-                    <MiniMetric label="Escalated Blockers" value={String(escalatedBlockers)} tone={escalatedBlockers > 0 ? "warn" : "default"} />
-                    <MiniMetric label="Open Requests" value={String(openRequests)} tone={openRequests > 0 ? "warn" : "default"} />
-                  </div>
-                </div>
-
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
-                  <div>
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Lifecycle Object Model</p>
-                    <p className="text-sm text-gray-700 mt-1">Use this page to understand the initiative as a governed unit, then move into Insights to manage risks, blockers, support requests, and evidence.</p>
-                  </div>
-                  <div className="grid grid-cols-1 gap-2">
-                    <MiniMetric label="Initiative" value="Strategic response wrapper" tone="default" />
-                    <MiniMetric label="Projects" value="Execution workstreams" tone="default" />
-                    <MiniMetric label="Support" value="Formal TO workflow" tone="default" />
-                  </div>
-                </div>
-
                 <Separator />
 
                 {/* CTA buttons */}
@@ -804,24 +703,6 @@ function Metric({ label, value }: { label: string; value: string }) {
     <div className="bg-gray-50 rounded-lg px-4 py-3">
       <p className="text-xs text-gray-500 mb-0.5">{label}</p>
       <p className="text-sm font-semibold text-gray-900">{value}</p>
-    </div>
-  );
-}
-
-function StatTile({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="bg-orange-50 border border-orange-100 rounded-xl py-3">
-      <p className="text-xl font-bold text-orange-700">{value}</p>
-      <p className="text-xs text-orange-600 mt-0.5">{label}</p>
-    </div>
-  );
-}
-
-function MiniMetric({ label, value, tone }: { label: string; value: string; tone: "default" | "warn" }) {
-  return (
-    <div className={`rounded-lg px-3 py-2 border ${tone === "warn" ? "bg-amber-50 border-amber-200" : "bg-white border-gray-200"}`}>
-      <p className="text-[11px] text-gray-500 uppercase tracking-wide">{label}</p>
-      <p className={`text-sm font-semibold mt-1 ${tone === "warn" ? "text-amber-800" : "text-gray-900"}`}>{value}</p>
     </div>
   );
 }

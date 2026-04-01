@@ -433,7 +433,7 @@ export default function LifecycleManagementPage() {
             The operational execution layer for DEWA transformation initiatives — from conception through delivery and verified outcome.
           </p>
 
-          <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             <div className="flex flex-wrap gap-6 text-sm text-muted-foreground" role="list" aria-label="Lifecycle summary stats">
               <span className="flex items-center gap-2" role="listitem">
                 <RefreshCw className="w-4 h-4" />
@@ -442,11 +442,6 @@ export default function LifecycleManagementPage() {
               <span className="flex items-center gap-2" role="listitem">
                 <TrendingUp className="w-4 h-4" />
                 {portfolioSummary.totalProjects} Delivery Workstreams
-              </span>
-              <span className="flex items-center gap-2" role="listitem">
-                <span className="inline-flex h-6 items-center px-2 rounded bg-orange-50 border border-orange-100 text-orange-700 text-xs font-semibold">
-                  EA & TO Governed
-                </span>
               </span>
             </div>
           </div>
@@ -582,31 +577,6 @@ export default function LifecycleManagementPage() {
 
               {/* Main grid */}
               <div className="flex-1 min-w-0">
-                <div className="mb-5 rounded-2xl border border-slate-200 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 p-5 text-white shadow-sm">
-                  <div className="flex items-start justify-between gap-4 flex-wrap">
-                    <div className="max-w-3xl">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-300">Governed Operating Model</p>
-                      <h2 className="text-lg font-semibold mt-2">Lifecycle turns portfolio signals into governed execution.</h2>
-                      <p className="text-sm text-slate-300 mt-2 leading-relaxed">
-                        Each initiative is the strategic execution wrapper. Projects deliver the work, risks and blockers expose delivery threats,
-                        support requests bring TO into the workflow, and escalations create the formal intervention path.
-                      </p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 min-w-[280px]">
-                      {[
-                        { label: "Initiative", value: "Governed execution wrapper" },
-                        { label: "Project", value: "Delivery stream inside the initiative" },
-                        { label: "Risk / Blocker", value: "Threat or dependency requiring action" },
-                        { label: "Support Request", value: "Formal TO support channel" },
-                      ].map((item) => (
-                        <div key={item.label} className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-                          <p className="text-[11px] uppercase tracking-wide text-slate-400">{item.label}</p>
-                          <p className="text-xs text-slate-100 mt-1 leading-snug">{item.value}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
                 <div className="flex items-center justify-between mb-4">
                   <p className="text-sm text-gray-500">
                     {filteredInitiatives.length} of {initiatives.length} initiatives
