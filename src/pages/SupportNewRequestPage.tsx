@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ArrowLeft, Paperclip } from "lucide-react";
+import { ArrowLeft, Paperclip, Lightbulb, ArrowRight } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
-import { ServiceRequest, SupportTicket } from "@/data/supportData";
+import { ServiceRequest, SupportTicket, knowledgeArticles } from "@/data/supportData";
 import { createSupportStage3Intake } from "@/data/stage3/intake";
 import {
   upsertStoredSupportRequest,
@@ -68,6 +68,22 @@ export default function SupportNewRequestPage() {
   const [form, setForm] = useState<RequestFormState>(() => createDefaultForm(requestedServiceName));
   const [attachments, setAttachments] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  const suggestedArticles = useMemo(() => {
+    const query = form.description?.toLowerCase().trim();
+    if (!query || query.length < 10) return [];
+
+    const queryWords = query.split(/\s+/).filter((w) => w.length > 3);
+    return knowledgeArticles
+      .filter((a) =>
+        queryWords.some(
+          (word) =>
+            a.title.toLowerCase().includes(word) ||
+            a.tags.some((tag) => tag.toLowerCase().includes(word))
+        )
+      )
+      .slice(0, 3);
+  }, [form.description]);
 
   const backToSupport = () => {
     if (requestContext.cardId) {
@@ -366,6 +382,33 @@ export default function SupportNewRequestPage() {
                   </ul>
                 )}
               </div>
+
+              {suggestedArticles.length > 0 && (
+                <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 my-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Lightbulb className="w-4 h-4 text-blue-600" />
+                    <p className="text-sm font-medium text-blue-900">
+                      These articles may already answer your question
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    {suggestedArticles.map((article) => (
+                      <button
+                        key={article.id}
+                        type="button"
+                        onClick={() => navigate(`/marketplaces/support-services/knowledge/${article.id}`)}
+                        className="flex items-center gap-2 text-sm text-blue-700 hover:text-blue-900 w-full text-left"
+                      >
+                        <ArrowRight className="w-3.5 h-3.5 flex-shrink-0" />
+                        {article.title}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-blue-600 mt-3">
+                    If none of these help, continue below to submit your request.
+                  </p>
+                </div>
+              )}
 
               <div className="flex items-center gap-3">
                 <button type="submit" className="btn-primary">
