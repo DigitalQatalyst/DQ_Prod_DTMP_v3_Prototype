@@ -274,14 +274,10 @@ export default function LCInitiativeDetailPage() {
 
   const isActive = initiative.status === "Active" || initiative.status === "At Risk";
   const openRisks = initiativeProjects.flatMap((project) => project.risks).filter((risk) => risk.status === "Open").length;
-  const openCriticalRisks = initiativeProjects.flatMap((project) => project.risks).filter((risk) => risk.status === "Open" && risk.severity === "Critical").length;
   const openBlockers = initiativeProjects.flatMap((project) => project.blockers).filter((blocker) => !blocker.resolved).length;
-  const escalatedBlockers = initiativeProjects.flatMap((project) => project.blockers).filter((blocker) => !blocker.resolved && blocker.escalationStatus !== "Not Escalated").length;
-  const delayedMilestones = initiativeProjects.flatMap((project) => project.milestones).filter((milestone) => milestone.status === "Delayed").length;
   const totalMilestones = initiativeProjects.flatMap((project) => project.milestones).length;
   const completedMilestones = initiativeProjects.flatMap((project) => project.milestones).filter((milestone) => milestone.status === "Complete").length;
   const resolvedBlockers = initiativeProjects.flatMap((project) => project.blockers).filter((blocker) => blocker.resolved).length;
-  const projectManagers = [...new Set(initiativeProjects.map((project) => project.pmName))].filter(Boolean);
   const openRequests = requests.filter((request) => !["Delivered", "Completed"].includes(request.status)).length;
   const completedRequests = requests.filter((request) => ["Delivered", "Completed"].includes(request.status)).length;
   const isCompleted = initiative.status === "Completed";
@@ -349,60 +345,6 @@ export default function LCInitiativeDetailPage() {
                 </p>
               </div>
             )}
-
-            <div className="hidden bg-orange-50 border border-orange-100 rounded-xl p-4 space-y-3">
-              <div className="flex items-center justify-between gap-3 flex-wrap">
-                <div>
-                  <p className="text-xs font-semibold text-orange-700 uppercase tracking-wide">Lifecycle Journey</p>
-                  <p className="text-sm text-orange-900 mt-1">
-                    {LIFECYCLE_JOURNEY[lifecycleStageIndex].label} â€” {LIFECYCLE_JOURNEY[lifecycleStageIndex].note}
-                  </p>
-                </div>
-                <Badge className="bg-white text-orange-700 border border-orange-200 text-xs">
-                  Current Stage: {LIFECYCLE_JOURNEY[lifecycleStageIndex].label}
-                </Badge>
-              </div>
-              <div className="grid grid-cols-2 lg:grid-cols-6 gap-2">
-                {LIFECYCLE_JOURNEY.map((stage, index) => {
-                  const isCurrent = index === lifecycleStageIndex;
-                  const isComplete = index < lifecycleStageIndex;
-                  return (
-                    <div
-                      key={stage.id}
-                      className={`rounded-lg border px-3 py-2 text-xs ${
-                        isCurrent
-                          ? "bg-orange-100 border-orange-300 text-orange-900"
-                          : isComplete
-                          ? "bg-white border-orange-200 text-orange-700"
-                          : "bg-white/70 border-orange-100 text-orange-500"
-                      }`}
-                    >
-                      <p className="font-semibold">{stage.label}</p>
-                      <p className="mt-1 opacity-80 leading-snug">{stage.note}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="hidden grid grid-cols-1 md:grid-cols-4 gap-3">
-              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-                <p className="text-xs text-gray-500 uppercase tracking-wide">Accountable Owner</p>
-                <p className="text-sm font-semibold text-gray-900 mt-1">{initiative.owner}</p>
-              </div>
-              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-                <p className="text-xs text-gray-500 uppercase tracking-wide">Project Managers</p>
-                <p className="text-sm font-semibold text-gray-900 mt-1">{projectManagers.length}</p>
-              </div>
-              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-                <p className="text-xs text-gray-500 uppercase tracking-wide">Open Risks</p>
-                <p className={`text-sm font-semibold mt-1 ${openCriticalRisks > 0 ? "text-red-700" : "text-gray-900"}`}>{openRisks}</p>
-              </div>
-              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-                <p className="text-xs text-gray-500 uppercase tracking-wide">Escalated Blockers</p>
-                <p className={`text-sm font-semibold mt-1 ${escalatedBlockers > 0 ? "text-amber-700" : "text-gray-900"}`}>{escalatedBlockers}</p>
-              </div>
-            </div>
 
             {isCompleted && (
               <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-5 space-y-4">
