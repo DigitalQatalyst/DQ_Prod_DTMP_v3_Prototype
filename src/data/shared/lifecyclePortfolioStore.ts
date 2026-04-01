@@ -1101,6 +1101,84 @@ export const resolveBlocker = (
   return updated;
 };
 
+// ── Update — Risk Status ──────────────────────────────────────────────────────
+
+export const updateRiskStatus = (
+  projectId: string,
+  riskId: string,
+  status: "Open" | "Mitigated" | "Accepted" | "Closed"
+): Project | null => {
+  const store = readStore();
+  let updated: Project | null = null;
+  const now = new Date().toISOString();
+  const nextProjects = store.projects.map((p) => {
+    if (p.id !== projectId) return p;
+    const nextRisks = p.risks.map((r) => (r.id === riskId ? { ...r, status } : r));
+    updated = { ...p, risks: nextRisks, updatedAt: now };
+    return updated;
+  });
+  writeStore({ ...store, projects: nextProjects });
+  return updated;
+};
+
+// ── Update — Blocker Escalation ───────────────────────────────────────────────
+
+export const updateBlockerEscalation = (
+  projectId: string,
+  blockerId: string,
+  escalationStatus: "Not Escalated" | "Escalated to TO" | "Escalated to Division Head"
+): Project | null => {
+  const store = readStore();
+  let updated: Project | null = null;
+  const now = new Date().toISOString();
+  const nextProjects = store.projects.map((p) => {
+    if (p.id !== projectId) return p;
+    const nextBlockers = p.blockers.map((b) =>
+      b.id === blockerId ? { ...b, escalationStatus } : b
+    );
+    updated = { ...p, blockers: nextBlockers, updatedAt: now };
+    return updated;
+  });
+  writeStore({ ...store, projects: nextProjects });
+  return updated;
+};
+
+// ── Update — Initiative Budget Spent ─────────────────────────────────────────
+
+export const updateInitiativeBudgetSpent = (
+  initiativeId: string,
+  budgetSpent: number
+): Initiative | null => {
+  const store = readStore();
+  let updated: Initiative | null = null;
+  const now = new Date().toISOString();
+  const nextInitiatives = store.initiatives.map((i) => {
+    if (i.id !== initiativeId) return i;
+    updated = { ...i, budgetSpent, updatedAt: now };
+    return updated;
+  });
+  writeStore({ ...store, initiatives: nextInitiatives });
+  return updated;
+};
+
+// ── Update — Project Budget Spent ─────────────────────────────────────────────
+
+export const updateProjectBudgetSpent = (
+  projectId: string,
+  budgetSpent: number
+): Project | null => {
+  const store = readStore();
+  let updated: Project | null = null;
+  const now = new Date().toISOString();
+  const nextProjects = store.projects.map((p) => {
+    if (p.id !== projectId) return p;
+    updated = { ...p, budgetSpent, updatedAt: now };
+    return updated;
+  });
+  writeStore({ ...store, projects: nextProjects });
+  return updated;
+};
+
 // ── Create — Initiative ───────────────────────────────────────────────────────
 
 export const addInitiative = (data: Omit<Initiative, "id" | "updatedAt">): Initiative => {

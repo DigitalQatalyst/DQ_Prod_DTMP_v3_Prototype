@@ -85,12 +85,47 @@ export default function LCStage2Overview() {
       .slice(0, 5);
   }, [requests]);
 
+  const deliveredRequests: LCServiceRequest[] = useMemo(() => {
+    return [...requests]
+      .filter((r) => r.status === "Delivered" || r.status === "Completed")
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      .slice(0, 5);
+  }, [requests]);
+
   return (
     <div className="p-6 space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Lifecycle Management - My Workspace</h1>
-        <p className="text-gray-500 mt-1">Track your submitted service requests and initiative ownership.</p>
+        <p className="text-gray-500 mt-1">Track formal TO support requests, delivery responses, and initiative ownership.</p>
       </div>
+
+      <Card className="border-slate-200 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white">
+        <CardContent className="p-6">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="max-w-3xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-300">How This Workspace Works</p>
+              <h2 className="text-lg font-semibold mt-2">Stage 2 is the support and response layer for governed initiatives.</h2>
+              <p className="text-sm text-slate-300 mt-2 leading-relaxed">
+                Initiatives stay in Lifecycle as the strategic execution wrapper. This workspace tracks the formal TO support channels,
+                shows which requests are active, and records what outcomes came back into delivery.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 min-w-[280px]">
+              {[
+                { label: "Initiative", value: "Governed delivery context" },
+                { label: "Support request", value: "Formal TO workflow item" },
+                { label: "Delivered item", value: "Support response returned to delivery" },
+                { label: "Open in Lifecycle", value: "Return to the initiative execution view" },
+              ].map((item) => (
+                <div key={item.label} className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-wide text-slate-400">{item.label}</p>
+                  <p className="text-xs text-slate-100 mt-1">{item.value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
         <Card>
@@ -170,7 +205,7 @@ export default function LCStage2Overview() {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">My Active Requests</h2>
-                <p className="text-sm text-gray-500 mt-1">Last 5 active submissions.</p>
+                <p className="text-sm text-gray-500 mt-1">Open support channels currently moving through the TO workflow.</p>
               </div>
               <Badge variant="outline" className="text-xs border-gray-200">
                 {lastActiveRequests.length} listed
@@ -189,6 +224,9 @@ export default function LCStage2Overview() {
                         Initiative: {r.initiativeName}
                         {r.projectName ? ` · Project: ${r.projectName}` : ""}
                       </p>
+                      {r.sourceName && (
+                        <p className="text-xs text-gray-400 mt-0.5">â†³ From {r.sourceType}: {r.sourceName}</p>
+                      )}
                       <p className="text-xs text-gray-500 mt-1">{new Date(r.submittedAt).toLocaleDateString()}</p>
                     </div>
                     <Badge className={`text-xs border ${getStatusColor(r.status)}`}>
@@ -198,6 +236,50 @@ export default function LCStage2Overview() {
                 ))}
               </div>
             )}
+
+            <div className="pt-2 border-t border-gray-200">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900">Delivered</h3>
+                  <p className="text-xs text-gray-500 mt-0.5">Support outcomes that have been completed or delivered back to you.</p>
+                </div>
+                <Badge variant="outline" className="text-xs border-gray-200">
+                  {deliveredRequests.length} listed
+                </Badge>
+              </div>
+
+              {deliveredRequests.length === 0 ? (
+                <p className="text-sm text-gray-500">No delivered requests yet.</p>
+              ) : (
+                <div className="space-y-3">
+                  {deliveredRequests.map((r) => (
+                    <div key={r.id} className="p-3 border border-gray-200 rounded-lg">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 line-clamp-1">{r.serviceType}</p>
+                          <p className="text-xs text-gray-500 mt-1 line-clamp-1">
+                            Initiative: {r.initiativeName}
+                            {r.projectName ? ` Â· Project: ${r.projectName}` : ""}
+                          </p>
+                          {r.sourceName && (
+                            <p className="text-xs text-gray-400 mt-0.5">â†³ From {r.sourceType}: {r.sourceName}</p>
+                          )}
+                        </div>
+                        <Badge className={`text-xs border ${getStatusColor(r.status)}`}>
+                          {r.status}
+                        </Badge>
+                      </div>
+                      <button
+                        onClick={() => { window.location.href = `/marketplaces/lifecycle-management/initiative/${r.initiativeId}/insights`; }}
+                        className="text-xs text-teal-600 hover:text-teal-800 font-medium mt-2 flex items-center gap-1"
+                      >
+                        View in Lifecycle â†’
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, Briefcase, FolderKanban, Server, ShieldCheck, Package, Archive, CheckCircle, AlertTriangle, Clock, ExternalLink } from "lucide-react";
+import { X, Briefcase, Eye, FileText, FolderKanban, Server, ShieldCheck, Package, Archive, CheckCircle, AlertTriangle, Clock, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -244,9 +244,11 @@ const TABS: { id: DetailTab; label: string; icon: React.FC<{ className?: string 
 interface Props {
   initiative: Initiative;
   onClose: () => void;
+  onSeeInsights?: () => void;
+  onRequestService?: () => void;
 }
 
-export default function LCInitiativeDetailPanel({ initiative, onClose }: Props) {
+export default function LCInitiativeDetailPanel({ initiative, onClose, onSeeInsights, onRequestService }: Props) {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<DetailTab>("overview");
 
@@ -449,16 +451,16 @@ export default function LCInitiativeDetailPanel({ initiative, onClose }: Props) 
         </div>
 
         {/* Footer */}
-        <div className="border-t border-gray-200 px-6 py-4 bg-gray-50 flex items-center justify-between gap-3">
+        <div className="border-t border-gray-200 px-6 py-4 bg-gray-50 flex items-center justify-between gap-3 flex-wrap">
           <p className="text-xs text-gray-400">
             Last updated: {new Date(initiative.updatedAt).toLocaleDateString()}
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {initiative.fromPortfolio && initiative.portfolioCardId && (
               <Button
                 size="sm"
                 variant="outline"
-                className="text-xs border-orange-300 text-orange-700 hover:bg-orange-50"
+                className="text-xs border-blue-200 text-blue-700 hover:bg-blue-50"
                 onClick={() => {
                   onClose();
                   navigate("/marketplaces/portfolio-management", {
@@ -470,9 +472,31 @@ export default function LCInitiativeDetailPanel({ initiative, onClose }: Props) 
                 View in Portfolio
               </Button>
             )}
+            {onSeeInsights && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs border-orange-200 text-orange-700 hover:bg-orange-50"
+                onClick={onSeeInsights}
+              >
+                <Eye className="w-3.5 h-3.5 mr-1.5" />
+                See Insights
+              </Button>
+            )}
+            {onRequestService && (
+              <Button
+                size="sm"
+                className="bg-orange-600 hover:bg-orange-700 text-white text-xs"
+                onClick={onRequestService}
+              >
+                <FileText className="w-3.5 h-3.5 mr-1.5" />
+                Request Service
+              </Button>
+            )}
             <Button
               size="sm"
-              className="bg-orange-600 hover:bg-orange-700 text-white text-xs"
+              variant="outline"
+              className="text-xs"
               onClick={onClose}
             >
               Close

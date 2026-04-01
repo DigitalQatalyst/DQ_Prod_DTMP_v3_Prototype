@@ -38,7 +38,14 @@
       "Bash(powershell -Command \"Get-ChildItem -Recurse ''C:\\\\Users\\\\Wangare\\\\Desktop\\\\DEWA Prototype\\\\DQ_Prod_DTMP_v3_DEWA_Prototype\\\\src\\\\pages\\\\stage2'' | Select-Object FullName\")",
       "Bash(powershell -Command \"Select-String -Path ''C:\\\\Users\\\\Wangare\\\\Desktop\\\\DEWA Prototype\\\\DQ_Prod_DTMP_v3_DEWA_Prototype\\\\src\\\\App.tsx'' -Pattern ''solution-build|stage3'' | Select-Object LineNumber, Line\")",
       "Bash(powershell -Command \"Select-String -Path ''C:\\\\Users\\\\Wangare\\\\Desktop\\\\DEWA Prototype\\\\DQ_Prod_DTMP_v3_DEWA_Prototype\\\\src\\\\pages\\\\SolutionBuildPage.tsx'' -Pattern ''requestButton|rightContent|Can.t find|card|icon'' -CaseSensitive:0 | Select-Object LineNumber, Line\")",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(pandoc \"C:\\\\Users\\\\Wangare\\\\Downloads\\\\files\\\\DTMP_DEWA_PortfolioManagement_FullSpec_v1.docx\" -t markdown)",
+      "Bash(BASE=\"C:\\\\Users\\\\Wangare\\\\AppData\\\\Roaming\\\\Claude\\\\local-agent-mode-sessions\\\\skills-plugin\\\\c771c95d-c30b-4f6b-868a-cef306a92327\\\\472e6076-6c93-46ac-8cbc-9117ec5f0094\\\\skills\\\\docx\")",
+      "Bash(python \"$BASE/scripts/office/unpack.py\" \"C:\\\\Users\\\\Wangare\\\\Downloads\\\\files\\\\DTMP_DEWA_PortfolioManagement_FullSpec_v1.docx\" \"C:\\\\Users\\\\Wangare\\\\Downloads\\\\files\\\\spec_unpacked\")",
+      "Bash(python -c \":*)",
+      "Bash(where gh:*)",
+      "Bash(find '/c/Users/Wangare/Desktop/DEWA Prototype/DQ_Prod_DTMP_v3_DEWA_Prototype/src/pages' -type f -name *ycl* -o -name *ifecycle*)",
+      "Bash(xargs grep:*)"
     ]
   }
 }

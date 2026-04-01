@@ -1,0 +1,1281 @@
+================================================================================
+LIFECYCLE MARKETPLACE — ELEVATION GUIDE
+DEWA DTMP v3 Prototype
+Author: Claude Sonnet 4.6 (via audit session with project owner)
+Date: 2026-04-01
+Audience: Implementing LLM or developer. Execute exactly as prescribed.
+================================================================================
+
+TABLE OF CONTENTS
+─────────────────
+1.  What This Marketplace Is and What Story It Tells
+2.  Current Architecture Reference
+3.  Stage 2 & Stage 3 Unification — The Problem and Fix
+4.  Tab 1 (Initiatives) — The Design Standard
+5.  Tab Restructure — Option B: Collapse Tabs 2 & 3 into "Explore & Start"
+6.  Explore & Start — Discovery Layer (Framework Cards)
+7.  Explore & Start — Selection Layer (Side Panel + Template Connection)
+8.  Explore & Start — Configuration Layer (Intent Bar)
+9.  Explore & Start — Submission Layer (Request Form)
+10. Marketplace Header & Hero Area
+11. Empty States
+12. Global Search
+13. Governance Layer — Closing the Gap
+14. RAG Auto-Scoring
+15. Escalation Queue for TO Office
+16. Gate Sign-Off Evidence Capture
+17. Audit Trail Surface
+18. Benefits Realization Module
+19. Document Studio Integration (Deliverable Handoff)
+20. Portfolio Sync — Conflict Resolution
+21. EA Alignment Score — Clean Up
+22. "Raised from Portfolio" Badge — Upgrade
+23. Data Model Additions Required
+24. File-Level Change Map
+25. Priority & Sequencing Recommendation
+
+
+================================================================================
+1. WHAT THIS MARKETPLACE IS AND WHAT STORY IT TELLS
+================================================================================
+
+PURPOSE
+-------
+The Lifecycle Marketplace is the governed delivery layer of the DEWA Digital
+Transformation Management Platform (DTMP). It wraps strategic intent — surfaced
+from the Portfolio Management marketplace — into formal, auditable, multi-stage
+initiatives. It is the operational home of the TO (Transformation Office).
+
+The marketplace serves three distinct user populations simultaneously:
+  - Division staff / initiative owners: who execute delivery
+  - Senior stakeholders / division heads: who monitor and approve
+  - TO office staff: who govern, support, and ensure compliance across all
+
+NARRATIVE SPINE
+---------------
+The story this marketplace must tell, in order:
+
+  Portfolio identifies a gap or opportunity (app flagged for retire/modernise,
+  architecture gap, new capability needed)
+          ↓
+  Lifecycle wraps it in a formal governed initiative (type selected, template
+  assigned, approval sought)
+          ↓
+  Delivery happens through one or more projects under that initiative, with
+  gate approvals, risk management, blocker escalation, and service requests
+  to the TO for support
+          ↓
+  The TO governs the full portfolio of initiatives across divisions, surfaces
+  systemic risks, approves gates, and delivers support outputs
+          ↓
+  Benefits are tracked post-initiative to prove the value of governed delivery
+
+POSITIONING STATEMENT (for UI copy and orientation)
+----------------------------------------------------
+"Lifecycle Management is where DEWA's strategic intentions become governed
+reality. Every initiative — from app retirement to AI deployment — moves
+through a defined stage-gate process with full accountability, TO support,
+and measurable outcomes."
+
+WHAT MAKES IT DISTINCT FROM A PROJECT TRACKER
+----------------------------------------------
+This is not Jira. It is not a task list. The differentiators are:
+  - Formal initiative frameworks specific to DEWA's transformation types
+  - Stage-gate governance with multi-level approvals
+  - TO office as an active support function (19 service types, SLA-governed)
+  - Cross-initiative portfolio visibility for the TO office
+  - EA alignment scoring connecting delivery to architecture strategy
+  - Benefits realization tracking post-closure
+
+Every design decision should reinforce governance, accountability, and
+strategic alignment — not just task management.
+
+
+================================================================================
+2. CURRENT ARCHITECTURE REFERENCE
+================================================================================
+
+KEY FILES (do not rename or move without updating all imports):
+  src/pages/LifecycleManagementPage.tsx     — Stage 1 marketplace (3 tabs)
+  src/pages/lifecycle/TemplatesLibrary.tsx  — Templates tab component
+  src/pages/lifecycle/LCStage2Overview.tsx  — Stage 2 user workspace hub
+  src/pages/lifecycle/LCInsightsPage.tsx    — Role-gated initiative cockpit
+  src/pages/lifecycle/LCStage3Page.tsx      — Stage 3 TO governance (STANDALONE)
+  src/pages/Stage3AppPage.tsx               — Unified Stage 3 (other marketplaces)
+  src/data/lifecycle/lifecycleData.ts       — Master data: templates, instances
+  src/data/lifecycle/frameworkCards.ts      — 12 DEWA initiative frameworks
+  src/data/lifecycle/serviceRequestState.ts — Service requests, SLAs, approvals
+  src/data/lifecycle/index.ts               — Service definitions by tab
+  src/data/shared/lifecyclePortfolioStore.ts — Shared Initiative/Project store
+  src/data/shared/lifecycleRole.ts          — Role-based access control
+  src/components/lifecycle/RoleSelectorModal.tsx
+  src/components/lifecycle/LCInsightsLoginModal.tsx
+  src/components/lifecycle/SeeInsightsDrawer.tsx
+
+ROUTING (src/App.tsx):
+  /marketplaces/lifecycle-management            → LifecycleManagementPage
+  /marketplaces/lifecycle-management/initiative/:id → LCInitiativeDetailPage
+  /stage2/lifecycle-management                  → Stage2AppPage (unified)
+  /stage3/lifecycle-management                  → LCStage3GuardedRoute → LCStage3Page
+  /stage3/portfolio-management                  → PMStage3GuardedRoute → PMStage3Page
+
+ROLE MODEL (src/data/shared/lifecycleRole.ts):
+  initiative-owner   → Full operational cockpit (milestones, budget, risks, blockers)
+  senior-stakeholder → Executive summary view (RAG, headline milestones, top risks)
+  general-staff      → Read-only status view (name, status, completion %, dates)
+
+SESSION ROLES (src/data/shared/sessionRole.ts):
+  to-ops    → isTOStage3Role() = true → can access Stage 3
+  to-admin  → isTOStage3Role() = true → can access Stage 3
+  business-user → redirected to Stage 2 if Stage 3 attempted
+
+STAGE 3 GATING LOGIC:
+  Non-TO users attempting /stage3/* routes are redirected to /stage2.
+  Stage 3 nav items are NOT hidden from the nav — they are redirect-protected.
+  NOTE: In production, nav items should be conditionally hidden for non-TO roles.
+  For the prototype this is acceptable but should be noted as a known gap.
+
+
+================================================================================
+3. STAGE 2 & STAGE 3 UNIFICATION — THE PROBLEM AND FIX
+================================================================================
+
+CURRENT STATE
+-------------
+Stage 2: UNIFIED. All marketplaces route to Stage2AppPage.tsx which detects
+the active marketplace from the route path and renders the appropriate workspace.
+Lifecycle Management correctly participates in this unified Stage 2. No change
+needed here.
+
+Stage 3: PARTIALLY UNIFIED. Most marketplaces route to Stage3AppPage.tsx.
+But Lifecycle Management (LCStage3Page.tsx) and Portfolio Management
+(PMStage3Page.tsx) have their own standalone Stage 3 pages — they are NOT
+routed through Stage3AppPage.tsx.
+
+WHY THIS MATTERS
+----------------
+The TO office is the single user of Stage 3 across ALL marketplaces. When a
+TO officer moves between governing lifecycle initiatives, portfolio health,
+solution specs, and document studio — they should feel like they are in one
+unified governance workspace, not jumping between separate products with
+different chrome, navigation patterns, and layout conventions.
+
+WHAT TO DO
+----------
+Option A (Minimal): Keep LCStage3Page.tsx and PMStage3Page.tsx as standalone,
+but ensure they share the exact same outer shell (header, nav tabs, layout
+wrapper) as Stage3AppPage.tsx. The TO user sees consistent chrome even if the
+content components differ.
+
+Option B (Full unification): Refactor Stage3AppPage.tsx to accept a new scope
+value "lifecycle-management" and "portfolio-management", and route both through
+the unified page. LCStage3Page content becomes a scoped sub-component inside
+Stage3AppPage.
+
+RECOMMENDATION: Option A is lower risk and sufficient for the prototype.
+Option B is the correct long-term architecture. Implement Option A now, plan
+for Option B in a subsequent sprint.
+
+OPTION A IMPLEMENTATION STEPS:
+1. Identify the outer shell wrapper used in Stage3AppPage.tsx (the layout
+   component, header, scope navigation tabs, TO user context bar).
+2. Extract that shell into a shared component:
+   src/components/stage3/Stage3Shell.tsx
+3. Wrap LCStage3Page.tsx and PMStage3Page.tsx in Stage3Shell.
+4. Ensure the scope navigation tabs in Stage3Shell include "Lifecycle Management"
+   and "Portfolio Management" as clickable scopes that navigate to their
+   respective routes.
+5. TO user should be able to switch between lifecycle, portfolio, solution-specs,
+   document-studio scope without losing the TO navigation context.
+
+
+================================================================================
+4. TAB 1 (INITIATIVES) — THE DESIGN STANDARD
+================================================================================
+
+Tab 1 is the established visual and interaction standard for this marketplace.
+All other tabs MUST match it. Do not lower Tab 1 to meet Tabs 2 and 3 — raise
+Tabs 2 and 3 to match Tab 1.
+
+TAB 1 CHARACTERISTICS TO REPLICATE:
+  - Left sidebar filter panel (collapsible, with filter count badge)
+  - Filter types: status checkboxes with per-status counts, division dropdown,
+    type checkboxes (scrollable), owner text search
+  - Main content area: 3-column grid (grid-cols-1 md:grid-cols-2 xl:grid-cols-3)
+  - Cards with gradient header banner (div with h-32, background gradient)
+  - Icon centred in gradient header (lucide-react icon, w-12 h-12, text-white/40)
+  - Status badge in top-right of gradient header
+  - Portfolio provenance badge in top-left of gradient header (conditional)
+  - Card body: division label (xs, muted), name (base, semibold), description
+    (sm, 3-line clamp), metadata badges (type, EA alignment score), bottom strip
+    with project count and progress bar (for active) or target date (for others)
+  - Hover: border-orange-300, shadow-xl, -translate-y-1, transition-all duration-300
+  - "X of Y initiatives (filtered)" result count above grid
+  - Empty state: contextual message + CTA button
+  - Card is a full div (not Card component) with explicit click navigation
+
+The gradient system for division headers uses DIVISION_GRADIENT record in
+LifecycleManagementPage.tsx. Ensure this record is complete for all 10 divisions.
+
+
+================================================================================
+5. TAB RESTRUCTURE — OPTION B
+================================================================================
+
+CURRENT TABS:
+  Tab 1: "Initiatives"         (browse active initiatives)
+  Tab 2: "Templates Library"   (browse methodology templates)
+  Tab 3: "Start an Initiative" (browse frameworks + submit request)
+
+PROBLEMS WITH CURRENT STRUCTURE:
+  - Tab 3 is named as an action (verb) while Tabs 1 and 2 are categories (nouns)
+  - Frameworks (Tab 3) and Templates (Tab 2) are logically connected — a user
+    needs both to start an initiative — but they are completely disconnected
+  - Tab ordering does not match decision-making sequence. A first-time user
+    should understand framework types before seeing active initiatives.
+  - Tab 2 and Tab 3 have inconsistent internal UX patterns:
+      Tab 2: 2-column grid, detail opens INLINE (replaces grid, back button)
+      Tab 3: 3-column grid, detail opens in DIALOG modal
+    These must be consistent.
+  - Tab 2 and Tab 3 lack the sidebar filter panel that Tab 1 has.
+  - Tab 2 and Tab 3 cards have no gradient header, no icons — flat compared
+    to Tab 1.
+
+NEW TAB STRUCTURE:
+  Tab 1: "Active Initiatives"    (unchanged — current Tab 1)
+  Tab 2: "Explore & Start"       (merges current Tabs 2 and 3 into one journey)
+
+The renamed Tab 1 ("Active Initiatives" not just "Initiatives") makes it
+clearer to first-time visitors what this tab contains.
+
+Tab 2 becomes a single, progressive-disclosure surface that takes the user
+from discovery → selection → configuration → submission in one coherent flow.
+
+TAB LABEL STYLING NOTE:
+Both tabs must use identical trigger styling to the current implementation:
+  className="flex items-center gap-2 px-6 py-4 text-muted-foreground
+  hover:text-foreground font-medium transition-colors relative rounded-none
+  border-b-2 border-transparent data-[state=active]:border-orange-600
+  data-[state=active]:text-primary-navy bg-transparent"
+
+State variable: rename Stage1Tab type from "initiatives" | "templates" |
+"start-initiative" to "initiatives" | "explore-start"
+
+
+================================================================================
+6. EXPLORE & START — DISCOVERY LAYER (FRAMEWORK CARDS)
+================================================================================
+
+This is the default view when the user clicks "Explore & Start" tab.
+
+LAYOUT:
+  Same as Tab 1: sidebar filter panel on left, main grid on right.
+  Grid: 3-column (grid-cols-1 md:grid-cols-2 lg:grid-cols-3)
+
+SIDEBAR FILTERS FOR FRAMEWORKS:
+  Category:  [ ] All  [ ] Internal  [ ] External   (replaces current dropdown)
+  Duration:  dropdown → All | Under 3 months | 3–6 months | 6–12 months | 12+ months
+  Complexity: [ ] Simple  [ ] Moderate  [ ] Complex
+  Division relevance: dropdown → All divisions (uses divisionRelevance field to
+    be added to InitiativeFramework type — see Section 23)
+
+FEATURED STRIP (above the grid, below the filter bar):
+  A horizontal strip showing 2–3 "featured" or "most used" frameworks.
+  Visual treatment: slightly wider cards in a 2-column row, with a subtle
+  "Featured" or "Trending at DEWA" label.
+  Which frameworks appear here: determined by a new field `featured: boolean`
+  added to InitiativeFramework in frameworkCards.ts. Set featured: true on
+  3 frameworks that are most relevant to current DEWA transformation priorities
+  (e.g., AI Deployment Initiative, Application Modernisation Initiative,
+  Digital Platform Enablement Initiative).
+
+FRAMEWORK CARDS — REQUIRED UPGRADES:
+  Current card has: type name, category badge, description, duration badge,
+  scope badge, separator, two buttons.
+
+  Add the following to each framework card:
+
+  1. GRADIENT HEADER BANNER (matching Tab 1 card standard):
+     Height: h-28 (slightly shorter than Tab 1's h-32 since these are catalog
+     items not live initiatives)
+     Background: gradient per framework category:
+       Internal frameworks: from-teal-500 to-emerald-600
+       External frameworks: from-blue-500 to-indigo-600
+     Icon: centred, w-10 h-10, text-white/40
+       Map each of the 12 framework types to a lucide-react icon:
+         AI Deployment Initiative         → Brain or Cpu
+         Application Modernisation        → RefreshCw or Layers
+         Architecture Remediation         → GitBranch or Network
+         Digital Platform Enablement      → Globe or Server
+         Data & Analytics Initiative      → BarChart2 or Database
+         Cybersecurity Enhancement        → Shield or Lock
+         Customer Experience Initiative   → Users or Smile
+         Operational Efficiency           → Zap or Settings
+         Innovation & Emerging Tech       → Lightbulb or Sparkles
+         Compliance & Regulatory          → FileCheck or Scale
+         Infrastructure Modernisation     → Building or HardDrive
+         Sustainability Initiative        → Leaf or Wind
+     Category badge: top-right of header (Internal/External)
+
+  2. USAGE SIGNAL (below the description, before action buttons):
+     Add a new data row showing:
+       - "X active"  — count of current initiatives using this framework type
+         (computed from initiatives store filtered by type)
+       - "Y completed" — count of completed initiatives of this type
+       - "Avg. Z months" — average duration (static from typicalDuration field)
+     Display as three small stat pills in a flex row, separated by dots.
+     This is social proof — it tells the user this framework has been used
+     and validated, not just theoretical.
+
+  3. COMPLEXITY INDICATOR:
+     A visual complexity bar (3 segments, filled 1/2/3 depending on complexity)
+     Label: "Complexity" with the bar inline.
+     Position: between description and usage signal.
+
+  4. "VIEW DETAILS" BUTTON REMOVED from card:
+     Details are now revealed via side panel (see Section 7).
+     The card itself becomes fully clickable (cursor-pointer, onClick opens panel).
+     Keep only "Start Initiative" button on card, but rename to
+     "Begin Request →" to signal it advances the flow.
+     Alternatively: on card click → open side panel. Side panel has the
+     "Begin Request" CTA. Card itself is just a browsing surface.
+     RECOMMENDED: card click = open side panel. No buttons on the card itself
+     except a subtle "→" chevron indicator on hover.
+
+  5. STEP INDICATOR HEADER (at very top of Explore & Start tab, above featured strip):
+     A horizontal step indicator showing the 3-phase journey:
+       ① Select Framework  →  ② Choose Template  →  ③ Submit Request
+     Style: pill-shaped steps, connected by thin lines.
+     Active step highlighted in orange-600, completed steps in teal, pending in gray-300.
+     Initially Step 1 is active. When user selects framework → Step 2 active.
+     When user selects template → Step 3 active.
+     When form submitted → reset to Step 1 (or navigate to Stage 2).
+     Component: create src/components/lifecycle/ExploreStartStepper.tsx
+
+  6. TEXT SEARCH:
+     Add a search input above the featured strip (full width, or positioned
+     in the sidebar above the filters):
+       placeholder="Search frameworks by name or keyword..."
+     Filters the 12 frameworks by matching against: type name, description,
+     keyPhases array, expectedOutcomes array.
+     Use case-insensitive substring match.
+
+  7. RESULT COUNT:
+     Below search/filter bar: "Showing X of 12 frameworks"
+     Same pattern as Tab 1's "X of Y initiatives (filtered)"
+
+
+================================================================================
+7. EXPLORE & START — SELECTION LAYER (SIDE PANEL + TEMPLATE CONNECTION)
+================================================================================
+
+INTERACTION PATTERN:
+  When the user clicks a framework card, a side panel (drawer) slides in
+  from the RIGHT edge of the screen. The framework grid remains visible and
+  scrollable behind the panel. The panel overlays with a semi-transparent
+  backdrop (backdrop-blur-sm, bg-black/20) — NOT a full modal.
+
+  The selected card in the grid gets a highlighted border (border-orange-500,
+  ring-2 ring-orange-200) to show it is active.
+
+SIDE PANEL COMPONENT:
+  Create: src/components/lifecycle/FrameworkSidePanel.tsx
+  Props: framework: InitiativeFramework | null, onClose: () => void,
+         onSelectTemplate: (template: LifecycleTemplate) => void,
+         selectedTemplate: LifecycleTemplate | null,
+         onBeginRequest: () => void
+
+  Panel width: w-[480px] (fixed, not responsive below this — on mobile it
+  should be full-screen)
+  Position: fixed right-0 top-0 h-full, z-50
+  Animation: translate-x-full → translate-x-0 with transition-transform duration-300
+
+SIDE PANEL CONTENT STRUCTURE (top to bottom):
+
+  a) PANEL HEADER
+     Close button (X) top-right
+     Framework name as h2 (text-xl font-bold)
+     Category badge (Internal/External)
+     Gradient strip matching the card header colour (h-2 strip at very top
+     of panel, matching the card's gradient — visual continuity signal)
+
+  b) OVERVIEW SECTION
+     Description (full, not line-clamped)
+     Two-column grid:
+       Left:  Typical Duration | Typical Scope
+       Right: Category | Framework ID (e.g. IFW-01)
+     Complexity bar (same as card)
+     Usage stats (same as card: X active, Y completed)
+
+  c) WHAT TO EXPECT (collapsible accordion sections)
+     "Key Phases" — ordered list of phase names
+     "What TO Provides" — bullet list
+     "What Your Division Provides" — bullet list
+     "Expected Outcomes" — bullet list
+     Use Accordion component from shadcn/ui. Default open: Key Phases.
+
+  d) DIVIDER with label: "Select a Template for this Initiative"
+
+  e) COMPATIBLE TEMPLATES SECTION
+     This is the critical connection between frameworks and templates.
+
+     Add a new field to InitiativeFramework in frameworkCards.ts:
+       compatibleTemplates: string[]  — array of LifecycleTemplate IDs
+
+     Map each framework to its compatible template IDs:
+       AI Deployment, Innovation & Emerging Tech → agile, hybrid
+       Architecture Remediation, Infrastructure Modernisation → stage-gate, waterfall
+       Application Modernisation, Digital Platform Enablement → hybrid, agile
+       Compliance & Regulatory, Cybersecurity Enhancement → stage-gate, waterfall
+       Customer Experience, Operational Efficiency → agile, hybrid
+       Data & Analytics → hybrid, stage-gate
+       Sustainability → stage-gate, hybrid
+
+     Display: show only compatible templates (2-3 cards, horizontal scroll if
+     more than 2). Each template card in this section is compact:
+       - Template name
+       - Methodology badge
+       - Complexity badge
+       - Success rate
+       - Stage count
+       - "Recommended" badge on the first/most-used compatible template
+       - Click to SELECT (highlighted border when selected)
+
+     Below the template cards, when one is selected, show an inline stage
+     timeline: horizontal step indicators showing stage names in order.
+     This gives the user a preview of what they are committing to.
+
+     If no template is compatible (shouldn't happen but defensive):
+     Show all templates with a note "All templates compatible with this framework".
+
+  f) INTENT CONFIRMATION BAR (at bottom of panel, sticky)
+     Visible only when BOTH a framework AND a template are selected.
+     Content:
+       [Framework name] · [Template name]
+       [Duration] · [Complexity] · [Approval: Division + TO required]
+       [Begin Request →] button (bg-orange-600, full-width)
+
+     The "Begin Request →" button opens the initiative request form (Dialog),
+     pre-populated with the selected framework type and template.
+
+     Below the button: small text "Submitting starts the TO approval process.
+     You will be notified within 48 hours."
+
+
+================================================================================
+8. EXPLORE & START — CONFIGURATION LAYER (INTENT BAR)
+================================================================================
+
+The Intent Bar is a persistent strip that appears at the BOTTOM of the
+"Explore & Start" tab (outside the side panel, in the main page) once
+the user has selected a framework. It persists even if they close the
+side panel to browse other frameworks.
+
+PURPOSE: Preserve the user's in-progress selection state so they don't
+lose it if they close the panel to compare another framework.
+
+CONTENT WHEN FRAMEWORK SELECTED (NO TEMPLATE YET):
+  "📋 Framework selected: [Framework Name]  |  Now choose a template →"
+  [Change Framework] ghost button    [View Templates →] orange outline button
+
+CONTENT WHEN BOTH SELECTED:
+  "✓ [Framework Name]  ·  ✓ [Template Name]  ·  Est. [Duration]"
+  [Change] ghost button    [Begin Request →] orange filled button
+
+STYLING:
+  Fixed bottom bar: fixed bottom-0 left-0 right-0 z-40
+  Background: bg-white border-t border-orange-200 shadow-lg
+  Padding: px-6 py-3
+  Only visible on the "explore-start" tab and only when a framework is selected.
+  Dismiss: user can click X to clear selection and hide bar.
+  Height: h-14 (compact). Push page content up by 56px when visible (add
+  pb-14 to the tab content wrapper when this bar is active).
+
+STATE MANAGEMENT:
+  In LifecycleManagementPage.tsx, add state:
+    selectedFramework: InitiativeFramework | null
+    selectedTemplate: LifecycleTemplate | null
+  These persist across panel open/close within the same tab session.
+  Reset when user submits request or changes tab.
+
+
+================================================================================
+9. EXPLORE & START — SUBMISSION LAYER (REQUEST FORM)
+================================================================================
+
+The initiative request form already exists as a Dialog in
+LifecycleManagementPage.tsx. The following changes are required:
+
+PRE-POPULATION:
+  When the form opens from "Begin Request →", pre-populate:
+    - Initiative Type: from selectedFramework.type
+    - Methodology/Template: from selectedTemplate.title (display-only field)
+    - If user arrived from Portfolio (router state.prefill), also pre-populate:
+        name, division, objective, scope (already implemented — keep this)
+
+  The form should show a non-editable summary at the top:
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │ Starting: [Framework Name]   Template: [Template Name]              │
+  │ Est. Duration: X months  ·  Complexity: Y  ·  Governance: [level]  │
+  └─────────────────────────────────────────────────────────────────────┘
+  Style: bg-orange-50 border border-orange-100 rounded-lg p-3 mb-4
+
+STAGE PREVIEW (collapsible, default collapsed):
+  Inside the form, below the summary block, add a collapsible section:
+  "What happens after submission? ▾"
+  When expanded, shows the first 3 stage names from the selected template
+  as a horizontal step preview (compact, text only):
+    Stage 1: Assessment  →  Stage 2: Planning  →  Stage 3: Execution  →  ...
+  This reduces anxiety by showing the user what they're committing to.
+
+STAKEHOLDER FIELD:
+  Current implementation: free-text input.
+  Replace with: a multi-select component populated from a known list of
+  DEWA role titles / division heads. If a people directory is not available,
+  use a predefined list of role labels (e.g., "Head of IT Architecture",
+  "CTO", "Head of Digital Transformation", "Division GM — Generation", etc.)
+  stored in a new file: src/data/shared/dewaRoles.ts
+  The field should still accept free-text as a fallback.
+
+FORM FIELDS (confirm all present):
+  - Initiative Name (text, required)
+  - Division (dropdown, required) — uses DIVISION_OPTIONS
+  - Framework Type (pre-populated, display-only or locked dropdown)
+  - Template/Methodology (pre-populated, display-only)
+  - Target Start Date (date picker, required)
+  - Objective (textarea, required)
+  - Scope (textarea, required)
+  - Budget Estimate (number input, optional)
+  - Priority (dropdown: Critical / High / Medium / Low, required)
+  - Owner (text, required — the person submitting + assignee)
+  - Stakeholders (multi-select, optional)
+  - Additional Context (textarea, optional)
+
+POST-SUBMIT BEHAVIOUR:
+  On successful submission:
+    1. Close the Dialog
+    2. Reset selectedFramework, selectedTemplate in page state
+    3. Hide the intent bar
+    4. Show a toast: "Initiative request submitted. The TO office will
+       review within 48 hours. Track it in your Stage 2 workspace."
+    5. Navigate to Stage 2: /stage2/lifecycle-management (with a short delay,
+       ~1500ms, so user can read the toast)
+  This is the handover moment to Stage 2 — it must feel intentional.
+
+
+================================================================================
+10. MARKETPLACE HEADER & HERO AREA
+================================================================================
+
+CURRENT STATE:
+  LifecycleManagementPage.tsx has a header section before the tabs.
+  It likely contains a title, subtitle, and the "See Insights" button.
+  This section is underperforming its potential.
+
+REQUIRED ADDITIONS:
+
+  a) STATS BAR
+     A horizontal strip of 4 KPI tiles immediately below the page title,
+     above the tab bar.
+     Tiles:
+       1. Active Initiatives: count of initiatives with status "Active"
+       2. Initiatives At Risk: count with status "At Risk" (in red/amber)
+       3. Gates Approved (this quarter): count of approved ApprovalWorkflows
+       4. Framework Types Available: 12 (static)
+     Each tile: icon + number (large) + label (small, muted)
+     Style: bg-white border border-gray-100 rounded-lg px-4 py-3
+     Arrange in a 4-column grid, full width.
+     Responsive: 2x2 grid on md, single column on sm.
+     Computed values from: getAllInitiatives(), getApprovalWorkflows() from
+     lifecyclePortfolioStore.
+
+  b) BREADCRUMB
+     Above the page title:
+     Marketplaces / Lifecycle Management
+     Style: text-xs text-muted-foreground with a "/" separator and link back
+     to /marketplaces for "Marketplaces".
+
+  c) PAGE TITLE & SUBTITLE (keep existing, refine copy)
+     Title: "Lifecycle Management"
+     Subtitle: "Govern, execute and close DEWA's strategic transformation
+     initiatives. Manage every stage from initiation through to measured
+     benefit delivery."
+     The subtitle must be present. Do not leave it blank or generic.
+
+  d) "SEE INSIGHTS" BUTTON (existing — keep, adjust position)
+     Keep in the top-right of the header. Ensure it opens the role selector
+     modal correctly. Do not move this.
+
+  e) PORTFOLIO SIGNAL BANNER (conditional)
+     If the user has arrived via router state from Portfolio Management
+     (state.fromPortfolio === true), show a contextual banner:
+     ┌────────────────────────────────────────────────────────────────┐
+     │ 📋 Portfolio Signal  You arrived here from Portfolio Management │
+     │ A portfolio finding has been pre-filled into the initiative     │
+     │ request form. Review and submit when ready.                     │
+     │ [Go to Explore & Start →]                  [Dismiss ×]         │
+     └────────────────────────────────────────────────────────────────┘
+     Style: bg-blue-50 border border-blue-200 rounded-xl px-4 py-3
+     This banner replaces the need for implicit pre-fill discovery —
+     the user knows why they are here and what to do next.
+
+
+================================================================================
+11. EMPTY STATES
+================================================================================
+
+TAB 1 — NO INITIATIVES YET (first-time user):
+  Current: "No initiatives found — Create one from the Start an Initiative tab."
+  Replace with a richer onboarding empty state:
+
+  ┌────────────────────────────────────────────────────────────────────┐
+  │                        [Icon: Layers or Activity]                  │
+  │          No Governed Initiatives Yet                               │
+  │  This is where all of DEWA's active transformation initiatives     │
+  │  will appear once they have been submitted and approved by the TO. │
+  │                                                                    │
+  │  To start your first initiative:                                   │
+  │  Step 1: Browse initiative frameworks in "Explore & Start"         │
+  │  Step 2: Select a methodology template                             │
+  │  Step 3: Submit your request to the TO for approval               │
+  │                                                                    │
+  │  [Explore & Start →]  (navigates to Tab 2)                        │
+  └────────────────────────────────────────────────────────────────────┘
+
+TAB 1 — FILTERED WITH NO RESULTS:
+  Keep current pattern: "No results match your filters" + [Clear Filters] button.
+
+TAB 2 (EXPLORE & START) — NO FRAMEWORKS (should not happen, but defensive):
+  "No initiative frameworks match your filters. [Clear Filters]"
+
+STAGE 2 — MY INITIATIVES EMPTY:
+  "You have no active initiatives. Once you submit an initiative request
+  and it is approved by the TO, it will appear here."
+  [Go to Lifecycle Marketplace →] button linking to Stage 1.
+
+
+================================================================================
+12. GLOBAL SEARCH
+================================================================================
+
+Add a search input to the header area of LifecycleManagementPage.tsx,
+positioned between the stats bar and the tab bar.
+
+  placeholder="Search initiatives, frameworks, or templates..."
+  Width: max-w-md
+  Icon: Search (lucide-react), left-aligned inside input
+
+SEARCH SCOPE:
+  Searches across ALL three data sets simultaneously:
+    - Initiatives: name, description, division, owner, type
+    - Frameworks: type name, description, keyPhases, expectedOutcomes
+    - Templates: title, description, category, tags
+
+SEARCH RESULTS:
+  When a search term is active (>2 characters), replace the tab content
+  with a unified results view:
+    Section 1: "Initiatives (X)" — shows matching initiative cards
+    Section 2: "Frameworks (X)" — shows matching framework cards (compact)
+    Section 3: "Templates (X)" — shows matching template cards (compact)
+  Each section uses the same card patterns as their respective tabs.
+  Clicking a result card takes the user to the appropriate detail view.
+
+CLEARING SEARCH:
+  X button inside the search input. Clearing returns to the active tab view.
+  Tab selection persists while searching — if user was on Tab 2, they return
+  to Tab 2 after clearing.
+
+STATE: add searchQuery: string to LifecycleManagementPage state.
+IMPLEMENTATION: src/components/lifecycle/LifecycleSearchResults.tsx
+
+
+================================================================================
+13. GOVERNANCE LAYER — CLOSING THE GAP
+================================================================================
+
+LCStage3Page.tsx is the TO office governance dashboard. LCInsightsPage.tsx
+is the per-initiative role-gated cockpit. Both have the right structure but
+incomplete data bindings and missing functional surfaces. Close these gaps:
+
+PRIORITY 1 — DATA BINDINGS IN LCSINSIGHTSPAGE.TSX:
+  The page is 118KB which suggests extensive placeholder structure. Audit
+  every section that renders static/hardcoded data and replace with live
+  data from lifecyclePortfolioStore:
+    - Initiative health (RAG): read from initiative.rag, not hardcoded
+    - Budget: read from initiative.budget and initiative.budgetSpent
+    - Project list: read from getProjectsByInitiativeId(initiativeId)
+    - Risk register: read from getRisksByInitiativeId(initiativeId) — if this
+      helper does not exist, add it to lifecyclePortfolioStore.ts
+    - Blocker list: read from getBlockersByInitiativeId(initiativeId)
+    - Milestone list: read from all projects under the initiative
+    - Gate progress: read from getApprovalWorkflowsByInitiativeId()
+
+PRIORITY 2 — ROLE-GATED CONTENT AUDIT:
+  Three roles (initiative-owner, senior-stakeholder, general-staff) should
+  see different levels of detail. Audit each cockpit section:
+    initiative-owner:    ALL sections visible and editable
+    senior-stakeholder:  RAG, headline milestones, top risks, project summary,
+                         budget total — READ ONLY. No detailed risk register,
+                         no blocker detail, no activity feed.
+    general-staff:       Initiative name, status, completion %, start date,
+                         target date — READ ONLY. Nothing else.
+  Any section not matching this matrix must be hidden or simplified.
+  Use a utility function getCurrentLifecycleRole() from lifecycleRole.ts
+  and wrap sections conditionally.
+
+PRIORITY 3 — LCSTAGE3PAGE.TSX — TO PORTFOLIO VIEW:
+  The TO officer needs to see ALL initiatives across ALL divisions, not just
+  one at a time. LCStage3Page must have:
+    a) Summary tiles: Total active, At Risk, Gates pending this week,
+       Blocked initiatives (any blocker not resolved and >5 days old)
+    b) Initiative table: sortable by division, status, RAG, target date
+    c) Filter bar: by division, status, RAG, initiative type
+    d) Click row → drill into LCInsightsPage for that initiative (navigate
+       to the initiative cockpit with role set to "initiative-owner" for
+       TO context — TO should see full detail)
+    e) "Escalations" tab (see Section 15)
+    f) "Pending Gate Approvals" tab (see below)
+
+  PENDING GATE APPROVALS TAB in LCStage3Page:
+    List all ApprovalWorkflows with status === "pending" across all initiatives.
+    Columns: Initiative Name | Gate Name | Stage | Submitted By | Days Waiting |
+             Priority | [Review] button
+    Sort: by Days Waiting descending (most overdue first)
+    [Review] button: opens ApprovalWorkflow detail in a Dialog where TO can:
+      - Read submission notes
+      - Add decision comments
+      - Click [Approve], [Reject], or [Approve with Conditions]
+      - Submission updates ApprovalWorkflow.status and adds to approvals array
+    This is the most critical missing TO-office function.
+
+
+================================================================================
+14. RAG AUTO-SCORING
+================================================================================
+
+PROBLEM:
+  RAG (Red/Amber/Green) health status is manually set on initiatives.
+  Manual RAG in a governance tool is an anti-pattern — it is subjective
+  and can be gamed. The TO office needs a computed RAG baseline.
+
+SOLUTION:
+  Add a computeInitiativeRAG() function to lifecyclePortfolioStore.ts:
+
+  function computeInitiativeRAG(initiative: Initiative): RAGStatus {
+    const risks = getRisksByInitiativeId(initiative.id)
+    const blockers = getBlockersByInitiativeId(initiative.id)
+    const overdueDays = calculateOverdueDays(initiative.targetDate)
+    const budgetOverrunPct = initiative.budget
+      ? ((initiative.budgetSpent - initiative.budget) / initiative.budget) * 100
+      : 0
+
+    const criticalRisks = risks.filter(r => r.severity === 'Critical' && r.status === 'Open').length
+    const unresolvedBlockers = blockers.filter(b => !b.resolved).length
+    const escalatedBlockers = blockers.filter(
+      b => !b.resolved && b.escalationStatus !== 'Not Escalated'
+    ).length
+
+    // RED conditions (any one triggers Red):
+    if (criticalRisks >= 2) return 'Red'
+    if (budgetOverrunPct > 15) return 'Red'
+    if (overdueDays > 30) return 'Red'
+    if (escalatedBlockers >= 2) return 'Red'
+
+    // AMBER conditions (any one triggers Amber):
+    if (criticalRisks === 1) return 'Amber'
+    if (budgetOverrunPct > 5 && budgetOverrunPct <= 15) return 'Amber'
+    if (overdueDays > 0 && overdueDays <= 30) return 'Amber'
+    if (unresolvedBlockers >= 3) return 'Amber'
+
+    return 'Green'
+  }
+
+USAGE:
+  In all initiative card renders and cockpit views, replace the raw
+  initiative.rag display with computeInitiativeRAG(initiative).
+  Keep initiative.rag as a manual override field — if rag is explicitly
+  set by the initiative owner, show that instead BUT display a small
+  "Manual override" indicator next to the badge.
+  This preserves human judgment while establishing a computed baseline.
+
+  Show a tooltip on the RAG badge explaining why it is Red/Amber:
+  "2 open Critical risks detected" or "Budget 18% over forecast"
+
+
+================================================================================
+15. ESCALATION QUEUE FOR TO OFFICE
+================================================================================
+
+PROBLEM:
+  Blockers can be escalated ("Escalated to TO" or "Escalated to Division Head")
+  but there is NO UI for the TO office to see and act on them.
+
+SOLUTION:
+  Add an "Escalations" tab to LCStage3Page.tsx.
+
+  DATA SOURCE: getAllBlockers() from lifecyclePortfolioStore — filter where
+  escalationStatus !== 'Not Escalated' && resolved === false
+
+  TABLE COLUMNS:
+    Initiative | Project | Blocker Title | Raised By | Date Raised |
+    Days Open | Escalated To | [Acknowledge] [Resolve] actions
+
+  Sort: Days Open descending.
+
+  ACKNOWLEDGE ACTION:
+    Updates a new field on Blocker: acknowledgedByTO: boolean = true
+    Acknowledges without resolving — signals TO has seen it.
+    Show a small checkmark indicator in the table row after acknowledgement.
+
+  RESOLVE ACTION:
+    Opens a small Dialog: "Resolution notes" textarea + [Mark Resolved] button.
+    On submit: sets blocker.resolved = true, stores resolution note in a new
+    field blocker.resolutionNote: string.
+    Removes from the Escalations tab list.
+
+  SLA DISPLAY:
+    Show "X days" in Days Open column. Color: green <3 days, amber 3–7, red >7.
+    This creates implicit SLA pressure on the TO to act on escalations promptly.
+
+  ADD TO Blocker INTERFACE (src/data/shared/lifecyclePortfolioStore.ts):
+    acknowledgedByTO?: boolean
+    resolutionNote?: string
+
+
+================================================================================
+16. GATE SIGN-OFF EVIDENCE CAPTURE
+================================================================================
+
+PROBLEM:
+  ApprovalWorkflow has a submissionNotes field but no UI for PMs to input
+  gate sign-off evidence. Gate submissions are implied but not captured.
+
+SOLUTION:
+  When a PM clicks "Submit Gate for Approval" (in LCInsightsPage or
+  project detail), open a Dialog with:
+
+    Gate Name (display only): [Gate Name from ApprovalWorkflow]
+    Stage (display only): [Stage Name]
+
+    Completion Evidence (textarea, required):
+    "Describe the evidence that this gate's deliverables have been completed."
+    placeholder="e.g., UAT sign-off received from business owner on [date],
+    all test cases passed, deployment to UAT environment verified..."
+
+    Document Reference (text input, optional):
+    "Reference a document in Document Studio (paste document ID or title)"
+    placeholder="Document Studio reference (optional)"
+
+    Submission Notes (textarea, optional):
+    "Any additional notes for the approver"
+
+  On submit: creates ApprovalWorkflow with:
+    submissionNotes: combined evidence + docRef + notes
+    status: "pending"
+    submittedBy: current user name
+    submittedAt: current ISO timestamp
+
+  Add documentStudioRef?: string to ApprovalWorkflow interface.
+
+  This gives the TO approver actual evidence to review, not just a button click.
+
+
+================================================================================
+17. AUDIT TRAIL SURFACE
+================================================================================
+
+EXISTING INFRASTRUCTURE:
+  addActivityEvent() and getActivityEvents() already exist in
+  lifecyclePortfolioStore.ts. Activity events are being created but not
+  displayed anywhere in the UI.
+
+SURFACE IN LCSINSIGHTSPAGE.TSX (initiative-owner role only):
+  Add an "Activity" tab or collapsible section at the bottom of the cockpit.
+  Title: "Activity Log"
+  Content: chronological list of activity events for this initiative.
+
+  Each event row:
+    [Timestamp] [User] [Action description]
+    e.g., "2026-03-28 14:22  Ahmed Al-Mansouri  Submitted Gate 2 for approval"
+         "2026-03-29 09:15  TO Office           Gate 2 approved (conditional)"
+         "2026-03-30 11:00  Ahmed Al-Mansouri  Added risk: Budget overrun on project X"
+
+  Style: simple timeline with a vertical line and dots. No heavy cards.
+  Show last 20 events. [Load more] link if more exist.
+
+ENSURE EVENTS ARE FIRED for:
+  - Initiative status change
+  - Gate submission
+  - Gate approved/rejected
+  - Risk added/updated
+  - Blocker raised/resolved
+  - Budget updated
+  - Service request submitted
+  - Service request delivered
+
+SURFACE IN LCSTAGE3PAGE.TSX (TO officer view):
+  A "Recent Activity" panel showing the last 10 events ACROSS ALL initiatives,
+  not filtered to one. This gives the TO officer a live feed of what is
+  happening across the portfolio. Same row format as above.
+
+
+================================================================================
+18. BENEFITS REALIZATION MODULE
+================================================================================
+
+PROBLEM:
+  expectedBenefits array exists in LifecycleInstance with status fields
+  (planned / in-progress / realized / not-realized), but nothing surfaces
+  this data meaningfully. The narrative ends at gate completion. The TO
+  office's value proposition requires proving outcomes were delivered.
+
+SOLUTION:
+  Add a "Benefits" section to LCInsightsPage.tsx, visible to initiative-owner
+  and senior-stakeholder roles.
+
+  DISPLAY:
+    Table with columns:
+      Benefit Description | Quantified Value | Realization Date | Status
+    Rows use status badge: Planned (gray), In Progress (blue), Realized (green),
+    Not Realized (red).
+
+  EDITING (initiative-owner only):
+    Each row has an [Update] button opening a small Dialog:
+      Status dropdown: Planned / In Progress / Realized / Not Realized
+      Actual Value achieved (number, optional — compared to quantifiedValue)
+      Realization notes (textarea, optional)
+    On submit: updates the benefit record in the initiative's expectedBenefits array.
+
+  SUMMARY TILE in initiative cockpit header:
+    "X of Y benefits realized" — shown as a fraction with a small progress bar.
+    Color: green if >50% realized, amber if 25–50%, gray if <25%.
+
+  IN LCSTAGE3PAGE.TSX (portfolio view):
+    Add a "Benefits Summary" section showing across all completed initiatives:
+      Total benefits planned | Total realized | Realization rate %
+    This is the headline metric that proves the value of the Lifecycle governance
+    model to senior leadership.
+
+  DATA MODEL ADDITION:
+    Add to the benefit object in LifecycleInstance.expectedBenefits:
+      actualValue?: number
+      realizationNotes?: string
+      lastUpdated?: string  (ISO date)
+
+
+================================================================================
+19. DOCUMENT STUDIO INTEGRATION (DELIVERABLE HANDOFF)
+================================================================================
+
+PROBLEM:
+  When a service request reaches "Delivered" status, a deliverable is implied
+  (Status Report, Risk Assessment, etc.) but it has no destination. The user
+  sees a toast and nothing more. The "My Reports" page in Stage 2 shows
+  deliverables but with a demo-only download toast.
+
+INTEGRATION APPROACH (unidirectional — Lifecycle knows about Doc Studio,
+  not the other way around):
+
+  Step 1: Add documentStudioId?: string to LCServiceRequest interface.
+  Step 2: When TO marks a request "Delivered" in Stage 3, they are prompted
+    with: "Attach a Document Studio reference (optional)"
+    Text input: document ID or document title from Document Studio.
+    This is stored in LCServiceRequest.documentStudioId.
+  Step 3: In Stage 2 "My Reports" (LCMyReports.tsx), for any delivered request
+    with a documentStudioId, the download/view button instead navigates to:
+    /marketplaces/document-studio/document/[documentStudioId]
+    (or whatever the Document Studio document detail route is)
+    rather than showing a toast.
+  Step 4: For delivered requests WITHOUT a documentStudioId, keep the current
+    toast behaviour as a fallback.
+
+  This is lightweight, requires no changes to Document Studio, and closes the
+  loop for the demo while remaining architecturally correct for production.
+
+ADDITIONALLY: In LCStage3Page pending service requests table, when marking
+a request as Delivered, show the Document Studio reference field inline
+(not a separate modal) as an optional field in the status update form.
+
+
+================================================================================
+20. PORTFOLIO SYNC — CONFLICT RESOLUTION
+================================================================================
+
+EXISTING FIELD:
+  LifecycleInstance has portfolioLink: { type, id, syncStatus, lastSynced }
+  syncStatus: 'synced' | 'out-of-sync' | 'manual'
+
+PROBLEM: No UI exists to see sync state, resolve conflicts, or trigger re-sync.
+
+SOLUTION (lightweight, prototype-appropriate):
+
+  In the initiative detail card (Tab 1 grid) and cockpit header (LCInsightsPage):
+    Show a small sync indicator next to the "Raised from Portfolio" badge:
+      synced:      green dot + "Synced with Portfolio"
+      out-of-sync: amber dot + "Out of sync with Portfolio" + [Sync] button
+      manual:      gray dot + "Manual — not linked to Portfolio"
+
+  [Sync] button (for out-of-sync state):
+    Shows a Dialog: "Sync with Portfolio"
+    Displays: what the Portfolio shows vs what Lifecycle shows for key fields
+    (status, target date, owner).
+    Two options: [Use Portfolio Values] or [Keep Lifecycle Values]
+    On confirm: updates syncStatus to 'synced' and lastSynced to now.
+    This is a demo-appropriate "sync resolution" that shows the concept
+    without requiring real backend synchronisation.
+
+
+================================================================================
+21. EA ALIGNMENT SCORE — CLEAN UP
+================================================================================
+
+PROBLEM:
+  eaAlignmentScore shows as "TBD" (null) on many initiative cards.
+  This creates visual noise and undermines credibility. A score of "TBD"
+  on a governance platform signals incompleteness.
+
+SOLUTION:
+  Option A: Remove the EA score from the card until it has a real value.
+    Show it only when eaAlignmentScore !== null.
+    The badge slot remains but is empty (no "TBD" text).
+
+  Option B: Pre-populate all seed initiatives with an EA alignment score.
+    Add scores to all initiatives in lifecyclePortfolioStore.ts seed data.
+    Scores should be realistic (65–95 range), varying by initiative maturity.
+    This is the preferred approach for a demo.
+
+  Option C: Compute EA score automatically from a simple heuristic:
+    If initiative has an architecturally-typed framework (Architecture
+    Remediation, Digital Platform Enablement, Infrastructure Modernisation)
+    → base score 80
+    If eaAlignmentScore explicitly set → use that
+    Otherwise → null (hide the badge entirely)
+
+RECOMMENDATION: Option B for immediate demo quality. Option C as the
+  production target.
+
+TOOLTIP ON SCORE:
+  Add a tooltip to the EA score badge: "Enterprise Architecture alignment
+  score assessed by the EA team during initiative scoping."
+  This contextualises the metric for users unfamiliar with the concept.
+
+
+================================================================================
+22. "RAISED FROM PORTFOLIO" BADGE — UPGRADE
+================================================================================
+
+CURRENT STATE:
+  Badge appears on initiative cards when initiative.fromPortfolio === true.
+  It is informational only.
+
+UPGRADES:
+
+  1. LINK TO SOURCE: Make the badge (or a small "→" after it) a link that
+     navigates to /marketplaces/portfolio-management/[portfolioCardId].
+     This closes the Portfolio ↔ Lifecycle navigation loop.
+
+  2. SYNC STATUS INDICATOR: Show the portfolioLink.syncStatus as a colored
+     dot next to the badge (green = synced, amber = out of sync).
+
+  3. IN INITIATIVE COCKPIT (LCInsightsPage): Show a "Portfolio Provenance"
+     section in the cockpit header for portfolio-linked initiatives:
+       Source: [Portfolio Card Name] (link)
+       Linked Since: [lastSynced date]
+       Sync Status: [badge]
+     This gives the initiative owner full context about where the initiative
+     originated.
+
+  4. FOR INITIATIVES NOT FROM PORTFOLIO: Do not show any provenance section.
+     The absence of the section is the signal — not a "manually created" label.
+
+
+================================================================================
+23. DATA MODEL ADDITIONS REQUIRED
+================================================================================
+
+All additions are additive (no breaking changes). Use optional fields where
+backward compatibility must be preserved.
+
+FILE: src/data/lifecycle/frameworkCards.ts
+  Add to InitiativeFramework interface:
+    compatibleTemplates: string[]     — array of LifecycleTemplate IDs
+    divisionRelevance: string[]       — array of Division strings
+    featured?: boolean                — if true, show in featured strip
+    activeCount?: number              — populated dynamically at render time
+    completedCount?: number           — populated dynamically at render time
+    iconName?: string                 — lucide-react icon name string
+
+FILE: src/data/shared/lifecyclePortfolioStore.ts
+  Add to Blocker interface:
+    acknowledgedByTO?: boolean
+    resolutionNote?: string
+
+  Add to Initiative interface:
+    (no additions required — existing fields sufficient)
+
+  Add helper functions:
+    getRisksByInitiativeId(id: string): Risk[]
+    getBlockersByInitiativeId(id: string): Blocker[]
+    getProjectsByInitiativeId(id: string): Project[]
+    getAllBlockers(): Blocker[]
+    computeInitiativeRAG(initiative: Initiative): RAGStatus
+      (as specified in Section 14)
+
+FILE: src/data/lifecycle/lifecycleData.ts
+  Add to ApprovalWorkflow interface:
+    documentStudioRef?: string
+
+  Add to expected benefit object (within LifecycleInstance.expectedBenefits):
+    actualValue?: number
+    realizationNotes?: string
+    lastUpdated?: string
+
+FILE: src/data/lifecycle/serviceRequestState.ts
+  Add to LCServiceRequest interface:
+    documentStudioId?: string
+
+FILE: src/data/shared/dewaRoles.ts  (NEW FILE — create)
+  Export: DEWA_ROLE_OPTIONS: string[] — a list of known DEWA role titles
+  for use in the stakeholder multi-select in the initiative request form.
+  Example values:
+    "Chief Digital Officer"
+    "Head of IT Architecture"
+    "Head of Digital Transformation"
+    "CTO"
+    "Division GM — Generation"
+    "Division GM — Distribution"
+    "Division GM — Water"
+    "Head of Customer Services"
+    "Head of Cybersecurity"
+    "Head of Data & Analytics"
+    "Head of Innovation"
+    "Project Management Office Lead"
+    "Enterprise Architect"
+    "Solution Architect"
+
+
+================================================================================
+24. FILE-LEVEL CHANGE MAP
+================================================================================
+
+MODIFY (existing files):
+  src/pages/LifecycleManagementPage.tsx
+    — Remove Tab 3 "start-initiative", add Tab 2 "explore-start"
+    — Remove TemplatesLibrary import/tab, integrate into ExploreStart
+    — Add selectedFramework, selectedTemplate state
+    — Add searchQuery state and search bar in header
+    — Add stats bar in header
+    — Add Intent Bar component (or inline)
+    — Add portfolio signal banner (conditional)
+    — Upgrade Tab 1 label to "Active Initiatives"
+    — Upgrade empty state for Tab 1
+    — Connect ExploreStartStepper
+
+  src/data/lifecycle/frameworkCards.ts
+    — Add compatibleTemplates, divisionRelevance, featured, iconName fields
+    — Populate all 12 frameworks with new fields
+
+  src/data/shared/lifecyclePortfolioStore.ts
+    — Add helper functions (getRisksByInitiativeId, etc.)
+    — Add computeInitiativeRAG()
+    — Add fields to Blocker interface
+
+  src/data/lifecycle/lifecycleData.ts
+    — Add documentStudioRef to ApprovalWorkflow
+    — Add actualValue, realizationNotes, lastUpdated to benefit objects
+
+  src/data/lifecycle/serviceRequestState.ts
+    — Add documentStudioId to LCServiceRequest
+
+  src/pages/lifecycle/LCStage3Page.tsx
+    — Add "Escalations" tab with full escalation queue
+    — Add "Pending Gate Approvals" tab with approve/reject actions
+    — Add "Recent Activity" panel
+    — Add portfolio-wide benefits summary section
+    — Wrap in Stage3Shell (when Section 3 unification is implemented)
+
+  src/pages/lifecycle/LCInsightsPage.tsx
+    — Replace hardcoded/static data with live store reads
+    — Add Benefits section
+    — Add Activity Log section
+    — Add gate sign-off submission Dialog
+    — Add portfolio provenance section (conditional)
+    — Add RAG computed badge with tooltip
+    — Enforce role-gating matrix rigorously
+
+  src/pages/lifecycle/TemplatesLibrary.tsx
+    — This file may be RETIRED or refactored into FrameworkSidePanel
+    — Template content becomes part of the side panel's compatible-templates
+      section rather than a standalone tab
+    — If kept, must be updated to match Tab 1 visual standard
+
+  src/App.tsx
+    — If Stage 3 unification Option B is implemented, update lifecycle and
+      portfolio Stage 3 routes to go through Stage3AppPage
+
+CREATE (new files):
+  src/components/lifecycle/ExploreStartStepper.tsx
+    — 3-step progress indicator for the Explore & Start flow
+
+  src/components/lifecycle/FrameworkSidePanel.tsx
+    — Sliding side panel for framework detail + template selection
+    — Props: framework, onClose, onSelectTemplate, selectedTemplate, onBeginRequest
+
+  src/components/lifecycle/LifecycleSearchResults.tsx
+    — Unified search results component for global marketplace search
+
+  src/components/stage3/Stage3Shell.tsx  (if Option A or B from Section 3)
+    — Shared outer wrapper for all Stage 3 pages
+
+  src/data/shared/dewaRoles.ts
+    — DEWA_ROLE_OPTIONS string array for stakeholder multi-select
+
+
+================================================================================
+25. PRIORITY & SEQUENCING RECOMMENDATION
+================================================================================
+
+The following sequence is recommended for an implementing LLM or developer.
+Work in this order to ensure each layer builds on a stable foundation.
+
+PHASE 1 — VISUAL COHERENCE (do first, highest demo impact)
+  [ ] Tab 1 label → "Active Initiatives"
+  [ ] Stats bar in marketplace header (Section 10a)
+  [ ] Tab restructure: remove Tab 3, add "Explore & Start" Tab 2 (Section 5)
+  [ ] Framework cards: add gradient header, icons, usage signals (Section 6)
+  [ ] Framework cards: add step indicator (ExploreStartStepper) (Section 6)
+  [ ] Tab 1 empty state upgrade (Section 11)
+
+PHASE 2 — EXPLORE & START JOURNEY (core new functionality)
+  [ ] Add compatibleTemplates and related fields to frameworkCards.ts (Section 23)
+  [ ] Build FrameworkSidePanel.tsx (Section 7)
+  [ ] Intent bar (Section 8)
+  [ ] Form upgrades: summary block, stage preview, stakeholder multi-select (Section 9)
+  [ ] Post-submit navigation to Stage 2 (Section 9)
+  [ ] Global search bar (Section 12)
+
+PHASE 3 — GOVERNANCE LAYER (closes the TO office story)
+  [ ] Add helper functions to lifecyclePortfolioStore (Section 23)
+  [ ] computeInitiativeRAG() function (Section 14)
+  [ ] RAG badge with tooltip and manual override indicator (Section 14)
+  [ ] Gate approval UI in LCStage3Page (Section 13 — Pending Gate Approvals tab)
+  [ ] Escalation queue in LCStage3Page (Section 15)
+  [ ] Gate sign-off Dialog in LCInsightsPage (Section 16)
+
+PHASE 4 — DATA COMPLETENESS & INTEGRATION
+  [ ] Activity log surface in LCInsightsPage (Section 17)
+  [ ] Benefits realization section in LCInsightsPage (Section 18)
+  [ ] Document Studio deliverable handoff (Section 19)
+  [ ] Portfolio sync conflict UI (Section 20)
+  [ ] EA alignment score cleanup (Section 21)
+  [ ] "Raised from Portfolio" badge upgrades (Section 22)
+
+PHASE 5 — INFRASTRUCTURE
+  [ ] Stage 3 unification: Stage3Shell.tsx (Section 3)
+  [ ] Role-gating audit in LCInsightsPage (Section 13 — Priority 2)
+  [ ] dewaRoles.ts stakeholder data (Section 23)
+
+================================================================================
+END OF DOCUMENT
+Lifecycle Marketplace Elevation Guide — DEWA DTMP v3
+================================================================================

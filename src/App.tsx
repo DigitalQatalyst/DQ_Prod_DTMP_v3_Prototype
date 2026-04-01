@@ -34,6 +34,8 @@ import PortfolioManagementPage from "./pages/PortfolioManagementPage";
 import PortfolioDetailPage from "./pages/PortfolioDetailPage";
 import LifecycleManagementPage from "./pages/LifecycleManagementPage";
 import LifecycleDetailPage from "./pages/LifecycleDetailPage";
+import LCInitiativeDetailPage from "./pages/lifecycle/LCInitiativeDetailPage";
+import LCInsightsPage from "./pages/lifecycle/LCInsightsPage";
 import LCStage3Page from "./pages/lifecycle/LCStage3Page";
 import PMStage3Page from "./pages/portfolio/PMStage3Page";
 import DivisionalLandingPage from "./pages/DivisionalLandingPage";
@@ -269,6 +271,8 @@ const App = () => (
           
           {/* Lifecycle Management marketplace */}
           <Route path="/marketplaces/lifecycle-management" element={<LifecycleManagementPage />} />
+          <Route path="/marketplaces/lifecycle-management/initiative/:id" element={<LCInitiativeDetailPage />} />
+          <Route path="/marketplaces/lifecycle-management/initiative/:id/insights" element={<LCInsightsPage />} />
           <Route path="/marketplaces/lifecycle-management/:tab/:cardId" element={<LifecycleDetailPage />} />
           {/* Lifecycle Management Stage 3 — TO Office */}
           <Route path="/stage3/lifecycle-management" element={<Navigate to="/stage3/lifecycle-management/overview" replace />} />
