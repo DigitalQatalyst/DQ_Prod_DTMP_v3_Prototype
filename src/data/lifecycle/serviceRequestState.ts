@@ -47,6 +47,7 @@ export interface LCServiceRequest {
   sourceType?: "risk" | "blocker" | "initiative";
   sourceId?: string;
   sourceName?: string;
+  documentStudioId?: string;
   assignedTo?: string;
   deliveredAt?: string;
   deliverableTitle?: string;
@@ -217,7 +218,13 @@ export const addLCRequest = (data: Omit<LCServiceRequest, "id" | "submittedAt" |
 export const updateLCRequestStatus = (
   requestId: string,
   status: LCRequestStatus,
-  options?: { assignedTo?: string; deliveredAt?: string; deliverableTitle?: string; deliverableFormat?: "PDF" | "PPTX" | "Word" }
+  options?: {
+    assignedTo?: string;
+    deliveredAt?: string;
+    deliverableTitle?: string;
+    deliverableFormat?: "PDF" | "PPTX" | "Word";
+    documentStudioId?: string;
+  }
 ): LCServiceRequest | null => {
   const requests = readRequests();
   let updated: LCServiceRequest | null = null;

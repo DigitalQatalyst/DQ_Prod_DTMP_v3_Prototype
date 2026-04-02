@@ -49,12 +49,21 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
+import Stage3Shell from "@/components/stage3/Stage3Shell";
 
 import {
   getInitiatives,
   type Initiative,
   type InitiativeStatus,
 } from "@/data/shared/lifecyclePortfolioStore";
+import { getAllActivityEvents } from "@/data/shared/activityEventStore";
+import {
+  addApprovalWorkflow,
+  getApprovalWorkflows,
+  lifecycleInstances,
+  updateApprovalWorkflow,
+  type ApprovalWorkflow,
+} from "@/data/lifecycle/lifecycleData";
 
 import {
   getApprovalQueue,
@@ -102,6 +111,13 @@ function slaLabel(r: LCServiceRequest): string {
   const h = Math.floor(remaining / 3_600_000);
   const d = Math.floor(h / 24);
   return d > 0 ? `${d}d left` : `${h}h left`;
+}
+
+function escalationAgeLabel(dateRaised: string): { label: string; className: string } {
+  const daysOpen = Math.max(0, Math.floor((Date.now() - new Date(dateRaised).getTime()) / 86_400_000));
+  if (daysOpen > 7) return { label: `${daysOpen} days`, className: "text-red-600" };
+  if (daysOpen >= 3) return { label: `${daysOpen} days`, className: "text-amber-600" };
+  return { label: `${daysOpen} days`, className: "text-green-600" };
 }
 
 const STATUS_BADGES: Record<LCRequestStatus, string> = {
@@ -161,12 +177,14 @@ export default function LCStage3Page() {
   const [approvals, setApprovals] = useState(() => getApprovalQueue());
   const [serviceRequests, setServiceRequests] = useState<LCServiceRequest[]>(() => getLCRequests());
   const [escalations, setEscalations] = useState<LCEscalation[]>(() => getEscalations());
+  const [gateApprovals, setGateApprovals] = useState<ApprovalWorkflow[]>(() => getApprovalWorkflows());
 
   const refresh = () => {
     setInitiatives(getInitiatives());
     setApprovals(getApprovalQueue());
     setServiceRequests(getLCRequests());
     setEscalations(getEscalations());
+    setGateApprovals(getApprovalWorkflows());
   };
 
   // ── Derived ───────────────────────────────────────────────────────────────────
@@ -200,6 +218,24 @@ export default function LCStage3Page() {
     () => serviceRequests.filter((r) => r.status === "Completed"),
     [serviceRequests]
   );
+
+  const pendingGateApprovals = useMemo(
+    () => gateApprovals.filter((approval) => approval.status === "pending"),
+    [gateApprovals]
+  );
+
+  const recentActivity = useMemo(() => getAllActivityEvents().slice(0, 10), [initiatives.length, approvals.length, serviceRequests.length, escalations.length, gateApprovals.length]);
+
+  const benefitsSummary = useMemo(() => {
+    const completedLifecycle = lifecycleInstances.filter((instance) => instance.status === "completed");
+    const benefits = completedLifecycle.flatMap((instance) => instance.expectedBenefits);
+    const realized = benefits.filter((benefit) => benefit.status === "realized");
+    return {
+      planned: benefits.length,
+      realized: realized.length,
+      rate: benefits.length > 0 ? Math.round((realized.length / benefits.length) * 100) : 0,
+    };
+  }, []);
 
   const slaBreached = useMemo(
     () => openServiceRequests.filter((r) => Date.now() > new Date(r.submittedAt).getTime() + r.slaHours * 3_600_000).length,
@@ -245,6 +281,7 @@ export default function LCStage3Page() {
   const [reqNote, setReqNote] = useState("");
   const [deliverableTitle, setDeliverableTitle] = useState("");
   const [deliverableFormat, setDeliverableFormat] = useState<"PDF" | "PPTX" | "Word">("PDF");
+  const [documentStudioId, setDocumentStudioId] = useState("");
 
   const submitReqAction = () => {
     if (!reqModal) return;
@@ -255,17 +292,22 @@ export default function LCStage3Page() {
       deliveredAt: isDeliver ? new Date().toISOString() : undefined,
       deliverableTitle: isDeliver && deliverableTitle.trim() ? deliverableTitle.trim() : undefined,
       deliverableFormat: isDeliver ? deliverableFormat : undefined,
+      documentStudioId: isDeliver && documentStudioId.trim() ? documentStudioId.trim() : undefined,
     });
     toast({ title: `Request ${nextStatus}`, description: `${req.serviceType} for ${req.initiativeName}` });
     setReqModal(null);
     setReqNote("");
     setDeliverableTitle("");
+    setDocumentStudioId("");
     refresh();
   };
 
   // Escalation action modal
   const [escModal, setEscModal] = useState<{ esc: LCEscalation; action: EscalationStatus } | null>(null);
   const [escNote, setEscNote] = useState("");
+
+  const [gateModal, setGateModal] = useState<{ approval: ApprovalWorkflow; decision: "approved" | "rejected" | "conditional" } | null>(null);
+  const [gateDecisionNote, setGateDecisionNote] = useState("");
 
   const submitEscAction = () => {
     if (!escModal) return;
@@ -280,10 +322,39 @@ export default function LCStage3Page() {
     refresh();
   };
 
+  const submitGateDecision = () => {
+    if (!gateModal) return;
+    updateApprovalWorkflow(gateModal.approval.id, (workflow) => ({
+      ...workflow,
+      status: gateModal.decision,
+      actualDecisionDate: new Date().toISOString(),
+      approvals: workflow.approvals.map((entry, index) =>
+        index === 0
+          ? {
+              ...entry,
+              decision: gateModal.decision,
+              decisionDate: new Date().toISOString(),
+              comments: gateDecisionNote.trim() || entry.comments,
+            }
+          : entry
+      ),
+      receivedApprovals: gateModal.decision === "approved" ? workflow.requiredApprovals : workflow.receivedApprovals,
+    }));
+    toast({ title: "Gate decision recorded", description: `${gateModal.approval.gate.name} has been updated.` });
+    setGateModal(null);
+    setGateDecisionNote("");
+    refresh();
+  };
+
   // ── Render ───────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex min-h-[calc(100vh-64px)] bg-gray-50">
+    <Stage3Shell
+      scope="lifecycle-management"
+      title="Lifecycle Management"
+      subtitle="Govern the full initiative portfolio, respond to delivery escalations, and manage TO support from one workspace."
+    >
+    <div className="flex min-h-[calc(100vh-64px)] rounded-2xl border border-gray-200 bg-white shadow-sm">
 
       {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
@@ -361,12 +432,15 @@ export default function LCStage3Page() {
         {activeView === "overview" && (
           <OverviewView
             pendingApprovals={pendingApprovals.length}
+            pendingGateApprovals={pendingGateApprovals.length}
             activeProgrammes={activeProgrammes.length}
             openRequests={openServiceRequests.length}
             openEscalations={openEscalations.length}
             slaBreached={slaBreached}
             completedInitiatives={completedInitiatives.length}
             onNavigate={goTo}
+            recentActivity={recentActivity}
+            benefitsSummary={benefitsSummary}
           />
         )}
 
@@ -377,6 +451,11 @@ export default function LCStage3Page() {
             onAction={(approval, action) => {
               setApprovalModal({ approval, action });
               setApprovalNote("");
+            }}
+            gateApprovals={pendingGateApprovals}
+            onGateAction={(approval, decision) => {
+              setGateModal({ approval, decision });
+              setGateDecisionNote("");
             }}
           />
         )}
@@ -395,6 +474,7 @@ export default function LCStage3Page() {
               setAssignee("Eng. Khalid Al Rashidi");
               setDeliverableTitle("");
               setDeliverableFormat("PDF");
+              setDocumentStudioId("");
               setReqNote("");
             }}
           />
@@ -527,6 +607,14 @@ export default function LCStage3Page() {
                       </SelectContent>
                     </Select>
                   </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Document Studio reference (optional)</label>
+                    <Input
+                      value={documentStudioId}
+                      onChange={(e) => setDocumentStudioId(e.target.value)}
+                      placeholder="Document Studio request ID or title"
+                    />
+                  </div>
                 </>
               )}
             </div>
@@ -535,6 +623,38 @@ export default function LCStage3Page() {
             <Button variant="outline" onClick={() => setReqModal(null)}>Cancel</Button>
             <Button className="bg-orange-600 hover:bg-orange-700 text-white" onClick={submitReqAction}>
               Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!gateModal} onOpenChange={() => setGateModal(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Gate Decision</DialogTitle>
+          </DialogHeader>
+          {gateModal ? (
+            <div className="space-y-4">
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                <p className="text-xs text-slate-500">Gate</p>
+                <p className="text-sm font-semibold text-slate-900">{gateModal.approval.gate.name}</p>
+                <p className="text-xs text-slate-500 mt-1">{gateModal.approval.lifecycleInstanceName}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700">Decision Notes</label>
+                <Textarea
+                  value={gateDecisionNote}
+                  onChange={(e) => setGateDecisionNote(e.target.value)}
+                  placeholder="Capture conditional requirements, rejection reasons, or approval notes."
+                  rows={4}
+                />
+              </div>
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setGateModal(null)}>Cancel</Button>
+            <Button className="bg-orange-600 hover:bg-orange-700 text-white" onClick={submitGateDecision}>
+              Confirm Decision
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -586,6 +706,7 @@ export default function LCStage3Page() {
         </DialogContent>
       </Dialog>
     </div>
+    </Stage3Shell>
   );
 }
 
@@ -593,20 +714,26 @@ export default function LCStage3Page() {
 
 function OverviewView({
   pendingApprovals,
+  pendingGateApprovals,
   activeProgrammes,
   openRequests,
   openEscalations,
   slaBreached,
   completedInitiatives,
   onNavigate,
+  recentActivity,
+  benefitsSummary,
 }: {
   pendingApprovals: number;
+  pendingGateApprovals: number;
   activeProgrammes: number;
   openRequests: number;
   openEscalations: number;
   slaBreached: number;
   completedInitiatives: number;
   onNavigate: (v: Stage3View) => void;
+  recentActivity: Array<{ id: string; actor: string; action: string; timestamp: string; note?: string }>;
+  benefitsSummary: { planned: number; realized: number; rate: number };
 }) {
   return (
     <div className="space-y-6">
@@ -620,7 +747,7 @@ function OverviewView({
       {/* KPI grid */}
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {[
-          { label: "Pending Approvals", value: pendingApprovals, icon: <Inbox className="w-5 h-5" />, color: "text-amber-600", bg: "bg-amber-50", view: "pending-approvals" as Stage3View, urgent: pendingApprovals > 0 },
+          { label: "Pending Approvals", value: pendingApprovals + pendingGateApprovals, icon: <Inbox className="w-5 h-5" />, color: "text-amber-600", bg: "bg-amber-50", view: "pending-approvals" as Stage3View, urgent: pendingApprovals + pendingGateApprovals > 0 },
           { label: "Active Programmes", value: activeProgrammes, icon: <Play className="w-5 h-5" />, color: "text-teal-600", bg: "bg-teal-50", view: "active-programmes" as Stage3View, urgent: false },
           { label: "Open Requests", value: openRequests, icon: <ClipboardList className="w-5 h-5" />, color: "text-blue-600", bg: "bg-blue-50", view: "service-requests" as Stage3View, urgent: false },
           { label: "SLA Breached", value: slaBreached, icon: <Clock className="w-5 h-5" />, color: "text-red-600", bg: "bg-red-50", view: "service-requests" as Stage3View, urgent: slaBreached > 0 },
@@ -701,11 +828,52 @@ function OverviewView({
               <div>
                 <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
                   <span>Approvals Pending</span>
-                  <span className={`font-semibold ${pendingApprovals > 0 ? "text-amber-600" : "text-green-600"}`}>
-                    {pendingApprovals === 0 ? "Clear" : pendingApprovals}
+                  <span className={`font-semibold ${pendingApprovals + pendingGateApprovals > 0 ? "text-amber-600" : "text-green-600"}`}>
+                    {pendingApprovals + pendingGateApprovals === 0 ? "Clear" : pendingApprovals + pendingGateApprovals}
                   </span>
                 </div>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <Card>
+          <CardContent className="p-5">
+            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <Activity className="w-4 h-4 text-teal-500" /> Recent Activity
+            </h3>
+            <div className="space-y-3">
+              {recentActivity.length === 0 ? (
+                <p className="text-sm text-gray-500">No recent lifecycle activity recorded yet.</p>
+              ) : (
+                recentActivity.map((event) => (
+                  <div key={event.id} className="flex items-start gap-3">
+                    <span className="mt-1 h-2.5 w-2.5 rounded-full bg-orange-500" />
+                    <div className="min-w-0">
+                      <p className="text-sm text-gray-900">
+                        <span className="font-semibold">{event.actor}</span> {event.action}
+                      </p>
+                      {event.note ? <p className="text-xs text-gray-500 mt-0.5">{event.note}</p> : null}
+                      <p className="text-xs text-gray-400 mt-0.5">{fmtDate(event.timestamp)}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-5">
+            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-green-500" /> Benefits Summary
+            </h3>
+            <div className="grid grid-cols-3 gap-3">
+              <S3KpiCard color="plain" label="Planned" value={String(benefitsSummary.planned)} sub="benefits tracked" />
+              <S3KpiCard color="green" label="Realized" value={String(benefitsSummary.realized)} sub="completed outcomes" />
+              <S3KpiCard color="orange" label="Rate" value={`${benefitsSummary.rate}%`} sub="realization rate" />
             </div>
           </CardContent>
         </Card>
@@ -719,9 +887,13 @@ function OverviewView({
 function PendingApprovalsView({
   approvals,
   onAction,
+  gateApprovals,
+  onGateAction,
 }: {
   approvals: InitiativeApprovalRequest[];
   onAction: (a: InitiativeApprovalRequest, action: ApprovalStatus) => void;
+  gateApprovals: ApprovalWorkflow[];
+  onGateAction: (approval: ApprovalWorkflow, decision: "approved" | "rejected" | "conditional") => void;
 }) {
   return (
     <div className="space-y-5">
@@ -842,6 +1014,54 @@ function PendingApprovalsView({
           ))}
         </div>
       )}
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Pending Gate Approvals</h2>
+            <p className="text-sm text-gray-500">Gate submissions with evidence captured from initiative delivery teams.</p>
+          </div>
+          <Badge variant="outline">{gateApprovals.length} pending</Badge>
+        </div>
+        {gateApprovals.length === 0 ? (
+          <EmptyState icon={<CheckCircle2 className="w-8 h-8 text-gray-300" />} message="No pending gate approvals" />
+        ) : (
+          <div className="space-y-3">
+            {gateApprovals.map((approval) => (
+              <Card key={approval.id} className="border-gray-200">
+                <CardContent className="p-5 space-y-3">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-amber-600">{approval.gate.stage}</p>
+                      <h3 className="text-base font-semibold text-gray-900 mt-1">{approval.gate.name}</h3>
+                      <p className="text-sm text-gray-500">{approval.lifecycleInstanceName}</p>
+                    </div>
+                    <Badge className="bg-amber-50 text-amber-700 border border-amber-200">Pending</Badge>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <p className="text-xs font-semibold text-slate-500 mb-1">Submission Evidence</p>
+                    <p className="text-sm text-slate-700 whitespace-pre-line">{approval.submissionNotes}</p>
+                    {approval.documentStudioRef ? (
+                      <p className="text-xs text-slate-500 mt-2">Document Studio: {approval.documentStudioRef}</p>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => onGateAction(approval, "approved")}>
+                      Approve
+                    </Button>
+                    <Button size="sm" variant="outline" className="border-amber-200 text-amber-700 hover:bg-amber-50" onClick={() => onGateAction(approval, "conditional")}>
+                      Conditional
+                    </Button>
+                    <Button size="sm" variant="outline" className="border-red-200 text-red-700 hover:bg-red-50" onClick={() => onGateAction(approval, "rejected")}>
+                      Reject
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -893,7 +1113,7 @@ function ActiveProgrammesView({ initiatives }: { initiatives: Initiative[] }) {
                 )}
 
                 <div className="flex items-center justify-between text-xs text-gray-400">
-                  <span>EA Alignment: {ini.eaAlignmentScore == null ? "TBD" : `${ini.eaAlignmentScore}%`}</span>
+                  <span>EA Alignment: {ini.eaAlignmentScore == null ? "Not Assessed" : `${ini.eaAlignmentScore}%`}</span>
                   <span>Target: {ini.targetDate}</span>
                 </div>
               </CardContent>
@@ -1038,6 +1258,9 @@ function EscalationsView({
           {escalations.map((e) => (
             <Card key={e.id} className={`border-gray-200 ${e.severity === "Critical" ? "border-red-200 bg-red-50/20" : e.severity === "High" ? "border-orange-200 bg-orange-50/10" : ""}`}>
               <CardContent className="p-5 space-y-3">
+                {(() => {
+                  const age = escalationAgeLabel(e.dateRaised);
+                  return (
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -1051,8 +1274,11 @@ function EscalationsView({
                   <div className="text-right text-xs text-gray-400 flex-shrink-0">
                     <p>Raised by {e.raisedBy}</p>
                     <p>{fmtDate(e.dateRaised)}</p>
+                    <p className={`font-medium ${age.className}`}>Days Open: {age.label}</p>
                   </div>
                 </div>
+                  );
+                })()}
 
                 <div className="bg-slate-50 border border-slate-100 rounded-lg p-3">
                   <p className="text-xs font-semibold text-slate-500 mb-1">What is needed</p>

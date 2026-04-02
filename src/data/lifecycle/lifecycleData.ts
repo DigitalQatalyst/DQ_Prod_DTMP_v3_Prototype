@@ -377,6 +377,9 @@ export interface LifecycleInstance {
     quantifiedValue?: number;
     realizationDate: string;
     status: 'planned' | 'in-progress' | 'realized' | 'not-realized';
+    actualValue?: number;
+    realizationNotes?: string;
+    lastUpdated?: string;
   }>;
   tags: string[];
 }
@@ -635,6 +638,7 @@ export interface ApprovalWorkflow {
   submittedBy: string;
   submittedDate: string;
   submissionNotes: string;
+  documentStudioRef?: string;
   status: 'pending' | 'approved' | 'rejected' | 'conditional' | 'withdrawn';
   approvals: Array<{
     approverName: string;
@@ -755,6 +759,63 @@ export const approvalWorkflows: ApprovalWorkflow[] = [
     escalated: false
   }
 ];
+
+const APPROVAL_WORKFLOWS_KEY = "dtmp.lifecycle.gateApprovals";
+const isBrowser = typeof window !== "undefined";
+
+const parseJson = <T>(raw: string | null, fallback: T): T => {
+  try {
+    return raw ? (JSON.parse(raw) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+const readApprovalWorkflows = (): ApprovalWorkflow[] => {
+  if (!isBrowser) return approvalWorkflows;
+  const raw = window.localStorage.getItem(APPROVAL_WORKFLOWS_KEY);
+  if (!raw) {
+    window.localStorage.setItem(APPROVAL_WORKFLOWS_KEY, JSON.stringify(approvalWorkflows));
+    return approvalWorkflows;
+  }
+  return parseJson<ApprovalWorkflow[]>(raw, approvalWorkflows);
+};
+
+const writeApprovalWorkflows = (workflows: ApprovalWorkflow[]): void => {
+  if (!isBrowser) return;
+  window.localStorage.setItem(APPROVAL_WORKFLOWS_KEY, JSON.stringify(workflows));
+};
+
+export const getApprovalWorkflows = (): ApprovalWorkflow[] =>
+  readApprovalWorkflows().sort(
+    (a, b) => new Date(b.submittedDate).getTime() - new Date(a.submittedDate).getTime()
+  );
+
+export const addApprovalWorkflow = (
+  workflow: Omit<ApprovalWorkflow, "id">
+): ApprovalWorkflow => {
+  const created: ApprovalWorkflow = {
+    ...workflow,
+    id: `apr-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+  };
+  writeApprovalWorkflows([created, ...readApprovalWorkflows()]);
+  return created;
+};
+
+export const updateApprovalWorkflow = (
+  approvalId: string,
+  updater: (workflow: ApprovalWorkflow) => ApprovalWorkflow
+): ApprovalWorkflow | null => {
+  const existing = readApprovalWorkflows();
+  let updated: ApprovalWorkflow | null = null;
+  const next = existing.map((workflow) => {
+    if (workflow.id !== approvalId) return workflow;
+    updated = updater(workflow);
+    return updated;
+  });
+  writeApprovalWorkflows(next);
+  return updated;
+};
 
 // ============================================================================
 // STATISTICS

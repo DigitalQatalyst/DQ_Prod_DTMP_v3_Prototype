@@ -45,7 +45,10 @@
       "Bash(python -c \":*)",
       "Bash(where gh:*)",
       "Bash(find '/c/Users/Wangare/Desktop/DEWA Prototype/DQ_Prod_DTMP_v3_DEWA_Prototype/src/pages' -type f -name *ycl* -o -name *ifecycle*)",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(find 'C:\\\\Users\\\\Wangare\\\\Desktop\\\\DEWA Prototype\\\\DQ_Prod_DTMP_v3_DEWA_Prototype/src' -type f -name *ortfolio* -o -type f -name *PM*)",
+      "Bash(git -C 'C:\\\\Users\\\\Wangare\\\\Desktop\\\\DEWA Prototype\\\\DQ_Prod_DTMP_v3_DEWA_Prototype\\\\.claude\\\\worktrees\\\\agent-a48a0210' status)",
+      "Bash(git -C \"C:\\\\Users\\\\Wangare\\\\Desktop\\\\DEWA Prototype\\\\DQ_Prod_DTMP_v3_DEWA_Prototype\\\\.claude\\\\worktrees\\\\agent-a48a0210\" diff --stat HEAD)"
     ]
   }
 }
