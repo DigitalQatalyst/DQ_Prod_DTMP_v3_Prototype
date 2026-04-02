@@ -3,65 +3,106 @@ import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Search,
-  Filter,
   X,
-  ChevronRight,
-  Eye,
   FileText,
-  Rocket,
   TrendingUp,
   TrendingDown,
   Minus,
   AlertTriangle,
+  AlertCircle,
   CheckCircle,
-  Clock,
-  ExternalLink,
-  BarChart3,
+  LayoutGrid,
+  Monitor,
+  Server,
+  GitMerge,
   Shield,
-  Layers,
   Cpu,
   Zap,
-  LayoutGrid,
+  Wifi,
+  Settings,
+  Database,
+  Brain,
+  Smartphone,
+  Globe,
+  Briefcase,
+  BarChart3,
+  Layers,
+  Bookmark,
 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
-  appCards,
+  allITCards,
+  allOTCards,
+  dataDigitalCards,
   projectCards,
   initiativeCards,
   rationalisationCards,
   governanceCards,
-  oadCards,
+  getPublishedContentCards,
+  mapContentCardToRationalisationCard,
+  mapContentCardToOTCard,
   PM_TAB_CONFIG,
   PM_REPORT_TYPES,
   PM_SLA_MAP,
   DIVISION_COLORS,
+  DIVISION_GRADIENT,
   STATUS_COLORS,
   type PMTab,
   type AppCard,
+  type InfrastructureCard,
+  type IntegrationCard,
+  type SecurityCard,
+  type ITCard,
+  type OADCard,
+  type OTNewCard,
   type ProjectCard,
   type InitiativeCard,
   type RationalisationCard,
   type GovernanceCard,
-  type OADCard,
+  type DataDigitalCard,
+  type DataPlatformCard,
+  type AIModelCard,
+  type DigitalProductCard,
+  type ExternalAPICard,
 } from "@/data/portfolioManagement";
+import {
+  getSessionPMRole,
+  setSessionPMRole,
+  clearSessionPMRole,
+  type PMRole,
+  PM_ROLES,
+} from "@/data/shared/portfolioRole";
 
-// ── Role system ──────────────────────────────────────────────────────────
+// ── Icon map per asset type ───────────────────────────────────────────────
 
-type PMRole = "EA Office / Portfolio Manager" | "Division Head / Senior Stakeholder" | "General DEWA Staff";
-const PM_ROLES: PMRole[] = [
-  "EA Office / Portfolio Manager",
-  "Division Head / Senior Stakeholder",
-  "General DEWA Staff",
-];
+function getCardIcon(tab: PMTab, assetType?: string): React.ReactNode {
+  if (tab === "it-asset-portfolio") {
+    if (assetType === "Infrastructure & Cloud") return <Server className="w-10 h-10 text-white/35" />;
+    if (assetType === "Integration Platform") return <GitMerge className="w-10 h-10 text-white/35" />;
+    if (assetType === "Security & Identity") return <Shield className="w-10 h-10 text-white/35" />;
+    return <Monitor className="w-10 h-10 text-white/35" />;
+  }
+  if (tab === "ot-asset-portfolio") {
+    if (assetType === "Smart Metering") return <Zap className="w-10 h-10 text-white/35" />;
+    if (assetType === "IoT & Field Sensors") return <Wifi className="w-10 h-10 text-white/35" />;
+    if (assetType === "Industrial Equipment") return <Settings className="w-10 h-10 text-white/35" />;
+    return <Cpu className="w-10 h-10 text-white/35" />;
+  }
+  if (tab === "data-digital-portfolio") {
+    if (assetType === "AI & ML Model") return <Brain className="w-10 h-10 text-white/35" />;
+    if (assetType === "Digital Customer Product") return <Smartphone className="w-10 h-10 text-white/35" />;
+    if (assetType === "External API") return <Globe className="w-10 h-10 text-white/35" />;
+    return <Database className="w-10 h-10 text-white/35" />;
+  }
+  if (tab === "project-portfolio") return <Briefcase className="w-10 h-10 text-white/35" />;
+  if (tab === "transformation-initiatives") return <TrendingUp className="w-10 h-10 text-white/35" />;
+  if (tab === "technology-rationalisation") return <Layers className="w-10 h-10 text-white/35" />;
+  return <BarChart3 className="w-10 h-10 text-white/35" />;
+}
 
-// ── Types for insights drawer union ──────────────────────────────────────
-
-type AnyCard = AppCard | ProjectCard | InitiativeCard | RationalisationCard | GovernanceCard | OADCard;
-
-// ── Helpers ───────────────────────────────────────────────────────────────
+// ── Helper functions ──────────────────────────────────────────────────────
 
 function healthColor(score: number): string {
   if (score >= 90) return "text-green-700 bg-green-100";
@@ -73,12 +114,6 @@ function ragColor(rag: string): string {
   if (rag === "Green") return "bg-green-500";
   if (rag === "Amber") return "bg-amber-400";
   return "bg-red-500";
-}
-
-function eaColor(score: number): string {
-  if (score >= 80) return "text-green-700";
-  if (score >= 60) return "text-amber-700";
-  return "text-red-700";
 }
 
 function govScoreColor(score: number): string {
@@ -93,442 +128,59 @@ function TrendIcon({ trend }: { trend: string }) {
   return <Minus className="w-3.5 h-3.5 text-gray-500" />;
 }
 
-// ── Role Selector Modal ───────────────────────────────────────────────────
-
-function RoleSelectorModal({
-  onClose,
-  onSelect,
-}: {
-  onClose: () => void;
-  onSelect: (role: PMRole) => void;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-gray-900">Select Your Role</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        <p className="text-sm text-gray-500 mb-5">
-          Intelligence depth is tailored to your role. Choose the role you want to view as for this demo.
-        </p>
-        <div className="space-y-3">
-          {PM_ROLES.map((role) => (
-            <button
-              key={role}
-              onClick={() => onSelect(role)}
-              className="w-full text-left px-4 py-3 rounded-xl border border-gray-200 hover:border-orange-300 hover:bg-orange-50 transition-all"
-            >
-              <p className="font-semibold text-gray-900 text-sm">{role}</p>
-              <p className="text-xs text-gray-500 mt-0.5">
-                {role === "EA Office / Portfolio Manager"
-                  ? "Full governance view — all metrics, history, cross-division"
-                  : role === "Division Head / Senior Stakeholder"
-                  ? "Executive summary — key scores, top risks, division-scoped"
-                  : "Lightweight — overall status and headline score only"}
-              </p>
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+// Get card division/name/status/assetType for generic operations
+function getCardMeta(card: AnyCardType, tab: PMTab) {
+  switch (tab) {
+    case "it-asset-portfolio": {
+      const c = card as ITCard;
+      const name = (c as AppCard).name || "";
+      const division = (c as AppCard).division || "All Divisions";
+      const assetType = (c as AppCard).assetType || "Application";
+      const status = (c as AppCard).status || "On Track";
+      const riskFlag = (c as AppCard).riskFlag;
+      const isNoInitiative = status === "No Initiative";
+      return { name, division, assetType, status, riskFlag, isNoInitiative };
+    }
+    case "ot-asset-portfolio": {
+      const c = card as (OADCard | OTNewCard);
+      const isOAD = "assetClassName" in c;
+      const name = isOAD ? (c as OADCard).assetClassName : (c as OTNewCard).name;
+      const division = c.division;
+      const assetType = c.assetType;
+      const status = c.status;
+      const isNoInitiative = status === "No Initiative" || (isOAD ? (c as OADCard).cardState === "Gap" : (c as OTNewCard).cardState === "Gap");
+      return { name, division, assetType, status, riskFlag: undefined, isNoInitiative };
+    }
+    case "data-digital-portfolio": {
+      const c = card as DataDigitalCard;
+      const name = c.name;
+      const division = c.division;
+      const assetType = c.assetType;
+      const status = c.status;
+      const riskFlag = (c as DataPlatformCard).riskFlag;
+      const isNoInitiative = status === "No Initiative";
+      return { name, division, assetType, status, riskFlag, isNoInitiative };
+    }
+    case "project-portfolio": {
+      const c = card as ProjectCard;
+      return { name: c.name, division: c.division, assetType: undefined, status: c.ragStatus, riskFlag: undefined, isNoInitiative: false };
+    }
+    case "transformation-initiatives": {
+      const c = card as InitiativeCard;
+      return { name: c.name, division: c.division, assetType: undefined, status: c.status, riskFlag: undefined, isNoInitiative: false };
+    }
+    case "technology-rationalisation": {
+      const c = card as RationalisationCard;
+      return { name: c.overlapTitle, division: c.divisionsAffected, assetType: undefined, status: c.status, riskFlag: undefined, isNoInitiative: false };
+    }
+    case "governance-health": {
+      const c = card as GovernanceCard;
+      return { name: `${c.division} — Governance`, division: c.division, assetType: undefined, status: c.trend, riskFlag: undefined, isNoInitiative: false };
+    }
+  }
 }
 
-// ── Insights Drawer ───────────────────────────────────────────────────────
-
-function InsightsDrawer({
-  card,
-  tab,
-  role,
-  onClose,
-  onChangeRole,
-  onRequestReport,
-}: {
-  card: AnyCard;
-  tab: PMTab;
-  role: PMRole;
-  onClose: () => void;
-  onChangeRole: () => void;
-  onRequestReport: () => void;
-}) {
-  const isEA = role === "EA Office / Portfolio Manager";
-  const isDivHead = role === "Division Head / Senior Stakeholder";
-
-  return (
-    <div className="fixed inset-0 z-50 flex justify-end">
-      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
-      <div className="relative bg-white w-full max-w-xl h-full overflow-y-auto shadow-2xl flex flex-col">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-5 text-white">
-          <div className="flex items-start justify-between mb-2">
-            <div>
-              <p className="text-xs font-medium text-orange-200 uppercase tracking-wider mb-1">
-                {PM_TAB_CONFIG[tab].label} — Insights
-              </p>
-              <h2 className="text-lg font-bold leading-snug">
-                {tab === "application-portfolio"
-                  ? (card as AppCard).name
-                  : tab === "project-portfolio"
-                  ? (card as ProjectCard).name
-                  : tab === "transformation-initiatives"
-                  ? (card as InitiativeCard).name
-                  : tab === "technology-rationalisation"
-                  ? (card as RationalisationCard).overlapTitle
-                  : tab === "governance-health"
-                  ? `${(card as GovernanceCard).division} — Governance Health`
-                  : (card as OADCard).assetClassName}
-              </h2>
-            </div>
-            <button onClick={onClose} className="text-orange-200 hover:text-white mt-1">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-          <div className="flex items-center gap-2 mt-3">
-            <span className="text-xs bg-white/20 text-white px-2 py-0.5 rounded-full">
-              Viewing as: {role}
-            </span>
-            <button
-              onClick={onChangeRole}
-              className="text-xs text-orange-200 hover:text-white underline"
-            >
-              Change role
-            </button>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 p-5 space-y-4 overflow-y-auto">
-          {/* App Portfolio Insights */}
-          {tab === "application-portfolio" && (() => {
-            const c = card as AppCard;
-            return (
-              <>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500 mb-1">Health Score</p>
-                    <p className={`text-2xl font-bold px-2 py-0.5 rounded inline-block ${healthColor(c.healthScore)}`}>
-                      {c.healthScore}%
-                    </p>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500 mb-1">Annual TCO</p>
-                    <p className="text-xl font-bold text-gray-900">{c.annualTCO}</p>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500 mb-1">Technical Debt</p>
-                    <p className="text-sm font-semibold text-gray-900">{c.technicalDebt}</p>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500 mb-1">Lifecycle Stage</p>
-                    <p className="text-sm font-semibold text-gray-900">{c.lifecycleStage}</p>
-                  </div>
-                </div>
-
-                {isEA && c.insightsBreakdown && (
-                  <div className="bg-white border border-gray-200 rounded-lg p-4">
-                    <h3 className="text-sm font-semibold text-gray-900 mb-3">Health Breakdown</h3>
-                    {Object.entries(c.insightsBreakdown).map(([k, v]) => (
-                      <div key={k} className="flex items-center gap-3 mb-2">
-                        <span className="text-xs text-gray-600 w-24 capitalize">{k}</span>
-                        <div className="flex-1 bg-gray-100 rounded-full h-2">
-                          <div
-                            className={`h-2 rounded-full ${v >= 80 ? "bg-green-500" : v >= 65 ? "bg-amber-400" : "bg-red-500"}`}
-                            style={{ width: `${v}%` }}
-                          />
-                        </div>
-                        <span className="text-xs font-medium text-gray-700 w-8 text-right">{v}%</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {isEA && c.eaAlignment && (
-                  <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
-                    <h3 className="text-sm font-semibold text-blue-900 mb-1">EA Alignment</h3>
-                    <p className="text-sm text-blue-700">{c.eaAlignment}</p>
-                  </div>
-                )}
-
-                {(isEA || isDivHead) && c.lifecycleRecommendation && (
-                  <div className="bg-orange-50 border border-orange-100 rounded-lg p-3">
-                    <h3 className="text-sm font-semibold text-orange-900 mb-1">EA Office Recommendation</h3>
-                    <p className="text-sm text-orange-700">{c.lifecycleRecommendation}</p>
-                  </div>
-                )}
-
-                {c.riskFlag && (
-                  <div className="bg-red-50 border border-red-100 rounded-lg p-3 flex gap-2">
-                    <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-red-700">{c.riskFlag}</p>
-                  </div>
-                )}
-
-                {!isEA && !isDivHead && (
-                  <div className="bg-gray-50 rounded-lg p-4 text-center">
-                    <p className="text-sm text-gray-600">
-                      Status: <span className={`font-semibold ${c.healthScore >= 80 ? "text-green-700" : c.healthScore >= 65 ? "text-amber-700" : "text-red-700"}`}>{c.status}</span>
-                    </p>
-                    <p className="text-sm text-gray-500 mt-1">Health: {c.healthScore}%</p>
-                  </div>
-                )}
-              </>
-            );
-          })()}
-
-          {/* Project Portfolio Insights */}
-          {tab === "project-portfolio" && (() => {
-            const c = card as ProjectCard;
-            return (
-              <>
-                <div className="flex items-center gap-3 mb-2">
-                  <div className={`w-4 h-4 rounded-full ${ragColor(c.ragStatus)}`} />
-                  <span className="text-sm font-semibold text-gray-900">{c.ragLabel}</span>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500 mb-1">Progress</p>
-                    <p className="text-2xl font-bold text-gray-900">{c.progress}%</p>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500 mb-1">Budget Health</p>
-                    <p className={`text-sm font-semibold ${c.budgetHealth === "On Track" ? "text-green-700" : c.budgetHealth === "Overspent" ? "text-red-700" : "text-amber-700"}`}>
-                      {c.budgetHealth}
-                    </p>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500 mb-1">EA Alignment</p>
-                    <p className={`text-sm font-semibold ${eaColor(c.eaAlignment)}`}>{c.eaAlignment}%</p>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500 mb-1">Target</p>
-                    <p className={`text-xs font-semibold ${c.isOverdue ? "text-red-700" : "text-gray-900"}`}>
-                      {c.targetCompletion} {c.isOverdue ? "— OVERDUE" : ""}
-                    </p>
-                  </div>
-                </div>
-
-                {isEA && (
-                  <>
-                    <div className="bg-white border border-gray-200 rounded-lg p-4">
-                      <h3 className="text-sm font-semibold text-gray-900 mb-2">Milestone Summary</h3>
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="flex-1 bg-gray-100 rounded-full h-2">
-                          <div
-                            className="h-2 rounded-full bg-blue-500"
-                            style={{ width: `${((c.milestonesAchieved || 0) / (c.milestonesTotal || 1)) * 100}%` }}
-                          />
-                        </div>
-                        <span className="text-xs text-gray-600">
-                          {c.milestonesAchieved} / {c.milestonesTotal} milestones
-                        </span>
-                      </div>
-                      {c.nextMilestone && (
-                        <p className="text-xs text-gray-500">Next: {c.nextMilestone}</p>
-                      )}
-                    </div>
-                    <div className="bg-white border border-gray-200 rounded-lg p-4">
-                      <h3 className="text-sm font-semibold text-gray-900 mb-2">Top Risks</h3>
-                      {c.topRisk1 && <p className="text-xs text-red-700 mb-1">• {c.topRisk1}</p>}
-                      {c.topRisk2 && <p className="text-xs text-amber-700">• {c.topRisk2}</p>}
-                    </div>
-                  </>
-                )}
-
-                {!isEA && isDivHead && c.topRisk1 && (
-                  <div className="bg-amber-50 border border-amber-100 rounded-lg p-3">
-                    <p className="text-xs font-semibold text-amber-900 mb-1">Top Risk</p>
-                    <p className="text-sm text-amber-700">{c.topRisk1}</p>
-                  </div>
-                )}
-              </>
-            );
-          })()}
-
-          {/* Transformation Initiatives Insights */}
-          {tab === "transformation-initiatives" && (() => {
-            const c = card as InitiativeCard;
-            return (
-              <>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500 mb-1">EA Alignment</p>
-                    <p className={`text-2xl font-bold ${eaColor(c.eaAlignmentScore)}`}>{c.eaAlignmentScore}%</p>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500 mb-1">Projects</p>
-                    <p className="text-2xl font-bold text-gray-900">{c.projectsCount}</p>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500 mb-1">Programme Budget</p>
-                    <p className="text-sm font-bold text-gray-900">{c.programmeBudget}</p>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500 mb-1">Target</p>
-                    <p className="text-sm font-semibold text-gray-900">{c.targetCompletion}</p>
-                  </div>
-                </div>
-                {(isEA || isDivHead) && (
-                  <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3">
-                    <p className="text-sm font-semibold text-emerald-900 mb-1">Status</p>
-                    <p className="text-sm text-emerald-700">{c.status} — {c.initiativeType}</p>
-                  </div>
-                )}
-              </>
-            );
-          })()}
-
-          {/* Technology Rationalisation Insights */}
-          {tab === "technology-rationalisation" && (() => {
-            const c = card as RationalisationCard;
-            return (
-              <>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-red-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500 mb-1">Annual Overlap Cost</p>
-                    <p className="text-sm font-bold text-red-700">{c.annualOverlapCost}</p>
-                  </div>
-                  <div className="bg-green-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500 mb-1">Saving Potential</p>
-                    <p className="text-sm font-bold text-green-700">{c.savingPotential}</p>
-                  </div>
-                </div>
-                <div className="bg-white border border-gray-200 rounded-lg p-4">
-                  <p className="text-xs text-gray-500 mb-1">Systems in Overlap</p>
-                  <p className="text-sm text-gray-900">{c.systemsInOverlap}</p>
-                </div>
-                <div className="bg-amber-50 border border-amber-100 rounded-lg p-3">
-                  <p className="text-xs font-semibold text-amber-900 mb-1">EA Office Recommendation</p>
-                  <p className="text-sm text-amber-700">{c.recommendation}: {c.consolidationTarget}</p>
-                </div>
-                <div className="flex gap-2">
-                  <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
-                    Complexity: {c.complexity}
-                  </span>
-                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                    Status: {c.status}
-                  </span>
-                </div>
-              </>
-            );
-          })()}
-
-          {/* Governance Health Insights */}
-          {tab === "governance-health" && (() => {
-            const c = card as GovernanceCard;
-            return (
-              <>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500 mb-1">Overall Governance</p>
-                    <p className={`text-2xl font-bold px-2 py-0.5 rounded inline-block ${govScoreColor(c.overallGovernanceScore)}`}>
-                      {c.overallGovernanceScore}%
-                    </p>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500 mb-1">EA Maturity</p>
-                    <p className="text-2xl font-bold text-gray-900">{c.eaMaturityScore}<span className="text-sm text-gray-400"> / 5.0</span></p>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500 mb-1">Arch. Compliance</p>
-                    <p className="text-sm font-bold text-gray-900">{c.architectureCompliance}%</p>
-                    <p className="text-xs text-gray-400">{c.standardsMet}</p>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500 mb-1">Trend</p>
-                    <div className="flex items-center gap-1 mt-1">
-                      <TrendIcon trend={c.trend} />
-                      <span className={`text-sm font-semibold ${c.trend === "Improving" ? "text-green-700" : c.trend === "Declining" ? "text-red-700" : "text-gray-600"}`}>
-                        {c.trend}
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-400 mt-0.5">{c.trendPercent}</p>
-                  </div>
-                </div>
-                {isEA && (
-                  <>
-                    {c.criticalViolations > 0 && (
-                      <div className="bg-red-50 border border-red-100 rounded-lg p-3 flex gap-2">
-                        <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <p className="text-sm font-semibold text-red-800">{c.criticalViolations} Critical Violation{c.criticalViolations > 1 ? "s" : ""}</p>
-                          <p className="text-xs text-red-600">{c.nonCompliantProjects} non-compliant active projects</p>
-                        </div>
-                      </div>
-                    )}
-                    <div className="bg-white border border-gray-200 rounded-lg p-3">
-                      <p className="text-xs text-gray-500 mb-1">Maturity Gap</p>
-                      <p className="text-sm text-gray-700">{c.maturityGap}</p>
-                      <p className="text-xs text-gray-400 mt-1">Last reviewed: {c.lastReviewed}</p>
-                    </div>
-                  </>
-                )}
-              </>
-            );
-          })()}
-
-          {/* OAD Insights */}
-          {tab === "operational-asset-digitisation" && (() => {
-            const c = card as OADCard;
-            return (
-              <>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500 mb-1">Digitised</p>
-                    <p className="text-2xl font-bold text-gray-900">{c.digitisedPercentage}%</p>
-                    <p className="text-xs text-gray-400">{c.digitisedCount} of {c.totalAssets}</p>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500 mb-1">Remaining</p>
-                    <p className="text-sm font-bold text-gray-900">{c.remainingCount}</p>
-                  </div>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-gray-500">Progress</span>
-                    <span className="text-xs text-gray-600">{c.digitisedPercentage}%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2.5">
-                    <div
-                      className={`h-2.5 rounded-full ${c.digitisedPercentage >= 80 ? "bg-green-500" : c.digitisedPercentage >= 50 ? "bg-amber-400" : "bg-red-500"}`}
-                      style={{ width: `${c.digitisedPercentage}%` }}
-                    />
-                  </div>
-                </div>
-                <div className="bg-white border border-gray-200 rounded-lg p-3">
-                  <p className="text-xs text-gray-500 mb-1">Target</p>
-                  <p className="text-sm font-semibold text-gray-900">{c.targetDate || "—"}</p>
-                </div>
-                {c.stateDetail && (
-                  <div className={`border rounded-lg p-3 flex gap-2 ${c.cardState === "Gap" ? "bg-orange-50 border-orange-100" : "bg-amber-50 border-amber-100"}`}>
-                    <AlertTriangle className={`w-4 h-4 flex-shrink-0 mt-0.5 ${c.cardState === "Gap" ? "text-orange-500" : "text-amber-500"}`} />
-                    <p className={`text-sm ${c.cardState === "Gap" ? "text-orange-700" : "text-amber-700"}`}>{c.stateDetail}</p>
-                  </div>
-                )}
-              </>
-            );
-          })()}
-        </div>
-
-        {/* Footer Actions */}
-        <div className="border-t border-gray-100 p-4 space-y-2">
-          <Button
-            onClick={onRequestReport}
-            className="w-full bg-orange-600 hover:bg-orange-700 text-white"
-          >
-            <FileText className="w-4 h-4 mr-2" />
-            Request Report
-          </Button>
-          <Button variant="outline" onClick={onClose} className="w-full">
-            Close
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
+type AnyCardType = ITCard | OADCard | OTNewCard | DataDigitalCard | ProjectCard | InitiativeCard | RationalisationCard | GovernanceCard;
 
 // ── Request Report Modal ──────────────────────────────────────────────────
 
@@ -545,7 +197,7 @@ function RequestReportModal({
 }) {
   const [selectedType, setSelectedType] = useState("");
   const [notes, setNotes] = useState("");
-  const reportTypes = PM_REPORT_TYPES[tab];
+  const reportTypes = PM_REPORT_TYPES[tab] || [];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
@@ -609,169 +261,788 @@ function RequestReportModal({
   );
 }
 
+// ── Save View Popover ─────────────────────────────────────────────────────
+
+function SaveViewPopover({
+  tab,
+  filters,
+  onClose,
+}: {
+  tab: PMTab;
+  filters: Record<string, string>;
+  onClose: () => void;
+}) {
+  const [name, setName] = useState("");
+  const handleSave = () => {
+    if (!name.trim()) return;
+    try {
+      const key = "dtmp.portfolio.savedViews";
+      const existing = JSON.parse(localStorage.getItem(key) || "[]");
+      existing.push({
+        id: `sv-${Date.now()}`,
+        name: name.trim(),
+        tab,
+        filters,
+        createdAt: new Date().toISOString(),
+        lastVisited: new Date().toISOString(),
+      });
+      localStorage.setItem(key, JSON.stringify(existing));
+    } catch {}
+    onClose();
+  };
+  return (
+    <div className="absolute bottom-full mb-2 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-xl p-3 z-20">
+      <p className="text-xs font-semibold text-gray-700 mb-2">Name this view</p>
+      <input
+        autoFocus
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && handleSave()}
+        placeholder='e.g. "At Risk — Generation"'
+        className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs mb-2 focus:outline-none focus:ring-1 focus:ring-orange-300"
+      />
+      <div className="flex gap-1">
+        <button onClick={handleSave} className="flex-1 text-xs bg-orange-600 text-white rounded-lg py-1.5 font-medium hover:bg-orange-700">Save</button>
+        <button onClick={onClose} className="flex-1 text-xs border border-gray-200 rounded-lg py-1.5 text-gray-600 hover:bg-gray-50">Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+// ── Portfolio Health Bar ──────────────────────────────────────────────────
+
+function PortfolioHealthBar({
+  onShowNeedsAttention,
+  onShowNoInitiative,
+  needsAttentionActive,
+  noInitiativeActive,
+}: {
+  onShowNeedsAttention: () => void;
+  onShowNoInitiative: () => void;
+  needsAttentionActive: boolean;
+  noInitiativeActive: boolean;
+}) {
+  const allCards: { status: string }[] = [
+    ...allITCards.map((c) => ({ status: (c as AppCard).status || "On Track" })),
+    ...allOTCards.map((c) => ({ status: c.status })),
+    ...dataDigitalCards.map((c) => ({ status: c.status })),
+    ...projectCards.map((c) => ({ status: c.ragStatus === "Red" ? "Critical" : c.ragStatus === "Amber" ? "At Risk" : "On Track" })),
+    ...initiativeCards.map((c) => ({ status: c.status === "At Risk" ? "At Risk" : "On Track" })),
+    ...rationalisationCards.map((c) => ({ status: "On Track" })),
+    ...governanceCards.map((c) => ({ status: c.trend === "Declining" ? "At Risk" : "On Track" })),
+  ];
+
+  const totalAssets = allCards.length;
+  const needsAttentionCount = allCards.filter((c) => c.status === "At Risk" || c.status === "Critical").length;
+  const noInitiativeCount = [
+    ...allITCards.filter((c) => (c as AppCard).status === "No Initiative"),
+    ...allOTCards.filter((c) => c.status === "No Initiative"),
+    ...dataDigitalCards.filter((c) => c.status === "No Initiative"),
+  ].length;
+
+  const avgCompliance = Math.round(
+    governanceCards.reduce((sum, c) => sum + c.architectureCompliance, 0) / Math.max(governanceCards.length, 1)
+  );
+
+  const totalRationalisationSavings = rationalisationCards.reduce((sum, c) => sum + c.savingPotentialNum, 0);
+  const savingsLabel = totalRationalisationSavings >= 1000000
+    ? `AED ${(totalRationalisationSavings / 1000000).toFixed(1)}M`
+    : `AED ${Math.round(totalRationalisationSavings / 1000)}K`;
+
+  const tiles = [
+    {
+      label: "Assets Governed",
+      value: totalAssets.toString(),
+      icon: <LayoutGrid className="w-5 h-5 text-blue-600" />,
+      color: "text-blue-700",
+      onClick: undefined,
+      active: false,
+    },
+    {
+      label: "Requiring Attention",
+      value: needsAttentionCount.toString(),
+      icon: <AlertTriangle className={`w-5 h-5 ${needsAttentionCount > 10 ? "text-red-500" : "text-amber-500"}`} />,
+      color: needsAttentionCount > 10 ? "text-red-700" : "text-amber-700",
+      onClick: onShowNeedsAttention,
+      active: needsAttentionActive,
+    },
+    {
+      label: "No Initiative",
+      value: noInitiativeCount.toString(),
+      icon: <AlertCircle className={`w-5 h-5 ${noInitiativeCount > 0 ? "text-orange-500" : "text-gray-400"}`} />,
+      color: noInitiativeCount > 0 ? "text-orange-700" : "text-gray-600",
+      onClick: onShowNoInitiative,
+      active: noInitiativeActive,
+    },
+    {
+      label: "Avg. EA Compliance",
+      value: `${avgCompliance}%`,
+      icon: <Shield className="w-5 h-5 text-teal-600" />,
+      color: avgCompliance >= 80 ? "text-teal-700" : "text-amber-700",
+      onClick: undefined,
+      active: false,
+    },
+    {
+      label: "Rationalisation Savings",
+      value: savingsLabel,
+      icon: <TrendingUp className="w-5 h-5 text-violet-600" />,
+      color: "text-violet-700",
+      onClick: undefined,
+      active: false,
+    },
+  ];
+
+  return (
+    <div className="bg-white border border-gray-100 rounded-xl shadow-sm px-4 py-3 mb-4">
+      <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
+        {tiles.map((tile) => (
+          <button
+            key={tile.label}
+            onClick={tile.onClick}
+            disabled={!tile.onClick}
+            className={`flex flex-col items-center text-center p-2 rounded-lg transition-all ${
+              tile.active ? "bg-orange-50 ring-1 ring-orange-300" : tile.onClick ? "hover:bg-gray-50 cursor-pointer" : "cursor-default"
+            }`}
+          >
+            <div className="mb-1">{tile.icon}</div>
+            <p className={`text-xl font-bold ${tile.color}`}>{tile.value}</p>
+            <p className="text-xs text-gray-500 leading-tight">{tile.label}</p>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Unified Card Skeleton ─────────────────────────────────────────────────
+
+function PMCard({
+  card,
+  tab,
+  highlighted = false,
+  onNavigate,
+}: {
+  card: AnyCardType;
+  tab: PMTab;
+  highlighted?: boolean;
+  onNavigate: () => void;
+}) {
+  const meta = getCardMeta(card, tab);
+  const divGradient = DIVISION_GRADIENT[meta.division] || "from-gray-500 to-slate-600";
+  const assetType = meta.assetType;
+  const isNoInit = meta.isNoInitiative;
+
+  const statusBadge = getStatusBadge(card, tab);
+
+  return (
+    <div
+      onClick={onNavigate}
+      className={`bg-white rounded-xl border flex flex-col cursor-pointer transition-all duration-300 hover:shadow-xl hover:border-orange-300 hover:-translate-y-1 ${
+        highlighted ? "ring-2 ring-blue-300 border-blue-400 shadow-lg" : isNoInit ? "border-l-4 border-orange-500 border-t border-r border-b border-gray-200" : "border-gray-200"
+      }`}
+    >
+      {/* Gradient header */}
+      <div className={`relative bg-gradient-to-br ${divGradient} rounded-t-xl h-28 flex items-center justify-center overflow-hidden`}>
+        {getCardIcon(tab, assetType)}
+        {/* Asset Type badge top-left */}
+        {assetType && (
+          <span className="absolute top-2 left-2 text-xs bg-white/20 text-white px-2 py-0.5 rounded-full font-medium backdrop-blur-sm">
+            {assetType}
+          </span>
+        )}
+        {/* Status badge top-right */}
+        <span className={`absolute top-2 right-2 text-xs px-2 py-0.5 rounded-full border font-medium ${statusBadge.color}`}>
+          {statusBadge.label}
+        </span>
+        {/* No Initiative alert icon bottom-left */}
+        {isNoInit && (
+          <AlertCircle className="absolute bottom-2 left-3 w-5 h-5 text-white/70" />
+        )}
+      </div>
+
+      {/* Card body */}
+      <div className="p-4 flex-1 flex flex-col gap-2">
+        {/* Division label */}
+        <p className="text-xs text-gray-400">{meta.division}</p>
+        {/* Card name */}
+        <p className="text-sm font-semibold text-gray-900 line-clamp-2 leading-snug">{meta.name}</p>
+        {/* Tab-specific metrics */}
+        <CardMetrics card={card} tab={tab} />
+        {/* No-init or risk banner */}
+        {isNoInit && (
+          <div className="bg-orange-50 border border-orange-200 text-orange-800 rounded px-3 py-2 text-xs flex gap-1.5 items-start">
+            <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-orange-500" />
+            <span>No active initiative. EA Office action required.</span>
+          </div>
+        )}
+        {!isNoInit && meta.riskFlag && (
+          <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded px-3 py-2 text-xs flex gap-1.5 items-start">
+            <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-amber-500" />
+            <span className="line-clamp-2">{meta.riskFlag}</span>
+          </div>
+        )}
+        {/* Linked tags */}
+        <CardTags card={card} tab={tab} />
+      </div>
+
+      {/* Footer */}
+      <CardFooter card={card} tab={tab} />
+    </div>
+  );
+}
+
+function getStatusBadge(card: AnyCardType, tab: PMTab): { label: string; color: string } {
+  if (tab === "it-asset-portfolio") {
+    const c = card as ITCard;
+    const status = (c as AppCard).status;
+    return { label: status, color: STATUS_COLORS[status] || "bg-gray-100 text-gray-700 border-gray-200" };
+  }
+  if (tab === "ot-asset-portfolio") {
+    const c = card as (OADCard | OTNewCard);
+    return { label: c.status, color: STATUS_COLORS[c.status] || "bg-gray-100 text-gray-700 border-gray-200" };
+  }
+  if (tab === "data-digital-portfolio") {
+    const c = card as DataDigitalCard;
+    return { label: c.status, color: STATUS_COLORS[c.status] || "bg-gray-100 text-gray-700 border-gray-200" };
+  }
+  if (tab === "project-portfolio") {
+    const c = card as ProjectCard;
+    const color = c.ragStatus === "Green" ? "bg-teal-100 text-teal-700 border-teal-200"
+      : c.ragStatus === "Amber" ? "bg-amber-100 text-amber-700 border-amber-200"
+      : "bg-red-100 text-red-700 border-red-200";
+    return { label: c.ragStatus, color };
+  }
+  if (tab === "transformation-initiatives") {
+    const c = card as InitiativeCard;
+    const color = c.status === "Active" ? "bg-teal-100 text-teal-700 border-teal-200"
+      : c.status === "Scoping" ? "bg-blue-100 text-blue-700 border-blue-200"
+      : c.status === "At Risk" ? "bg-amber-100 text-amber-700 border-amber-200"
+      : "bg-gray-100 text-gray-700 border-gray-200";
+    return { label: c.status, color };
+  }
+  if (tab === "technology-rationalisation") {
+    const c = card as RationalisationCard;
+    const color = c.status === "Initiative Active" ? "bg-teal-100 text-teal-700 border-teal-200"
+      : c.status === "Under Analysis" ? "bg-blue-100 text-blue-700 border-blue-200"
+      : "bg-gray-100 text-gray-700 border-gray-200";
+    return { label: c.status, color };
+  }
+  if (tab === "governance-health") {
+    const c = card as GovernanceCard;
+    const color = c.trend === "Improving" ? "bg-teal-100 text-teal-700 border-teal-200"
+      : c.trend === "Declining" ? "bg-red-100 text-red-700 border-red-200"
+      : "bg-gray-100 text-gray-700 border-gray-200";
+    return { label: c.trend, color };
+  }
+  return { label: "—", color: "bg-gray-100 text-gray-700 border-gray-200" };
+}
+
+function CardMetrics({ card, tab }: { card: AnyCardType; tab: PMTab }) {
+  if (tab === "it-asset-portfolio") {
+    const assetType = (card as AppCard).assetType;
+    if (assetType === "Application") {
+      const c = card as AppCard;
+      return (
+        <div className="grid grid-cols-2 gap-1.5 text-xs">
+          <div><p className="text-gray-400">Health</p><p className={`font-bold ${c.healthScore >= 80 ? "text-green-700" : c.healthScore >= 65 ? "text-amber-700" : "text-red-700"}`}>{c.healthScore}%</p></div>
+          <div><p className="text-gray-400">Debt</p><p className="font-semibold text-gray-800">{c.technicalDebt}</p></div>
+          <div><p className="text-gray-400">Stage</p><p className="font-semibold text-gray-800">{c.lifecycleStage}</p></div>
+          <div><p className="text-gray-400">TCO</p><p className="font-semibold text-gray-800">{c.annualTCO}</p></div>
+        </div>
+      );
+    }
+    if (assetType === "Infrastructure & Cloud") {
+      const c = card as InfrastructureCard;
+      return (
+        <div className="grid grid-cols-2 gap-1.5 text-xs">
+          <div><p className="text-gray-400">Health</p><p className={`font-bold ${c.healthScore >= 80 ? "text-green-700" : c.healthScore >= 65 ? "text-amber-700" : "text-red-700"}`}>{c.healthScore}%</p></div>
+          <div><p className="text-gray-400">Provider</p><p className="font-semibold text-gray-800 truncate">{c.cloudProvider}</p></div>
+          <div><p className="text-gray-400">Cost</p><p className="font-semibold text-gray-800">{c.annualCost}</p></div>
+          <div><p className="text-gray-400">Redundancy</p><p className="font-semibold text-gray-800 truncate">{c.redundancyStatus}</p></div>
+        </div>
+      );
+    }
+    if (assetType === "Integration Platform") {
+      const c = card as IntegrationCard;
+      return (
+        <div className="grid grid-cols-2 gap-1.5 text-xs">
+          <div><p className="text-gray-400">Health</p><p className={`font-bold ${c.healthScore >= 80 ? "text-green-700" : c.healthScore >= 65 ? "text-amber-700" : "text-red-700"}`}>{c.healthScore}%</p></div>
+          <div><p className="text-gray-400">Uptime</p><p className="font-bold text-gray-800">{c.uptimePercent}%</p></div>
+          <div><p className="text-gray-400">Systems</p><p className="font-semibold text-gray-800">{c.connectedSystemsCount}</p></div>
+          <div><p className="text-gray-400">Cost</p><p className="font-semibold text-gray-800">{c.annualCost}</p></div>
+        </div>
+      );
+    }
+    if (assetType === "Security & Identity") {
+      const c = card as SecurityCard;
+      return (
+        <div className="grid grid-cols-2 gap-1.5 text-xs">
+          <div><p className="text-gray-400">Compliance</p><p className={`font-bold ${c.complianceScore >= 85 ? "text-green-700" : c.complianceScore >= 70 ? "text-amber-700" : "text-red-700"}`}>{c.complianceScore}%</p></div>
+          <div><p className="text-gray-400">Vulnerabilities</p><p className={`font-bold ${c.openVulnerabilities > 0 ? "text-red-700" : "text-green-700"}`}>{c.openVulnerabilities} open</p></div>
+          <div><p className="text-gray-400">Frameworks</p><p className="font-semibold text-gray-800 truncate">{c.frameworkCoverage.join(", ")}</p></div>
+          <div><p className="text-gray-400">Last Audit</p><p className="font-semibold text-gray-800">{c.lastAuditDate}</p></div>
+        </div>
+      );
+    }
+  }
+
+  if (tab === "ot-asset-portfolio") {
+    const isOAD = "assetClassName" in card;
+    const pct = isOAD ? (card as OADCard).digitisedPercentage : (card as OTNewCard).digitisedPercentage;
+    const condition = isOAD ? (card as OADCard).assetCondition : (card as OTNewCard).assetCondition;
+    const connectivity = isOAD ? (card as OADCard).connectivityStatus : (card as OTNewCard).connectivityStatus;
+    return (
+      <div className="space-y-1.5 text-xs">
+        <div className="flex items-center justify-between">
+          <span className="text-gray-400">Digitised</span>
+          <span className={`font-bold ${pct >= 80 ? "text-green-700" : pct >= 50 ? "text-amber-700" : "text-red-700"}`}>{pct}%</span>
+        </div>
+        <div className="w-full bg-gray-100 rounded-full h-1.5">
+          <div className={`h-1.5 rounded-full ${pct >= 80 ? "bg-green-500" : pct >= 50 ? "bg-amber-400" : "bg-red-500"}`} style={{ width: `${pct}%` }} />
+        </div>
+        <div className="grid grid-cols-2 gap-1.5">
+          {condition && <div><p className="text-gray-400">Condition</p><p className="font-semibold text-gray-800">{condition}</p></div>}
+          {connectivity && <div><p className="text-gray-400">Connectivity</p><p className="font-semibold text-gray-800 truncate">{connectivity}</p></div>}
+        </div>
+      </div>
+    );
+  }
+
+  if (tab === "data-digital-portfolio") {
+    const assetType = (card as DataDigitalCard).assetType;
+    if (assetType === "Data Platform") {
+      const c = card as DataPlatformCard;
+      return (
+        <div className="grid grid-cols-2 gap-1.5 text-xs">
+          <div><p className="text-gray-400">Health</p><p className={`font-bold ${c.healthScore >= 80 ? "text-green-700" : "text-amber-700"}`}>{c.healthScore}%</p></div>
+          <div><p className="text-gray-400">Quality</p><p className={`font-bold ${c.dataQualityScore >= 80 ? "text-green-700" : "text-amber-700"}`}>{c.dataQualityScore}%</p></div>
+          <div><p className="text-gray-400">Volume</p><p className="font-semibold text-gray-800">{c.dataVolumeTB.toLocaleString()} TB</p></div>
+          <div><p className="text-gray-400">Pipelines</p><p className="font-semibold text-gray-800">{c.activePipelines}</p></div>
+        </div>
+      );
+    }
+    if (assetType === "AI & ML Model") {
+      const c = card as AIModelCard;
+      return (
+        <div className="grid grid-cols-2 gap-1.5 text-xs">
+          <div><p className="text-gray-400">Accuracy</p><p className={`font-bold ${c.modelAccuracy >= 85 ? "text-green-700" : "text-amber-700"}`}>{c.modelAccuracy}%</p></div>
+          <div><p className="text-gray-400">Status</p><p className="font-semibold text-gray-800">{c.modelStatus}</p></div>
+          <div><p className="text-gray-400">Bias Review</p><p className={`font-semibold ${c.biasReview === "Passed" ? "text-green-700" : "text-amber-700"}`}>{c.biasReview}</p></div>
+          <div><p className="text-gray-400">Freshness</p><p className="font-semibold text-gray-800 truncate">{c.trainingDataFreshness}</p></div>
+        </div>
+      );
+    }
+    if (assetType === "Digital Customer Product") {
+      const c = card as DigitalProductCard;
+      return (
+        <div className="grid grid-cols-2 gap-1.5 text-xs">
+          <div><p className="text-gray-400">Health</p><p className={`font-bold ${c.healthScore >= 80 ? "text-green-700" : "text-amber-700"}`}>{c.healthScore}%</p></div>
+          <div><p className="text-gray-400">CSAT</p><p className={`font-bold ${c.csatScore >= 4.0 ? "text-green-700" : "text-amber-700"}`}>{c.csatScore}/5.0</p></div>
+          <div><p className="text-gray-400">MAU</p><p className="font-semibold text-gray-800">{c.monthlyActiveUsers >= 1000000 ? `${(c.monthlyActiveUsers / 1000000).toFixed(1)}M` : `${Math.round(c.monthlyActiveUsers / 1000)}K`}</p></div>
+          <div><p className="text-gray-400">Accessibility</p><p className={`font-semibold ${c.accessibilityCompliance === "Passed" ? "text-green-700" : c.accessibilityCompliance === "Partial" ? "text-amber-700" : "text-red-700"}`}>{c.accessibilityCompliance}</p></div>
+        </div>
+      );
+    }
+    if (assetType === "External API") {
+      const c = card as ExternalAPICard;
+      return (
+        <div className="grid grid-cols-2 gap-1.5 text-xs">
+          <div><p className="text-gray-400">Uptime</p><p className={`font-bold ${c.uptimePercent >= 99 ? "text-green-700" : "text-amber-700"}`}>{c.uptimePercent}%</p></div>
+          <div><p className="text-gray-400">Consumers</p><p className="font-semibold text-gray-800">{c.activeConsumers}</p></div>
+          <div><p className="text-gray-400">Type</p><p className="font-semibold text-gray-800">{c.apiType}</p></div>
+          {c.deprecationDate && <div><p className="text-gray-400">Deprecation</p><p className="font-semibold text-red-700">{c.deprecationDate}</p></div>}
+        </div>
+      );
+    }
+  }
+
+  if (tab === "project-portfolio") {
+    const c = card as ProjectCard;
+    return (
+      <div className="space-y-1.5 text-xs">
+        <div className="flex items-center gap-2">
+          <div className={`w-3 h-3 rounded-full flex-shrink-0 ${c.ragStatus === "Green" ? "bg-green-500" : c.ragStatus === "Amber" ? "bg-amber-400" : "bg-red-500"}`} />
+          <span className="text-gray-700 font-medium truncate">{c.ragLabel}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex-1 bg-gray-100 rounded-full h-1.5">
+            <div className="h-1.5 rounded-full bg-blue-500" style={{ width: `${c.progress}%` }} />
+          </div>
+          <span className="font-bold text-gray-900">{c.progress}%</span>
+        </div>
+        <div className="grid grid-cols-2 gap-1.5">
+          <div><p className="text-gray-400">Budget</p><p className={`font-semibold ${c.budgetHealth === "On Track" ? "text-green-700" : "text-red-700"}`}>{c.budgetHealth}</p></div>
+          <div><p className="text-gray-400">EA Alignment</p><p className="font-semibold text-gray-800">{c.eaAlignment}%</p></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (tab === "transformation-initiatives") {
+    const c = card as InitiativeCard;
+    return (
+      <div className="grid grid-cols-2 gap-1.5 text-xs">
+        <div><p className="text-gray-400">EA Score</p><p className={`font-bold ${c.eaAlignmentScore >= 80 ? "text-green-700" : "text-amber-700"}`}>{c.eaAlignmentScore}%</p></div>
+        <div><p className="text-gray-400">Projects</p><p className="font-semibold text-gray-800">{c.projectsCount}</p></div>
+        <div><p className="text-gray-400">Budget</p><p className="font-semibold text-gray-800">{c.programmeBudget}</p></div>
+        <div><p className="text-gray-400">Target</p><p className="font-semibold text-gray-800">{c.targetCompletion}</p></div>
+      </div>
+    );
+  }
+
+  if (tab === "technology-rationalisation") {
+    const c = card as RationalisationCard;
+    return (
+      <div className="grid grid-cols-2 gap-1.5 text-xs">
+        <div><p className="text-gray-400">Annual Cost</p><p className="font-bold text-red-700">{c.annualOverlapCost}</p></div>
+        <div><p className="text-gray-400">Saving</p><p className="font-bold text-green-700">{c.savingPotential}</p></div>
+        <div><p className="text-gray-400">Action</p><p className="font-semibold text-gray-800">{c.recommendation}</p></div>
+        <div><p className="text-gray-400">Complexity</p><p className="font-semibold text-gray-800">{c.complexity}</p></div>
+      </div>
+    );
+  }
+
+  if (tab === "governance-health") {
+    const c = card as GovernanceCard;
+    return (
+      <div className="grid grid-cols-2 gap-1.5 text-xs">
+        <div><p className="text-gray-400">Gov. Score</p><p className={`font-bold ${govScoreColor(c.overallGovernanceScore).split(" ")[0]}`}>{c.overallGovernanceScore}%</p></div>
+        <div><p className="text-gray-400">Trend</p><div className="flex items-center gap-1"><TrendIcon trend={c.trend} /><span className="font-semibold text-gray-800">{c.trend}</span></div></div>
+        <div><p className="text-gray-400">EA Maturity</p><p className="font-semibold text-gray-800">{c.eaMaturityScore}/5</p></div>
+        <div><p className="text-gray-400">Violations</p><p className={`font-bold ${c.criticalViolations > 0 ? "text-red-700" : "text-green-700"}`}>{c.criticalViolations}</p></div>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+function CardTags({ card, tab }: { card: AnyCardType; tab: PMTab }) {
+  const tags: string[] = [];
+  if (tab === "it-asset-portfolio") {
+    const ini = (card as AppCard).initiativeTag;
+    const proj = (card as AppCard).projectTag;
+    if (proj) tags.push(proj);
+    if (ini) tags.push(ini);
+  } else if (tab === "ot-asset-portfolio") {
+    const ini = "initiativeTag" in card ? (card as OADCard).initiativeTag : undefined;
+    const proj = "projectTag" in card ? (card as OADCard).projectTag : undefined;
+    if (proj) tags.push(proj);
+    if (ini) tags.push(ini);
+  } else if (tab === "data-digital-portfolio") {
+    const ini = (card as DataDigitalCard).initiativeTag;
+    if (ini) tags.push(ini);
+  } else if (tab === "project-portfolio") {
+    tags.push((card as ProjectCard).parentInitiative);
+  } else if (tab === "technology-rationalisation") {
+    const ini = (card as RationalisationCard).initiativeTag;
+    if (ini) tags.push(ini);
+  }
+  if (!tags.length) return null;
+  return (
+    <div className="flex flex-wrap gap-1 mt-1">
+      {tags.map((t) => (
+        <span key={t} className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full border border-blue-100">{t}</span>
+      ))}
+    </div>
+  );
+}
+
+function CardFooter({ card, tab }: { card: AnyCardType; tab: PMTab }) {
+  let left = "";
+  let right = "";
+
+  if (tab === "it-asset-portfolio") {
+    const assetType = (card as AppCard).assetType;
+    if (assetType === "Application") {
+      const c = card as AppCard;
+      left = `Health ${c.healthScore}%`;
+      right = c.lifecycleStage;
+    } else if (assetType === "Infrastructure & Cloud") {
+      const c = card as InfrastructureCard;
+      left = `Health ${c.healthScore}%`;
+      right = `Renews ${c.contractRenewalDate}`;
+    } else if (assetType === "Integration Platform") {
+      const c = card as IntegrationCard;
+      left = `Health ${c.healthScore}%`;
+      right = `${c.connectedSystemsCount} systems`;
+    } else if (assetType === "Security & Identity") {
+      const c = card as SecurityCard;
+      left = `Compliance ${c.complianceScore}%`;
+      right = `${c.openVulnerabilities} vulnerabilities`;
+    }
+  } else if (tab === "ot-asset-portfolio") {
+    const isOAD = "assetClassName" in card;
+    const pct = isOAD ? (card as OADCard).digitisedPercentage : (card as OTNewCard).digitisedPercentage;
+    const digitised = isOAD ? (card as OADCard).digitisedCount : (card as OTNewCard).digitisedCount;
+    const total = isOAD ? (card as OADCard).totalAssets : (card as OTNewCard).totalAssets;
+    const remaining = isOAD ? (card as OADCard).remainingCount : `${(card as OTNewCard).totalAssets - (card as OTNewCard).digitisedCount} remaining`;
+    left = `${pct}% digitised`;
+    right = isOAD ? `${remaining} remaining` : `${remaining}`;
+  } else if (tab === "data-digital-portfolio") {
+    const assetType = (card as DataDigitalCard).assetType;
+    if (assetType === "Data Platform") {
+      const c = card as DataPlatformCard;
+      left = `Health ${c.healthScore}%`;
+      right = `Quality ${c.dataQualityScore}%`;
+    } else if (assetType === "AI & ML Model") {
+      const c = card as AIModelCard;
+      left = `Accuracy ${c.modelAccuracy}%`;
+      right = `Retrained ${c.lastRetrained}`;
+    } else if (assetType === "Digital Customer Product") {
+      const c = card as DigitalProductCard;
+      left = `CSAT ${c.csatScore}/5.0`;
+      right = c.monthlyActiveUsers >= 1000000 ? `${(c.monthlyActiveUsers / 1000000).toFixed(1)}M users` : `${Math.round(c.monthlyActiveUsers / 1000)}K users`;
+    } else if (assetType === "External API") {
+      const c = card as ExternalAPICard;
+      left = `Uptime ${c.uptimePercent}%`;
+      right = `${c.activeConsumers} consumers`;
+    }
+  } else if (tab === "project-portfolio") {
+    const c = card as ProjectCard;
+    left = `${c.progress}% complete`;
+    right = `EA ${c.eaAlignment}%`;
+  } else if (tab === "transformation-initiatives") {
+    const c = card as InitiativeCard;
+    left = `EA ${c.eaAlignmentScore}%`;
+    right = c.targetCompletion;
+  } else if (tab === "technology-rationalisation") {
+    const c = card as RationalisationCard;
+    left = `Save ${c.savingPotential}`;
+    right = `Complexity: ${c.complexity}`;
+  } else if (tab === "governance-health") {
+    const c = card as GovernanceCard;
+    left = `Score ${c.overallGovernanceScore}%`;
+    right = c.trendPercent || c.trend;
+  }
+
+  if (!left && !right) return null;
+  return (
+    <div className="border-t border-gray-100 px-4 py-2.5 flex items-center justify-between">
+      <span className="text-xs font-semibold text-gray-700">{left}</span>
+      <span className="text-xs text-gray-500">{right}</span>
+    </div>
+  );
+}
+
+// ── Cross-tab Attention View ───────────────────────────────────────────────
+
+function AttentionView({
+  noInitiativeOnly,
+  navigate,
+}: {
+  noInitiativeOnly: boolean;
+  navigate: (path: string) => void;
+}) {
+  const tabGroups: { tab: PMTab; label: string; cards: AnyCardType[] }[] = [
+    {
+      tab: "it-asset-portfolio",
+      label: "IT Assets",
+      cards: allITCards.filter((c) => {
+        const status = (c as AppCard).status;
+        if (noInitiativeOnly) return status === "No Initiative";
+        return status === "At Risk" || status === "Critical" || status === "No Initiative";
+      }),
+    },
+    {
+      tab: "ot-asset-portfolio",
+      label: "OT Assets",
+      cards: allOTCards.filter((c) => {
+        if (noInitiativeOnly) return c.status === "No Initiative";
+        const isGap = "cardState" in c && (c as OADCard).cardState === "Gap";
+        return c.status === "At Risk" || c.status === "Critical" || c.status === "No Initiative" || isGap;
+      }),
+    },
+    {
+      tab: "data-digital-portfolio",
+      label: "Data & Digital",
+      cards: dataDigitalCards.filter((c) => {
+        if (noInitiativeOnly) return c.status === "No Initiative";
+        return c.status === "At Risk" || c.status === "Critical" || c.status === "No Initiative";
+      }),
+    },
+    {
+      tab: "project-portfolio",
+      label: "Projects",
+      cards: noInitiativeOnly ? [] : projectCards.filter((c) => c.ragStatus === "Red"),
+    },
+  ];
+
+  const hasAny = tabGroups.some((g) => g.cards.length > 0);
+
+  return (
+    <div className="space-y-6">
+      {!hasAny && (
+        <div className="text-center py-16 text-gray-400">
+          <CheckCircle className="w-10 h-10 mx-auto mb-3 text-green-400 opacity-60" />
+          <p className="text-sm">No items require attention at this time.</p>
+        </div>
+      )}
+      {tabGroups.filter((g) => g.cards.length > 0).map((group) => (
+        <div key={group.tab}>
+          <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+            <span>{group.label}</span>
+            <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">{group.cards.length}</span>
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {group.cards.map((card) => (
+              <PMCard
+                key={(card as { id: string }).id}
+                card={card}
+                tab={group.tab}
+                onNavigate={() => navigate(`/marketplaces/portfolio-management/${group.tab}/${(card as { id: string }).id}`)}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Global Search View ────────────────────────────────────────────────────
+
+function GlobalSearchView({ query, navigate }: { query: string; navigate: (path: string) => void }) {
+  const q = query.toLowerCase();
+
+  function matchCard(card: AnyCardType, tab: PMTab): boolean {
+    const meta = getCardMeta(card, tab);
+    const searchable = [
+      meta.name, meta.division, meta.assetType, meta.status, meta.riskFlag,
+      "initiativeTag" in card ? (card as AppCard).initiativeTag : undefined,
+      "projectTag" in card ? (card as AppCard).projectTag : undefined,
+      "parentInitiative" in card ? (card as ProjectCard).parentInitiative : undefined,
+    ].filter(Boolean).join(" ").toLowerCase();
+    return searchable.includes(q);
+  }
+
+  const groups: { tab: PMTab; label: string; cards: AnyCardType[] }[] = [
+    { tab: "it-asset-portfolio", label: "IT Assets", cards: allITCards.filter((c) => matchCard(c, "it-asset-portfolio")) },
+    { tab: "ot-asset-portfolio", label: "OT Assets", cards: allOTCards.filter((c) => matchCard(c, "ot-asset-portfolio")) },
+    { tab: "data-digital-portfolio", label: "Data & Digital", cards: dataDigitalCards.filter((c) => matchCard(c, "data-digital-portfolio")) },
+    { tab: "project-portfolio", label: "Projects", cards: projectCards.filter((c) => matchCard(c, "project-portfolio")) },
+    { tab: "transformation-initiatives", label: "Initiatives", cards: initiativeCards.filter((c) => matchCard(c, "transformation-initiatives")) },
+    { tab: "technology-rationalisation", label: "Rationalisation", cards: rationalisationCards.filter((c) => matchCard(c, "technology-rationalisation")) },
+    { tab: "governance-health", label: "Governance", cards: governanceCards.filter((c) => matchCard(c, "governance-health")) },
+  ];
+
+  const totalResults = groups.reduce((s, g) => s + g.cards.length, 0);
+
+  return (
+    <div className="space-y-6">
+      <p className="text-sm text-gray-500">{totalResults} result{totalResults !== 1 ? "s" : ""} across all portfolio views for "<strong>{query}</strong>"</p>
+      {groups.filter((g) => g.cards.length > 0).map((group) => (
+        <div key={group.tab}>
+          <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+            {group.label}
+            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{group.cards.length}</span>
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {group.cards.map((card) => (
+              <PMCard
+                key={(card as { id: string }).id}
+                card={card}
+                tab={group.tab}
+                onNavigate={() => navigate(`/marketplaces/portfolio-management/${group.tab}/${(card as { id: string }).id}`)}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
+      {totalResults === 0 && (
+        <div className="text-center py-16 text-gray-400">
+          <Search className="w-10 h-10 mx-auto mb-3 opacity-40" />
+          <p className="text-sm">No results found for "{query}"</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────
 
 export default function PortfolioManagementPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState<PMTab>("application-portfolio");
+  const [activeTab, setActiveTab] = useState<PMTab>("it-asset-portfolio");
   const [highlightCardId, setHighlightCardId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [divisionFilter, setDivisionFilter] = useState("All Divisions");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [hasInitiativeFilter, setHasInitiativeFilter] = useState("All");
+  const [needsAttentionMode, setNeedsAttentionMode] = useState(false);
+  const [noInitiativeMode, setNoInitiativeMode] = useState(false);
+  const [showSaveView, setShowSaveView] = useState(false);
+  const [reportCard, setReportCard] = useState<{ card: AnyCardType; title: string; tab: PMTab } | null>(null);
+  const [reportSubmitted, setReportSubmitted] = useState(false);
+  const [sessionRole, setSessionRole] = useState<PMRole | null>(() => getSessionPMRole());
 
-  // Deep-link from Lifecycle: { tab, highlightCardId } in location.state
+  // Restore filters / tab from router state (Saved Views)
   useEffect(() => {
-    const state = location.state as { tab?: string; highlightCardId?: string } | null;
+    const state = location.state as {
+      tab?: string;
+      highlightCardId?: string;
+      restoreFilters?: Record<string, string>;
+    } | null;
     if (!state) return;
     if (state.tab) setActiveTab(state.tab as PMTab);
     if (state.highlightCardId) {
       setHighlightCardId(state.highlightCardId);
-      // Auto-clear highlight after 3 s
       setTimeout(() => setHighlightCardId(null), 3000);
+    }
+    if (state.restoreFilters) {
+      if (state.restoreFilters.division) setDivisionFilter(state.restoreFilters.division);
+      if (state.restoreFilters.status) setStatusFilter(state.restoreFilters.status);
+      if (state.restoreFilters.hasInitiative) setHasInitiativeFilter(state.restoreFilters.hasInitiative);
     }
     window.history.replaceState({}, "");
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.key]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [divisionFilter, setDivisionFilter] = useState("All Divisions");
-  const [statusFilter, setStatusFilter] = useState("All");
-  const [hasInitiativeFilter, setHasInitiativeFilter] = useState("All");
 
-  // Insights
-  const [insightsCard, setInsightsCard] = useState<AnyCard | null>(null);
-  const [role, setRole] = useState<PMRole | null>(null);
-  const [roleModalOpen, setRoleModalOpen] = useState(false);
-  const [pendingInsightsCard, setPendingInsightsCard] = useState<AnyCard | null>(null);
+  // Merge in published Stage 3 content cards
+  const allRationalisationCards = useMemo(() => {
+    const published = getPublishedContentCards();
+    const fromStage3 = published.filter((c) => c.type === "rationalisation").map(mapContentCardToRationalisationCard);
+    return [...rationalisationCards, ...fromStage3];
+  }, []);
 
-  // Report modal
-  const [reportCard, setReportCard] = useState<{ card: AnyCard; title: string } | null>(null);
-  const [reportSubmitted, setReportSubmitted] = useState(false);
-
-  const openInsights = (card: AnyCard) => {
-    if (!role) {
-      setPendingInsightsCard(card);
-      setRoleModalOpen(true);
-    } else {
-      setInsightsCard(card);
-    }
-  };
-
-  const handleRoleSelected = (r: PMRole) => {
-    setRole(r);
-    setRoleModalOpen(false);
-    if (pendingInsightsCard) {
-      setInsightsCard(pendingInsightsCard);
-      setPendingInsightsCard(null);
-    }
-  };
-
-  const openRequestReport = (card: AnyCard, title: string) => {
-    setInsightsCard(null);
-    setReportCard({ card, title });
-  };
-
-  const handleReportSubmit = (type: string) => {
-    setReportCard(null);
-    setReportSubmitted(true);
-    setTimeout(() => setReportSubmitted(false), 4000);
-    navigate("/stage2/portfolio-management", {
-      state: { cardId: "my-requests" },
-    });
-  };
-
-  const handleInitiateInLifecycle = (card: AnyCard) => {
-    // Build pre-fill context from the card so LifecycleManagementPage can
-    // auto-populate the "Start an Initiative" form.
-    const isOAD = activeTab === "operational-asset-digitisation";
-    const isApp = activeTab === "application-portfolio";
-
-    const prefillDivision: string | undefined = isOAD
-      ? (card as OADCard).division
-      : isApp
-      ? (card as AppCard).division
-      : undefined;
-
-    const prefillName: string | undefined = isOAD
-      ? `Digitise ${(card as OADCard).assetClassName}`
-      : isApp
-      ? `Modernise ${(card as AppCard).name}`
-      : undefined;
-
-    const prefillDescription: string | undefined = isOAD
-      ? `Initiative raised from Portfolio Management gap: ${(card as OADCard).assetClassName} — ${(card as OADCard).division}. No active digitisation programme exists. Objective: deploy sensors/analytics to close the digitisation gap.`
-      : isApp
-      ? `Initiative raised from Portfolio Management: ${(card as AppCard).name} has no active lifecycle initiative. Objective: address the application gap (${(card as AppCard).lifecycleStage ?? "Unknown"} stage).`
-      : undefined;
-
-    navigate("/marketplaces/lifecycle-management", {
-      state: {
-        openStartInitiative: true,
-        prefill: {
-          name: prefillName,
-          division: prefillDivision,
-          objective: prefillDescription,
-          scope: prefillName,
-        },
-      },
-    });
-  };
-
-  // ── Filter helpers ───────────────────────────────────────────────────
+  const allOTCardsMerged = useMemo(() => {
+    const published = getPublishedContentCards();
+    const fromStage3 = published.filter((c) => c.type === "ot-asset").map(mapContentCardToOTCard);
+    return [...allOTCards, ...fromStage3];
+  }, []);
 
   const divisions: string[] = [
-    "All Divisions",
-    "Generation",
-    "Transmission",
-    "Distribution",
-    "Water Services",
-    "Customer Services",
-    "Digital DEWA & Moro Hub",
-    "Corporate EA Office",
+    "All Divisions", "Generation", "Transmission", "Distribution",
+    "Water Services", "Customer Services", "Digital DEWA & Moro Hub", "Corporate EA Office",
   ];
 
   const tabStatusOptions: Record<PMTab, string[]> = {
-    "application-portfolio": ["All", "On Track", "At Risk", "Critical", "No Initiative"],
+    "it-asset-portfolio": ["All", "On Track", "At Risk", "Critical", "No Initiative"],
+    "ot-asset-portfolio": ["All", "On Track", "At Risk", "No Initiative", "Completed"],
+    "data-digital-portfolio": ["All", "On Track", "At Risk", "Critical", "No Initiative"],
     "project-portfolio": ["All", "Green", "Amber", "Red"],
     "transformation-initiatives": ["All", "Active", "Scoping", "At Risk", "Completed"],
     "technology-rationalisation": ["All", "Identified", "Under Analysis", "Initiative Active", "Resolved"],
     "governance-health": ["All", "Improving", "Stable", "Declining"],
-    "operational-asset-digitisation": ["All", "On Track", "At Risk", "No Initiative", "Completed"],
   };
 
-  // ── Filtered cards ───────────────────────────────────────────────────
-
-  const filteredCards = useMemo((): AnyCard[] => {
-    let cards: AnyCard[] = [];
-    if (activeTab === "application-portfolio") cards = appCards;
+  const filteredCards = useMemo((): AnyCardType[] => {
+    let cards: AnyCardType[] = [];
+    if (activeTab === "it-asset-portfolio") cards = allITCards;
+    else if (activeTab === "ot-asset-portfolio") cards = allOTCardsMerged;
+    else if (activeTab === "data-digital-portfolio") cards = dataDigitalCards;
     else if (activeTab === "project-portfolio") cards = projectCards;
     else if (activeTab === "transformation-initiatives") cards = initiativeCards;
-    else if (activeTab === "technology-rationalisation") cards = rationalisationCards;
+    else if (activeTab === "technology-rationalisation") cards = allRationalisationCards;
     else if (activeTab === "governance-health") cards = governanceCards;
-    else if (activeTab === "operational-asset-digitisation") cards = oadCards;
 
-    const q = searchQuery.toLowerCase();
     return cards.filter((c) => {
-      // Search
-      if (q) {
-        const name =
-          activeTab === "application-portfolio" ? (c as AppCard).name
-          : activeTab === "project-portfolio" ? (c as ProjectCard).name
-          : activeTab === "transformation-initiatives" ? (c as InitiativeCard).name
-          : activeTab === "technology-rationalisation" ? (c as RationalisationCard).overlapTitle
-          : activeTab === "governance-health" ? (c as GovernanceCard).division
-          : (c as OADCard).assetClassName;
-        if (!name.toLowerCase().includes(q)) return false;
-      }
+      const meta = getCardMeta(c, activeTab);
 
       // Division filter
       if (divisionFilter !== "All Divisions") {
-        const div =
-          activeTab === "application-portfolio" ? (c as AppCard).division
-          : activeTab === "project-portfolio" ? (c as ProjectCard).division
-          : activeTab === "transformation-initiatives" ? (c as InitiativeCard).division
-          : activeTab === "technology-rationalisation" ? null
-          : activeTab === "governance-health" ? (c as GovernanceCard).division
-          : (c as OADCard).division;
-        if (div && div !== divisionFilter && div !== "All Divisions") return false;
+        if (meta.division !== divisionFilter && meta.division !== "All Divisions") return false;
       }
 
       // Status filter
@@ -780,40 +1051,48 @@ export default function PortfolioManagementPage() {
           if ((c as ProjectCard).ragStatus !== statusFilter) return false;
         } else if (activeTab === "governance-health") {
           if ((c as GovernanceCard).trend !== statusFilter) return false;
-        } else if (activeTab === "transformation-initiatives") {
-          if ((c as InitiativeCard).status !== statusFilter) return false;
-        } else if (activeTab === "technology-rationalisation") {
-          if ((c as RationalisationCard).status !== statusFilter) return false;
-        } else if (activeTab === "application-portfolio") {
-          if ((c as AppCard).status !== statusFilter) return false;
-        } else if (activeTab === "operational-asset-digitisation") {
-          if ((c as OADCard).status !== statusFilter) return false;
+        } else {
+          if (meta.status !== statusFilter) return false;
         }
       }
 
       // Has initiative filter
       if (hasInitiativeFilter === "Yes") {
-        const hasIni =
-          activeTab === "application-portfolio" ? !!(c as AppCard).initiativeTag
-          : activeTab === "project-portfolio" ? true
-          : activeTab === "operational-asset-digitisation" ? !!(c as OADCard).initiativeTag
-          : activeTab === "technology-rationalisation" ? !!(c as RationalisationCard).initiativeTag
-          : true;
-        if (!hasIni) return false;
+        const ini = "initiativeTag" in c ? (c as AppCard).initiativeTag : undefined;
+        if (!ini) return false;
       } else if (hasInitiativeFilter === "No") {
-        const hasIni =
-          activeTab === "application-portfolio" ? !!(c as AppCard).initiativeTag
-          : activeTab === "operational-asset-digitisation" ? !!(c as OADCard).initiativeTag
-          : activeTab === "technology-rationalisation" ? !!(c as RationalisationCard).initiativeTag
-          : true;
-        if (hasIni) return false;
+        const ini = "initiativeTag" in c ? (c as AppCard).initiativeTag : undefined;
+        if (ini) return false;
       }
 
       return true;
     });
-  }, [activeTab, searchQuery, divisionFilter, statusFilter, hasInitiativeFilter]);
+  }, [activeTab, divisionFilter, statusFilter, hasInitiativeFilter, allRationalisationCards, allOTCardsMerged]);
 
   const tabCfg = PM_TAB_CONFIG[activeTab];
+  const assetEstabTabs: PMTab[] = ["it-asset-portfolio", "ot-asset-portfolio", "data-digital-portfolio"];
+  const govTabs: PMTab[] = ["project-portfolio", "transformation-initiatives", "technology-rationalisation", "governance-health"];
+
+  const hasActiveFilter = divisionFilter !== "All Divisions" || statusFilter !== "All" || hasInitiativeFilter !== "All";
+  const isGlobalSearch = searchQuery.trim().length > 2;
+  const isSpecialView = needsAttentionMode || noInitiativeMode;
+
+  const handleChangeRole = () => {
+    clearSessionPMRole();
+    setSessionRole(null);
+  };
+
+  const handleRoleSelect = (role: PMRole) => {
+    setSessionPMRole(role);
+    setSessionRole(role);
+  };
+
+  const handleReportSubmit = (_type: string) => {
+    setReportCard(null);
+    setReportSubmitted(true);
+    setTimeout(() => setReportSubmitted(false), 4000);
+    navigate("/stage2/portfolio-management", { state: { cardId: "my-requests" } });
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -825,28 +1104,18 @@ export default function PortfolioManagementPage() {
           <div className="flex items-start justify-between flex-wrap gap-4">
             <div>
               <div className="flex items-center gap-3 mb-2">
-                <span className="text-xs font-semibold bg-orange-100 text-orange-700 px-3 py-1 rounded-full uppercase tracking-wide">
-                  DRIVE Phase
-                </span>
+                <span className="text-xs font-semibold bg-orange-100 text-orange-700 px-3 py-1 rounded-full uppercase tracking-wide">DRIVE Phase</span>
                 <span className="text-xs text-gray-400">Portfolio Management</span>
               </div>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">Portfolio Management</h1>
               <p className="text-gray-600 max-w-2xl text-sm leading-relaxed">
-                DEWA's corporate governance intelligence platform. A single, continuously updated view of
-                the entire digital estate — application health, project performance, transformation
-                initiative alignment, technology rationalisation opportunities, architecture compliance,
-                EA maturity, and operational asset digitisation progress. The Corporate EA Office's
-                control tower.
-              </p>
-              <p className="text-sm text-orange-700 max-w-2xl mt-3 leading-relaxed">
-                Portfolio Management shows where enterprise attention is needed. Move into Lifecycle Management when DEWA needs a governed execution response, active intervention, and accountable delivery tracking.
+                A single, continuously updated view of DEWA's entire digital estate — applications, infrastructure, operational assets, data platforms, and AI models — under one governance lens. Three dimensions of DEWA's estate. One control tower.
               </p>
             </div>
-            <div className="flex flex-col items-end gap-4">
+            <div className="flex flex-col items-end gap-3">
               <div className="flex gap-6">
                 {[
-                  { label: "Intelligence Views", value: "6" },
-                  { label: "Real-time Analytics", value: "Live" },
+                  { label: "Portfolio Views", value: "8" },
                   { label: "EA Office Governed", value: "✓" },
                 ].map((s) => (
                   <div key={s.label} className="text-center">
@@ -855,203 +1124,245 @@ export default function PortfolioManagementPage() {
                   </div>
                 ))}
               </div>
+              {/* Viewing as indicator */}
+              <div className="text-xs text-gray-500 flex items-center gap-1.5">
+                {sessionRole ? (
+                  <>
+                    <span className="font-medium text-gray-700">Viewing as: {sessionRole}</span>
+                    <span>·</span>
+                    <button onClick={handleChangeRole} className="text-orange-600 hover:text-orange-800 underline">Change</button>
+                  </>
+                ) : (
+                  <span className="text-gray-400 italic">No role selected — set on detail page</span>
+                )}
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Tab bar */}
+      {/* Tab bar with two-tier grouping */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex overflow-x-auto scrollbar-hide gap-0">
-            {(Object.entries(PM_TAB_CONFIG) as [PMTab, typeof PM_TAB_CONFIG[PMTab]][]).map(
-              ([tabKey, cfg]) => (
-                <button
-                  key={tabKey}
-                  onClick={() => {
-                    setActiveTab(tabKey);
-                    setStatusFilter("All");
-                    setSearchQuery("");
-                  }}
-                  className={`flex-shrink-0 px-4 py-3.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                    activeTab === tabKey
-                      ? "border-orange-500 text-orange-700"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }`}
-                >
-                  {cfg.label}
-                </button>
-              )
-            )}
+          {/* Section labels */}
+          <div className="flex items-end pt-2 gap-0">
+            <div className="flex items-end gap-0">
+              <span className="text-xs font-semibold tracking-widest uppercase text-gray-400 pb-1 pr-2 whitespace-nowrap">Asset Estate</span>
+              {assetEstabTabs.map((tabKey) => {
+                const cfg = PM_TAB_CONFIG[tabKey];
+                return (
+                  <button
+                    key={tabKey}
+                    onClick={() => { setActiveTab(tabKey); setStatusFilter("All"); setNeedsAttentionMode(false); setNoInitiativeMode(false); setSearchQuery(""); }}
+                    className={`flex-shrink-0 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                      activeTab === tabKey
+                        ? `${cfg.tabColor} text-gray-900`
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    }`}
+                  >
+                    {cfg.shortLabel}
+                  </button>
+                );
+              })}
+            </div>
+            {/* Vertical separator */}
+            <div className="border-r border-gray-300 h-6 mx-2 self-center" />
+            <div className="flex items-end gap-0">
+              <span className="text-xs font-semibold tracking-widest uppercase text-gray-400 pb-1 pr-2 whitespace-nowrap">Governance Intelligence</span>
+              {govTabs.map((tabKey) => {
+                const cfg = PM_TAB_CONFIG[tabKey];
+                return (
+                  <button
+                    key={tabKey}
+                    onClick={() => { setActiveTab(tabKey); setStatusFilter("All"); setNeedsAttentionMode(false); setNoInitiativeMode(false); setSearchQuery(""); }}
+                    className={`flex-shrink-0 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                      activeTab === tabKey
+                        ? `${cfg.tabColor} text-gray-900`
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    }`}
+                  >
+                    {cfg.shortLabel}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
 
       <div className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
-        <div className="flex gap-6">
-          {/* Sidebar filters */}
-          <aside className="w-56 flex-shrink-0 hidden lg:block">
-            <div className="bg-white border border-gray-200 rounded-xl p-4 sticky top-20">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Filters</p>
+        {/* Portfolio Health Bar */}
+        <PortfolioHealthBar
+          onShowNeedsAttention={() => { setNeedsAttentionMode((v) => !v); setNoInitiativeMode(false); }}
+          onShowNoInitiative={() => { setNoInitiativeMode((v) => !v); setNeedsAttentionMode(false); }}
+          needsAttentionActive={needsAttentionMode}
+          noInitiativeActive={noInitiativeMode}
+        />
 
-              <div className="mb-4">
-                <p className="text-xs font-medium text-gray-700 mb-1.5">Division</p>
-                <select
-                  value={divisionFilter}
-                  onChange={(e) => setDivisionFilter(e.target.value)}
-                  className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white"
-                >
-                  {divisions.map((d) => (
-                    <option key={d}>{d}</option>
-                  ))}
-                </select>
-              </div>
+        {/* Global Search */}
+        <div className="relative mb-4">
+          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search across all 8 portfolio views..."
+            className="w-full pl-9 pr-10 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white"
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
 
-              <div className="mb-4">
-                <p className="text-xs font-medium text-gray-700 mb-1.5">
-                  {activeTab === "project-portfolio" ? "RAG Status" : activeTab === "governance-health" ? "Trend" : "Status"}
-                </p>
-                <div className="space-y-1">
-                  {tabStatusOptions[activeTab].map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => setStatusFilter(s)}
-                      className={`w-full text-left text-xs px-2 py-1.5 rounded-lg transition-colors ${
-                        statusFilter === s
-                          ? "bg-orange-100 text-orange-700 font-medium"
-                          : "text-gray-600 hover:bg-gray-50"
-                      }`}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              </div>
+        {/* Special view exit banner */}
+        {isSpecialView && (
+          <div className="mb-4 flex items-center gap-3 bg-orange-50 border border-orange-200 rounded-xl px-4 py-2.5 text-sm text-orange-800">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <span>{noInitiativeMode ? "Showing all assets with No Active Initiative across all tabs." : "Showing all assets requiring attention (At Risk, Critical, No Initiative) across all tabs."}</span>
+            <button
+              onClick={() => { setNeedsAttentionMode(false); setNoInitiativeMode(false); }}
+              className="ml-auto text-xs font-medium underline hover:no-underline"
+            >
+              Exit view
+            </button>
+          </div>
+        )}
 
-              {["application-portfolio", "project-portfolio", "technology-rationalisation", "operational-asset-digitisation"].includes(activeTab) && (
+        {/* Content area */}
+        {isGlobalSearch ? (
+          <GlobalSearchView query={searchQuery.trim()} navigate={navigate} />
+        ) : isSpecialView ? (
+          <AttentionView noInitiativeOnly={noInitiativeMode} navigate={navigate} />
+        ) : (
+          <div className="flex gap-6">
+            {/* Sidebar */}
+            <aside className="w-56 flex-shrink-0 hidden lg:block">
+              <div className="bg-white border border-gray-200 rounded-xl p-4 sticky top-20 relative">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Filters</p>
+
                 <div className="mb-4">
-                  <p className="text-xs font-medium text-gray-700 mb-1.5">Has Active Initiative</p>
+                  <p className="text-xs font-medium text-gray-700 mb-1.5">Division</p>
+                  <select
+                    value={divisionFilter}
+                    onChange={(e) => setDivisionFilter(e.target.value)}
+                    className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white"
+                  >
+                    {divisions.map((d) => <option key={d}>{d}</option>)}
+                  </select>
+                </div>
+
+                <div className="mb-4">
+                  <p className="text-xs font-medium text-gray-700 mb-1.5">
+                    {activeTab === "project-portfolio" ? "RAG Status" : activeTab === "governance-health" ? "Trend" : "Status"}
+                  </p>
                   <div className="space-y-1">
-                    {["All", "Yes", "No"].map((v) => (
+                    {tabStatusOptions[activeTab].map((s) => (
                       <button
-                        key={v}
-                        onClick={() => setHasInitiativeFilter(v)}
-                        className={`w-full text-left text-xs px-2 py-1.5 rounded-lg transition-colors ${
-                          hasInitiativeFilter === v
-                            ? "bg-orange-100 text-orange-700 font-medium"
-                            : "text-gray-600 hover:bg-gray-50"
-                        }`}
+                        key={s}
+                        onClick={() => setStatusFilter(s)}
+                        className={`w-full text-left text-xs px-2 py-1.5 rounded-lg transition-colors ${statusFilter === s ? "bg-orange-100 text-orange-700 font-medium" : "text-gray-600 hover:bg-gray-50"}`}
                       >
-                        {v}
+                        {s}
                       </button>
                     ))}
                   </div>
                 </div>
+
+                {["it-asset-portfolio", "ot-asset-portfolio", "data-digital-portfolio", "technology-rationalisation"].includes(activeTab) && (
+                  <div className="mb-4">
+                    <p className="text-xs font-medium text-gray-700 mb-1.5">Has Active Initiative</p>
+                    <div className="space-y-1">
+                      {["All", "Yes", "No"].map((v) => (
+                        <button
+                          key={v}
+                          onClick={() => setHasInitiativeFilter(v)}
+                          className={`w-full text-left text-xs px-2 py-1.5 rounded-lg transition-colors ${hasInitiativeFilter === v ? "bg-orange-100 text-orange-700 font-medium" : "text-gray-600 hover:bg-gray-50"}`}
+                        >
+                          {v}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {hasActiveFilter && (
+                  <button
+                    onClick={() => { setDivisionFilter("All Divisions"); setStatusFilter("All"); setHasInitiativeFilter("All"); }}
+                    className="text-xs text-orange-600 hover:text-orange-800 font-medium mb-3 block"
+                  >
+                    Clear filters
+                  </button>
+                )}
+
+                {/* Save view */}
+                {hasActiveFilter && (
+                  <div className="relative mt-1">
+                    <button
+                      onClick={() => setShowSaveView((v) => !v)}
+                      className="w-full text-left text-xs px-2 py-1.5 rounded-lg border border-dashed border-gray-300 text-gray-500 hover:bg-gray-50 flex items-center gap-1.5"
+                    >
+                      <Bookmark className="w-3.5 h-3.5" />
+                      Save this view
+                    </button>
+                    {showSaveView && (
+                      <SaveViewPopover
+                        tab={activeTab}
+                        filters={{ division: divisionFilter, status: statusFilter, hasInitiative: hasInitiativeFilter }}
+                        onClose={() => setShowSaveView(false)}
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
+            </aside>
+
+            {/* Main content */}
+            <div className="flex-1 min-w-0">
+              {/* Tab description */}
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-1">
+                  <h2 className="text-base font-semibold text-gray-900">{tabCfg.label}</h2>
+                  <span className="text-xs text-gray-500 whitespace-nowrap">
+                    {filteredCards.length} result{filteredCards.length !== 1 ? "s" : ""}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-500">{tabCfg.description}</p>
+              </div>
+
+              {/* Card grid */}
+              {filteredCards.length === 0 ? (
+                <div className="text-center py-16 text-gray-400">
+                  <LayoutGrid className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                  <p className="text-sm">No results match your filters.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {filteredCards.map((card) => (
+                    <PMCard
+                      key={(card as { id: string }).id}
+                      card={card}
+                      tab={activeTab}
+                      highlighted={(card as { id: string }).id === highlightCardId}
+                      onNavigate={() => navigate(`/marketplaces/portfolio-management/${activeTab}/${(card as { id: string }).id}`)}
+                    />
+                  ))}
+                </div>
               )}
-
-              {(divisionFilter !== "All Divisions" || statusFilter !== "All" || hasInitiativeFilter !== "All") && (
-                <button
-                  onClick={() => {
-                    setDivisionFilter("All Divisions");
-                    setStatusFilter("All");
-                    setHasInitiativeFilter("All");
-                  }}
-                  className="text-xs text-orange-600 hover:text-orange-800 font-medium"
-                >
-                  Clear filters
-                </button>
-              )}
             </div>
-          </aside>
-
-          {/* Main content */}
-          <div className="flex-1 min-w-0">
-            {/* Search + filter toggle */}
-            <div className="flex items-center gap-3 mb-5">
-              <div className="flex-1 relative">
-                <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={`Search ${tabCfg.label.toLowerCase()}...`}
-                  className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-300"
-                />
-              </div>
-              <span className="text-xs text-gray-500 whitespace-nowrap">
-                {filteredCards.length} result{filteredCards.length !== 1 ? "s" : ""}
-              </span>
-            </div>
-
-            {/* Tab description */}
-            <div className="mb-4">
-              <h2 className="text-base font-semibold text-gray-900">{tabCfg.label}</h2>
-              <p className="text-sm text-gray-500">{tabCfg.description}</p>
-            </div>
-
-            {/* Card Grid */}
-            {filteredCards.length === 0 ? (
-              <div className="text-center py-16 text-gray-400">
-                <LayoutGrid className="w-10 h-10 mx-auto mb-3 opacity-40" />
-                <p className="text-sm">No results match your filters.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {filteredCards.map((card) => (
-                  <PMCard
-                    key={card.id}
-                    card={card}
-                    tab={activeTab}
-                    highlighted={card.id === highlightCardId}
-                    onCardClick={() => navigate(`/marketplaces/portfolio-management/card/${activeTab}/${card.id}`)}
-                    onInitiateInLifecycle={() => handleInitiateInLifecycle(card)}
-                  />
-                ))}
-              </div>
-            )}
           </div>
-        </div>
+        )}
       </div>
 
       <Footer />
 
-      {/* Portals */}
-      {roleModalOpen &&
-        createPortal(
-          <RoleSelectorModal onClose={() => setRoleModalOpen(false)} onSelect={handleRoleSelected} />,
-          document.body
-        )}
-      {insightsCard &&
-        role &&
-        createPortal(
-          <InsightsDrawer
-            card={insightsCard}
-            tab={activeTab}
-            role={role}
-            onClose={() => setInsightsCard(null)}
-            onChangeRole={() => {
-              setPendingInsightsCard(insightsCard);
-              setInsightsCard(null);
-              setRoleModalOpen(true);
-            }}
-            onRequestReport={() => {
-              const title =
-                activeTab === "application-portfolio" ? (insightsCard as AppCard).name
-                : activeTab === "project-portfolio" ? (insightsCard as ProjectCard).name
-                : activeTab === "transformation-initiatives" ? (insightsCard as InitiativeCard).name
-                : activeTab === "technology-rationalisation" ? (insightsCard as RationalisationCard).overlapTitle
-                : activeTab === "governance-health" ? (insightsCard as GovernanceCard).division
-                : (insightsCard as OADCard).assetClassName;
-              openRequestReport(insightsCard, title);
-            }}
-          />,
-          document.body
-        )}
+      {/* Report modal portal */}
       {reportCard &&
         createPortal(
           <RequestReportModal
             cardTitle={reportCard.title}
-            tab={activeTab}
+            tab={reportCard.tab}
             onClose={() => setReportCard(null)}
             onSubmit={handleReportSubmit}
           />,
@@ -1065,388 +1376,6 @@ export default function PortfolioManagementPage() {
           </div>,
           document.body
         )}
-    </div>
-  );
-}
-
-// ── PMCard component ──────────────────────────────────────────────────────
-
-function PMCard({
-  card,
-  tab,
-  highlighted = false,
-  onCardClick,
-  onInitiateInLifecycle,
-}: {
-  card: AnyCard;
-  tab: PMTab;
-  highlighted?: boolean;
-  onCardClick: () => void;
-  onInitiateInLifecycle: () => void;
-}) {
-  const cfg = PM_TAB_CONFIG[tab];
-
-  const showInitiateBtn =
-    (tab === "application-portfolio" &&
-      ((card as AppCard).lifecycleStage === "Replace" ||
-        (card as AppCard).lifecycleStage === "Retire" ||
-        (card as AppCard).status === "Critical" ||
-        (card as AppCard).status === "No Initiative")) ||
-    (tab === "project-portfolio" && (card as ProjectCard).ragStatus === "Red") ||
-    (tab === "transformation-initiatives" &&
-      ((card as InitiativeCard).eaAlignmentScore < 80 || (card as InitiativeCard).status === "At Risk")) ||
-    (tab === "technology-rationalisation") ||
-    (tab === "governance-health" &&
-      ((card as GovernanceCard).overallGovernanceScore < 75 || (card as GovernanceCard).trend === "Declining")) ||
-    (tab === "operational-asset-digitisation" &&
-      ((card as OADCard).cardState === "Gap" || (card as OADCard).cardState === "At Risk"));
-
-  const isGapState =
-    (tab === "operational-asset-digitisation" && (card as OADCard).cardState === "Gap") ||
-    (tab === "application-portfolio" && (card as AppCard).status === "No Initiative");
-
-  return (
-    <div onClick={onCardClick} className={`bg-white rounded-xl border transition-all hover:border-orange-300 hover:shadow-xl hover:-translate-y-0.5 flex flex-col cursor-pointer ${highlighted ? "border-blue-400 ring-2 ring-blue-300 shadow-lg" : isGapState ? "border-orange-200" : "border-gray-200"}`}>
-      {/* Card header gradient */}
-      <div className={`bg-gradient-to-r ${cfg.gradient} rounded-t-xl px-4 py-3`}>
-        <p className="text-white font-semibold text-sm leading-snug line-clamp-2">
-          {tab === "application-portfolio" ? (card as AppCard).name
-            : tab === "project-portfolio" ? (card as ProjectCard).name
-            : tab === "transformation-initiatives" ? (card as InitiativeCard).name
-            : tab === "technology-rationalisation" ? (card as RationalisationCard).overlapTitle
-            : tab === "governance-health" ? (card as GovernanceCard).division
-            : (card as OADCard).assetClassName}
-        </p>
-      </div>
-
-      <div className="p-4 flex-1 flex flex-col gap-3">
-        {/* Division + status */}
-        <div className="flex items-center flex-wrap gap-1.5">
-          {tab !== "technology-rationalisation" && (
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-              DIVISION_COLORS[
-                tab === "governance-health" ? (card as GovernanceCard).division
-                : tab === "operational-asset-digitisation" ? (card as OADCard).division
-                : tab === "transformation-initiatives" ? (card as InitiativeCard).division
-                : tab === "project-portfolio" ? (card as ProjectCard).division
-                : (card as AppCard).division
-              ] || "bg-gray-100 text-gray-700"
-            }`}>
-              {tab === "governance-health" ? (card as GovernanceCard).division
-                : tab === "operational-asset-digitisation" ? (card as OADCard).division
-                : tab === "transformation-initiatives" ? (card as InitiativeCard).division
-                : tab === "project-portfolio" ? (card as ProjectCard).division
-                : (card as AppCard).division}
-            </span>
-          )}
-          {isGapState ? (
-            <span className="text-xs px-2 py-0.5 rounded-full border bg-orange-100 text-orange-800 border-orange-200 font-medium">
-              No Active Initiative
-            </span>
-          ) : (
-            <StatusBadge card={card} tab={tab} />
-          )}
-        </div>
-
-        {/* Key metrics per tab */}
-        <CardMetrics card={card} tab={tab} />
-
-        {/* Tags */}
-        <CardTags card={card} tab={tab} />
-
-        {/* Actions */}
-        <div className="mt-auto pt-2 flex flex-wrap gap-1.5">
-          {showInitiateBtn && (
-            <button
-              onClick={onInitiateInLifecycle}
-              className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors mt-1"
-            >
-              <Rocket className="w-3.5 h-3.5" />
-              {tab === "project-portfolio" ? "View in Lifecycle" : "Initiate in Lifecycle"}
-            </button>
-          )}
-          {tab === "project-portfolio" && (
-            <button
-              onClick={onInitiateInLifecycle}
-              className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-lg transition-colors mt-1"
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
-              View in Lifecycle
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function StatusBadge({ card, tab }: { card: AnyCard; tab: PMTab }) {
-  let label = "";
-  let color = "";
-
-  if (tab === "application-portfolio") {
-    const c = card as AppCard;
-    label = c.status;
-    color = STATUS_COLORS[c.status] || "bg-gray-100 text-gray-700 border-gray-200";
-  } else if (tab === "project-portfolio") {
-    const c = card as ProjectCard;
-    label = c.ragStatus;
-    color =
-      c.ragStatus === "Green"
-        ? "bg-green-100 text-green-800 border-green-200"
-        : c.ragStatus === "Amber"
-        ? "bg-amber-100 text-amber-800 border-amber-200"
-        : "bg-red-100 text-red-800 border-red-200";
-  } else if (tab === "transformation-initiatives") {
-    const c = card as InitiativeCard;
-    label = c.status;
-    color =
-      c.status === "Active"
-        ? "bg-green-100 text-green-800 border-green-200"
-        : c.status === "Scoping"
-        ? "bg-blue-100 text-blue-800 border-blue-200"
-        : c.status === "At Risk"
-        ? "bg-amber-100 text-amber-800 border-amber-200"
-        : "bg-gray-100 text-gray-700 border-gray-200";
-  } else if (tab === "technology-rationalisation") {
-    const c = card as RationalisationCard;
-    label = c.status;
-    color =
-      c.status === "Initiative Active"
-        ? "bg-green-100 text-green-800 border-green-200"
-        : c.status === "Under Analysis"
-        ? "bg-blue-100 text-blue-800 border-blue-200"
-        : "bg-gray-100 text-gray-700 border-gray-200";
-  } else if (tab === "governance-health") {
-    const c = card as GovernanceCard;
-    label = c.trend;
-    color =
-      c.trend === "Improving"
-        ? "bg-green-100 text-green-800 border-green-200"
-        : c.trend === "Declining"
-        ? "bg-red-100 text-red-800 border-red-200"
-        : "bg-gray-100 text-gray-700 border-gray-200";
-  } else {
-    const c = card as OADCard;
-    label = c.status;
-    color = STATUS_COLORS[c.status] || "bg-gray-100 text-gray-700 border-gray-200";
-  }
-
-  return (
-    <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${color}`}>{label}</span>
-  );
-}
-
-function CardMetrics({ card, tab }: { card: AnyCard; tab: PMTab }) {
-  if (tab === "application-portfolio") {
-    const c = card as AppCard;
-    return (
-      <div className="grid grid-cols-2 gap-2 text-xs">
-        <div>
-          <p className="text-gray-400">Health</p>
-          <p className={`font-bold text-sm ${c.healthScore >= 90 ? "text-green-700" : c.healthScore >= 70 ? "text-amber-700" : "text-red-700"}`}>
-            {c.healthScore}%
-          </p>
-        </div>
-        <div>
-          <p className="text-gray-400">TCO</p>
-          <p className="font-semibold text-gray-900">{c.annualTCO}</p>
-        </div>
-        <div>
-          <p className="text-gray-400">Debt</p>
-          <p className={`font-semibold ${c.technicalDebt === "None" || c.technicalDebt === "Low" ? "text-green-700" : c.technicalDebt === "Critical" || c.technicalDebt === "High" ? "text-red-700" : "text-amber-700"}`}>
-            {c.technicalDebt}
-          </p>
-        </div>
-        <div>
-          <p className="text-gray-400">Stage</p>
-          <p className={`font-semibold ${c.lifecycleStage === "Replace" || c.lifecycleStage === "Retire" ? "text-red-700" : c.lifecycleStage === "Modernise" ? "text-amber-700" : "text-green-700"}`}>
-            {c.lifecycleStage}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (tab === "project-portfolio") {
-    const c = card as ProjectCard;
-    return (
-      <div className="space-y-1.5">
-        <div className="flex items-center gap-2">
-          <div className={`w-2.5 h-2.5 rounded-full ${ragColor(c.ragStatus)}`} />
-          <span className="text-xs text-gray-600">{c.ragLabel}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex-1 bg-gray-100 rounded-full h-1.5">
-            <div className="h-1.5 rounded-full bg-blue-500" style={{ width: `${c.progress}%` }} />
-          </div>
-          <span className="text-xs text-gray-600">{c.progress}%</span>
-        </div>
-        <div className="grid grid-cols-2 gap-2 text-xs">
-          <div>
-            <p className="text-gray-400">Budget</p>
-            <p className={`font-semibold ${c.budgetHealth === "On Track" ? "text-green-700" : c.budgetHealth === "Overspent" ? "text-red-700" : "text-amber-700"}`}>{c.budgetHealth}</p>
-          </div>
-          <div>
-            <p className="text-gray-400">EA Align</p>
-            <p className={`font-semibold ${eaColor(c.eaAlignment)}`}>{c.eaAlignment}%</p>
-          </div>
-        </div>
-        <p className="text-xs text-gray-400">PM: {c.projectManager}</p>
-      </div>
-    );
-  }
-
-  if (tab === "transformation-initiatives") {
-    const c = card as InitiativeCard;
-    return (
-      <div className="grid grid-cols-2 gap-2 text-xs">
-        <div>
-          <p className="text-gray-400">EA Alignment</p>
-          <p className={`font-bold text-sm ${eaColor(c.eaAlignmentScore)}`}>{c.eaAlignmentScore}%</p>
-        </div>
-        <div>
-          <p className="text-gray-400">Projects</p>
-          <p className="font-semibold text-gray-900">{c.projectsCount} projects</p>
-        </div>
-        <div>
-          <p className="text-gray-400">Budget</p>
-          <p className="font-semibold text-gray-900">{c.programmeBudget}</p>
-        </div>
-        <div>
-          <p className="text-gray-400">Target</p>
-          <p className="font-semibold text-gray-900">{c.targetCompletion}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (tab === "technology-rationalisation") {
-    const c = card as RationalisationCard;
-    return (
-      <div className="space-y-1.5 text-xs">
-        <p className="text-gray-500 line-clamp-2">{c.systemsInOverlap}</p>
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <p className="text-gray-400">Overlap Cost</p>
-            <p className="font-semibold text-red-700">{c.annualOverlapCost}</p>
-          </div>
-          <div>
-            <p className="text-gray-400">Saving</p>
-            <p className="font-semibold text-green-700">{c.savingPotential}</p>
-          </div>
-          <div>
-            <p className="text-gray-400">Complexity</p>
-            <p className="font-semibold text-gray-900">{c.complexity}</p>
-          </div>
-          <div>
-            <p className="text-gray-400">Action</p>
-            <p className="font-semibold text-gray-900">{c.recommendation}</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (tab === "governance-health") {
-    const c = card as GovernanceCard;
-    return (
-      <div className="space-y-2 text-xs">
-        <div className="flex items-center justify-between">
-          <span className="text-gray-400">Overall Score</span>
-          <span className={`font-bold text-sm px-2 py-0.5 rounded ${govScoreColor(c.overallGovernanceScore)}`}>
-            {c.overallGovernanceScore}%
-          </span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-gray-400">Arch. Compliance</span>
-          <span className="font-semibold text-gray-900">{c.architectureCompliance}% — {c.standardsMet}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-gray-400">EA Maturity</span>
-          <span className="font-semibold text-gray-900">{c.eaMaturityScore} / 5.0</span>
-        </div>
-        {c.criticalViolations > 0 && (
-          <div className="flex items-center gap-1 text-red-700">
-            <AlertTriangle className="w-3 h-3" />
-            <span className="font-medium">{c.criticalViolations} critical violation{c.criticalViolations > 1 ? "s" : ""}</span>
-          </div>
-        )}
-        <div className="flex items-center gap-1">
-          <TrendIcon trend={c.trend} />
-          <span className={`font-medium ${c.trend === "Improving" ? "text-green-700" : c.trend === "Declining" ? "text-red-700" : "text-gray-600"}`}>
-            {c.trend} {c.trendPercent && `(${c.trendPercent})`}
-          </span>
-        </div>
-      </div>
-    );
-  }
-
-  if (tab === "operational-asset-digitisation") {
-    const c = card as OADCard;
-    return (
-      <div className="space-y-2 text-xs">
-        <div className="flex items-center gap-2">
-          <div className="flex-1 bg-gray-100 rounded-full h-2">
-            <div
-              className={`h-2 rounded-full ${c.digitisedPercentage >= 80 ? "bg-green-500" : c.digitisedPercentage >= 50 ? "bg-amber-400" : "bg-red-500"}`}
-              style={{ width: `${c.digitisedPercentage}%` }}
-            />
-          </div>
-          <span className="text-gray-600 font-medium">{c.digitisedPercentage}%</span>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <p className="text-gray-400">Total</p>
-            <p className="font-semibold text-gray-900">{c.totalAssets}</p>
-          </div>
-          <div>
-            <p className="text-gray-400">Remaining</p>
-            <p className="font-semibold text-gray-900">{c.remainingCount}</p>
-          </div>
-        </div>
-        {c.targetDate !== "—" && (
-          <p className="text-gray-500">Target: {c.targetDate}</p>
-        )}
-      </div>
-    );
-  }
-
-  return null;
-}
-
-function CardTags({ card, tab }: { card: AnyCard; tab: PMTab }) {
-  let projectTag: string | undefined;
-  let initiativeTag: string | undefined;
-
-  if (tab === "application-portfolio") {
-    projectTag = (card as AppCard).projectTag;
-    initiativeTag = (card as AppCard).initiativeTag;
-  } else if (tab === "transformation-initiatives") {
-    initiativeTag = (card as InitiativeCard).name;
-  } else if (tab === "technology-rationalisation") {
-    initiativeTag = (card as RationalisationCard).initiativeTag;
-  } else if (tab === "operational-asset-digitisation") {
-    projectTag = (card as OADCard).projectTag;
-    initiativeTag = (card as OADCard).initiativeTag;
-  } else if (tab === "project-portfolio") {
-    initiativeTag = (card as ProjectCard).parentInitiative;
-  }
-
-  if (!projectTag && !initiativeTag) return null;
-
-  return (
-    <div className="flex flex-wrap gap-1 text-xs">
-      {projectTag && (
-        <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full border border-blue-100">
-          {projectTag}
-        </span>
-      )}
-      {initiativeTag && tab !== "transformation-initiatives" && (
-        <span className="bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full border border-purple-100">
-          {initiativeTag}
-        </span>
-      )}
     </div>
   );
 }
