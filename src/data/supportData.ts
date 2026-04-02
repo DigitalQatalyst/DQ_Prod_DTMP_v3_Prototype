@@ -644,3 +644,13 @@ export const supportStats = {
   serviceRequests: serviceRequests.length,
   requestsInProgress: serviceRequests.filter((r) => r.status === "in-progress").length,
 };
+
+export const markArticleHelpful = (articleId: string) => {
+  const article = knowledgeArticles.find((a) => a.id === articleId);
+  if (article) {
+    article.helpfulCount += 1;
+    const total = article.helpfulCount + article.notHelpfulCount;
+    article.helpfulPercentage = Math.round((article.helpfulCount / total) * 100);
+  }
+};
+

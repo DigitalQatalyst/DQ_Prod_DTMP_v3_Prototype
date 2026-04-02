@@ -29,6 +29,8 @@ interface RequestContext {
   cardId: string;
   serviceName: string;
   action: string;
+  prefillFromArticle?: string;
+  prefillTitle?: string;
 }
 
 const supportCategoryOptions = [
@@ -62,10 +64,24 @@ export default function SupportNewRequestPage() {
     cardId: rawState.cardId || "",
     serviceName: (rawState.serviceName || "").trim(),
     action: rawState.action || "request-service",
+    prefillFromArticle: rawState.prefillFromArticle,
+    prefillTitle: rawState.prefillTitle,
   };
   const requestedServiceName = requestContext.serviceName;
 
-  const [form, setForm] = useState<RequestFormState>(() => createDefaultForm(requestedServiceName));
+  const [form, setForm] = useState<RequestFormState>(() => {
+    const defaultForm = createDefaultForm(requestedServiceName);
+    if (requestContext.prefillTitle) {
+      return {
+        ...defaultForm,
+        subject: `Follow-up to: ${requestContext.prefillTitle}`,
+        description: requestContext.prefillFromArticle
+          ? `I'm following up on article ${requestContext.prefillFromArticle}. I still need help with...`
+          : "",
+      };
+    }
+    return defaultForm;
+  });
   const [attachments, setAttachments] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
 

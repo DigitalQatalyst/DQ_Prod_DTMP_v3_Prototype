@@ -1,9 +1,10 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { ArrowLeft, Calendar, Clock, Eye, CheckCircle, Tag, ChevronRight, ArrowRight } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, Eye, CheckCircle, Tag, ChevronRight, ArrowRight, ThumbsUp, ThumbsDown } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
-import { knowledgeArticles, KnowledgeArticle } from "@/data/supportData";
+import { Button } from "@/components/ui/button";
+import { knowledgeArticles, KnowledgeArticle, markArticleHelpful } from "@/data/supportData";
 
 interface KnowledgeDetailContent {
   stepByStepActions: string[];
@@ -580,6 +581,8 @@ export default function SupportKnowledgeArticlePage() {
 
   const detailContent = buildKnowledgeDetailContent(article);
 
+  const [resolutionCaptured, setResolutionCaptured] = useState<"yes" | "no" | null>(null);
+
   const relatedArticles = useMemo(() => {
     return knowledgeArticles
       .filter((a) => a.id !== article.id && a.category === article.category)
@@ -686,6 +689,58 @@ export default function SupportKnowledgeArticlePage() {
               <p className="text-sm text-gray-700 mt-1">{detailContent.ifIssuesPersist}</p>
             </div>
           </div>
+
+          {!resolutionCaptured && (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mt-6">
+              <p className="text-sm font-medium text-gray-800 mb-3">Did this article help resolve your issue?</p>
+              <div className="flex gap-3">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-green-300 text-green-700 hover:bg-green-50"
+                  onClick={() => {
+                    markArticleHelpful(article.id);
+                    setResolutionCaptured("yes");
+                  }}
+                >
+                  <ThumbsUp className="w-3.5 h-3.5 mr-1.5" /> Yes, issue resolved
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                  onClick={() => setResolutionCaptured("no")}
+                >
+                  <ThumbsDown className="w-3.5 h-3.5 mr-1.5" /> No, I still need help
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {resolutionCaptured === "yes" && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-6">
+              <p className="text-sm text-green-800 font-medium">
+                Great — glad this helped. The article has been marked as useful.
+              </p>
+            </div>
+          )}
+
+          {resolutionCaptured === "no" && (
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mt-6">
+              <p className="text-sm text-orange-800 font-medium mb-3">
+                Let us help you directly.
+              </p>
+              <Button
+                size="sm"
+                className="bg-orange-600 hover:bg-orange-700 text-white"
+                onClick={() => navigate("/marketplaces/support-services/new-request", {
+                  state: { prefillFromArticle: article.id, prefillTitle: article.title }
+                })}
+              >
+                Submit a Support Request
+              </Button>
+            </div>
+          )}
 
           {relatedArticles.length > 0 && (
             <div className="mt-6 bg-white border border-gray-200 rounded-lg p-5">
