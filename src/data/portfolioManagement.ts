@@ -1,13 +1,14 @@
 // ─── Portfolio Management — Full Seeded Data ───────────────────────────────
-// All 54 governance intelligence cards across 6 tabs
+// All governance intelligence cards across 8 tabs (Three-Lens Model)
 
 export type PMTab =
-  | "application-portfolio"
+  | "it-asset-portfolio"
+  | "ot-asset-portfolio"
+  | "data-digital-portfolio"
   | "project-portfolio"
   | "transformation-initiatives"
   | "technology-rationalisation"
-  | "governance-health"
-  | "operational-asset-digitisation";
+  | "governance-health";
 
 export type PMCardStatus =
   | "On Track"
@@ -34,11 +35,20 @@ export type Complexity = "Low" | "Medium" | "High";
 export type GovernanceTrend = "Improving" | "Stable" | "Declining";
 export type OADCardState = "On Track" | "At Risk" | "Gap" | "Completed";
 
-// ── Tab 1: Application Portfolio ──────────────────────────────────────────
+// ── IT Asset Types ────────────────────────────────────────────────────────
+
+export type ITAssetType = "Application" | "Infrastructure & Cloud" | "Integration Platform" | "Security & Identity";
+export type OTAssetType = "Control Systems" | "Smart Metering" | "IoT & Field Sensors" | "Industrial Equipment" | "Monitoring Infrastructure";
+export type DataDigitalAssetType = "Data Platform" | "AI & ML Model" | "Digital Customer Product" | "External API";
+export type AssetCondition = "Good" | "Fair" | "Degraded" | "End of Life";
+export type ConnectivityStatus = "Connected" | "Partially Connected" | "Offline";
+
+// ── Tab 1: IT Asset Portfolio (replaces Application Portfolio) ────────────
 
 export interface AppCard {
   id: string;
-  tab: "application-portfolio";
+  tab: "it-asset-portfolio";
+  assetType: ITAssetType;
   name: string;
   division: DEWADivision;
   applicationType: string;
@@ -65,10 +75,61 @@ export interface AppCard {
   lifecycleRecommendation?: string;
 }
 
+export interface InfrastructureCard {
+  id: string;
+  tab: "it-asset-portfolio";
+  assetType: "Infrastructure & Cloud";
+  name: string;
+  division: DEWADivision;
+  healthScore: number;
+  cloudProvider: string;
+  contractRenewalDate: string;
+  annualCost: string;
+  redundancyStatus: string;
+  status: PMCardStatus;
+  initiativeTag?: string | null;
+  riskFlag?: string | null;
+}
+
+export interface IntegrationCard {
+  id: string;
+  tab: "it-asset-portfolio";
+  assetType: "Integration Platform";
+  name: string;
+  division: DEWADivision;
+  healthScore: number;
+  integrationType: string;
+  connectedSystemsCount: number;
+  uptimePercent: number;
+  annualCost: string;
+  status: PMCardStatus;
+  initiativeTag?: string | null;
+  riskFlag?: string | null;
+}
+
+export interface SecurityCard {
+  id: string;
+  tab: "it-asset-portfolio";
+  assetType: "Security & Identity";
+  name: string;
+  division: DEWADivision;
+  complianceScore: number;
+  frameworkCoverage: string[];
+  lastAuditDate: string;
+  openVulnerabilities: number;
+  licenceExpiry: string;
+  status: PMCardStatus;
+  initiativeTag?: string | null;
+  riskFlag?: string | null;
+}
+
+export type ITCard = AppCard | InfrastructureCard | IntegrationCard | SecurityCard;
+
 export const appCards: AppCard[] = [
   {
     id: "APP-01",
-    tab: "application-portfolio",
+    tab: "it-asset-portfolio",
+    assetType: "Application",
     name: "SCADA Network Management System",
     division: "Transmission",
     applicationType: "SCADA",
@@ -89,7 +150,8 @@ export const appCards: AppCard[] = [
   },
   {
     id: "APP-02",
-    tab: "application-portfolio",
+    tab: "it-asset-portfolio",
+    assetType: "Application",
     name: "MyDEWA Customer Portal",
     division: "Customer Services",
     applicationType: "Customer Portal",
@@ -110,7 +172,8 @@ export const appCards: AppCard[] = [
   },
   {
     id: "APP-03",
-    tab: "application-portfolio",
+    tab: "it-asset-portfolio",
+    assetType: "Application",
     name: "SAP ERP S/4HANA",
     division: "All Divisions",
     applicationType: "ERP",
@@ -130,7 +193,8 @@ export const appCards: AppCard[] = [
   },
   {
     id: "APP-04",
-    tab: "application-portfolio",
+    tab: "it-asset-portfolio",
+    assetType: "Application",
     name: "Legacy Billing System (BIS-3)",
     division: "Customer Services",
     applicationType: "Finance",
@@ -151,7 +215,8 @@ export const appCards: AppCard[] = [
   },
   {
     id: "APP-05",
-    tab: "application-portfolio",
+    tab: "it-asset-portfolio",
+    assetType: "Application",
     name: "Microsoft 365 Tenant",
     division: "All Divisions",
     applicationType: "Collaboration",
@@ -172,7 +237,8 @@ export const appCards: AppCard[] = [
   },
   {
     id: "APP-06",
-    tab: "application-portfolio",
+    tab: "it-asset-portfolio",
+    assetType: "Application",
     name: "IBM Maximo Asset Management",
     division: "Generation",
     applicationType: "Other",
@@ -193,7 +259,8 @@ export const appCards: AppCard[] = [
   },
   {
     id: "APP-07",
-    tab: "application-portfolio",
+    tab: "it-asset-portfolio",
+    assetType: "Application",
     name: "Rammas AI Platform",
     division: "Customer Services",
     applicationType: "CRM",
@@ -214,7 +281,8 @@ export const appCards: AppCard[] = [
   },
   {
     id: "APP-08",
-    tab: "application-portfolio",
+    tab: "it-asset-portfolio",
+    assetType: "Application",
     name: "Custom Distribution CRM",
     division: "Distribution",
     applicationType: "CRM",
@@ -235,7 +303,8 @@ export const appCards: AppCard[] = [
   },
   {
     id: "APP-09",
-    tab: "application-portfolio",
+    tab: "it-asset-portfolio",
+    assetType: "Application",
     name: "DEWA Data Warehouse (Legacy)",
     division: "Digital DEWA & Moro Hub",
     applicationType: "Analytics",
@@ -256,7 +325,8 @@ export const appCards: AppCard[] = [
   },
   {
     id: "APP-10",
-    tab: "application-portfolio",
+    tab: "it-asset-portfolio",
+    assetType: "Application",
     name: "Moro Hub Cloud Platform",
     division: "Digital DEWA & Moro Hub",
     applicationType: "Other",
@@ -275,6 +345,219 @@ export const appCards: AppCard[] = [
     eaAlignment: "Fully compliant — primary cloud platform performing above benchmark",
     lifecycleRecommendation: "Optimise — continue capacity planning and cloud-native workload migration.",
   },
+];
+
+// ── New IT Asset Cards — Infrastructure & Cloud ───────────────────────────
+
+export const infrastructureCards: InfrastructureCard[] = [
+  {
+    id: "ITI-01",
+    tab: "it-asset-portfolio",
+    assetType: "Infrastructure & Cloud",
+    name: "Moro Hub Private Cloud — Core Infrastructure",
+    division: "Digital DEWA & Moro Hub",
+    healthScore: 87,
+    cloudProvider: "Moro Hub (Private)",
+    contractRenewalDate: "2027-06-30",
+    annualCost: "AED 18.5M",
+    redundancyStatus: "Full Active-Active",
+    status: "On Track",
+    initiativeTag: "Digital Platform Enablement",
+    riskFlag: null,
+  },
+  {
+    id: "ITI-02",
+    tab: "it-asset-portfolio",
+    assetType: "Infrastructure & Cloud",
+    name: "Azure Government Cloud — Disaster Recovery",
+    division: "Digital DEWA & Moro Hub",
+    healthScore: 91,
+    cloudProvider: "Microsoft Azure",
+    contractRenewalDate: "2026-12-31",
+    annualCost: "AED 4.2M",
+    redundancyStatus: "Warm Standby",
+    status: "On Track",
+    initiativeTag: null,
+    riskFlag: null,
+  },
+  {
+    id: "ITI-03",
+    tab: "it-asset-portfolio",
+    assetType: "Infrastructure & Cloud",
+    name: "Core Network & MPLS Backbone",
+    division: "Transmission",
+    healthScore: 74,
+    cloudProvider: "On-Premise",
+    contractRenewalDate: "2025-09-30",
+    annualCost: "AED 9.1M",
+    redundancyStatus: "Partial",
+    status: "At Risk",
+    initiativeTag: "Smart Grid Modernisation Programme",
+    riskFlag: "MPLS contract expiry in 6 months. Renewal or migration decision pending.",
+  },
+  {
+    id: "ITI-04",
+    tab: "it-asset-portfolio",
+    assetType: "Infrastructure & Cloud",
+    name: "DEWA Data Centre — Al Quoz",
+    division: "Corporate EA Office",
+    healthScore: 69,
+    cloudProvider: "On-Premise",
+    contractRenewalDate: "2028-01-01",
+    annualCost: "AED 22.4M",
+    redundancyStatus: "Active-Passive",
+    status: "Critical",
+    initiativeTag: null,
+    riskFlag: "Cooling infrastructure approaching end of life. PUE ratio 1.9 — above DEWA target of 1.5. Initiative required.",
+  },
+  {
+    id: "ITI-05",
+    tab: "it-asset-portfolio",
+    assetType: "Infrastructure & Cloud",
+    name: "End-User Computing — Microsoft 365 Estate",
+    division: "All Divisions",
+    healthScore: 94,
+    cloudProvider: "Microsoft 365 (SaaS)",
+    contractRenewalDate: "2027-03-31",
+    annualCost: "AED 3.8M",
+    redundancyStatus: "N/A — SaaS",
+    status: "On Track",
+    initiativeTag: null,
+    riskFlag: null,
+  },
+];
+
+// ── New IT Asset Cards — Integration Platform ─────────────────────────────
+
+export const integrationCards: IntegrationCard[] = [
+  {
+    id: "ITP-01",
+    tab: "it-asset-portfolio",
+    assetType: "Integration Platform",
+    name: "SAP Integration Suite (BTP)",
+    division: "All Divisions",
+    healthScore: 88,
+    integrationType: "ESB / API Gateway",
+    connectedSystemsCount: 34,
+    uptimePercent: 99.4,
+    annualCost: "AED 2.1M",
+    status: "On Track",
+    initiativeTag: null,
+  },
+  {
+    id: "ITP-02",
+    tab: "it-asset-portfolio",
+    assetType: "Integration Platform",
+    name: "DEWA API Gateway — External Services",
+    division: "Digital DEWA & Moro Hub",
+    healthScore: 83,
+    integrationType: "API Gateway",
+    connectedSystemsCount: 18,
+    uptimePercent: 98.7,
+    annualCost: "AED 0.9M",
+    status: "On Track",
+    initiativeTag: "Digital Platform Enablement",
+  },
+  {
+    id: "ITP-03",
+    tab: "it-asset-portfolio",
+    assetType: "Integration Platform",
+    name: "OT/IT Integration Middleware (OSIsoft PI)",
+    division: "Generation",
+    healthScore: 66,
+    integrationType: "OT-IT Middleware",
+    connectedSystemsCount: 11,
+    uptimePercent: 96.1,
+    annualCost: "AED 1.4M",
+    status: "At Risk",
+    initiativeTag: "Smart Grid Modernisation Programme",
+    riskFlag: "OSIsoft PI server version 3 versions behind. Vendor support ends 2026-Q3.",
+  },
+  {
+    id: "ITP-04",
+    tab: "it-asset-portfolio",
+    assetType: "Integration Platform",
+    name: "GIS Integration Platform",
+    division: "Distribution",
+    healthScore: 78,
+    integrationType: "ETL / Data Integration",
+    connectedSystemsCount: 7,
+    uptimePercent: 97.8,
+    annualCost: "AED 0.7M",
+    status: "On Track",
+    initiativeTag: null,
+  },
+];
+
+// ── New IT Asset Cards — Security & Identity ──────────────────────────────
+
+export const securityCards: SecurityCard[] = [
+  {
+    id: "ITS-01",
+    tab: "it-asset-portfolio",
+    assetType: "Security & Identity",
+    name: "Identity & Access Management (Microsoft Entra)",
+    division: "All Divisions",
+    complianceScore: 94,
+    frameworkCoverage: ["ISO 27001", "NESA"],
+    lastAuditDate: "2025-11-01",
+    openVulnerabilities: 2,
+    licenceExpiry: "2027-01-31",
+    status: "On Track",
+    riskFlag: null,
+  },
+  {
+    id: "ITS-02",
+    tab: "it-asset-portfolio",
+    assetType: "Security & Identity",
+    name: "OT Security Platform (Claroty)",
+    division: "Generation",
+    complianceScore: 71,
+    frameworkCoverage: ["IEC 62443"],
+    lastAuditDate: "2025-06-15",
+    openVulnerabilities: 14,
+    licenceExpiry: "2026-09-30",
+    status: "At Risk",
+    initiativeTag: "OT Cybersecurity Enhancement",
+    riskFlag: "14 open OT vulnerabilities. IEC 62443 compliance review overdue by 4 months.",
+  },
+  {
+    id: "ITS-03",
+    tab: "it-asset-portfolio",
+    assetType: "Security & Identity",
+    name: "Security Operations Centre (SOC) Platform",
+    division: "Corporate EA Office",
+    complianceScore: 89,
+    frameworkCoverage: ["ISO 27001", "NESA", "UAE IA Standards"],
+    lastAuditDate: "2026-01-10",
+    openVulnerabilities: 5,
+    licenceExpiry: "2028-06-30",
+    status: "On Track",
+    riskFlag: null,
+  },
+  {
+    id: "ITS-04",
+    tab: "it-asset-portfolio",
+    assetType: "Security & Identity",
+    name: "Data Loss Prevention (DLP) — Microsoft Purview",
+    division: "All Divisions",
+    complianceScore: 77,
+    frameworkCoverage: ["ISO 27001", "PDPL (UAE)"],
+    lastAuditDate: "2025-09-20",
+    openVulnerabilities: 8,
+    licenceExpiry: "2026-12-31",
+    status: "At Risk",
+    initiativeTag: null,
+    riskFlag: "UAE Personal Data Protection Law (PDPL) classification coverage at 62%. Target is 90%. Initiative needed.",
+  },
+];
+
+// ── Merged IT Asset Card Array ────────────────────────────────────────────
+export const allITCards: ITCard[] = [
+  ...appCards,
+  ...infrastructureCards,
+  ...integrationCards,
+  ...securityCards,
 ];
 
 // ── Tab 2: Project Portfolio ──────────────────────────────────────────────
@@ -675,10 +958,12 @@ export interface RationalisationCard {
   divisionsAffected: string;
   systemsInOverlap: string;
   annualOverlapCost: string;
+  annualOverlapCostNum: number;
   recommendation: "Consolidate" | "Migrate" | "Retire" | "Evaluate";
   consolidationTarget: string;
   complexity: Complexity;
   savingPotential: string;
+  savingPotentialNum: number;
   status: "Identified" | "Under Analysis" | "Initiative Active" | "Resolved";
   initiativeTag?: string;
 }
@@ -691,10 +976,12 @@ export const rationalisationCards: RationalisationCard[] = [
     divisionsAffected: "Customer Services & Distribution",
     systemsInOverlap: "Salesforce + Custom CRM (Distribution)",
     annualOverlapCost: "AED 1.4M/year",
+    annualOverlapCostNum: 1400000,
     recommendation: "Consolidate",
     consolidationTarget: "Standardise on Salesforce",
     complexity: "Medium",
     savingPotential: "AED 900K/year",
+    savingPotentialNum: 900000,
     status: "Identified",
   },
   {
@@ -704,10 +991,12 @@ export const rationalisationCards: RationalisationCard[] = [
     divisionsAffected: "All Divisions",
     systemsInOverlap: "Microsoft Teams + Zoom + Webex (division-specific)",
     annualOverlapCost: "AED 680K/year",
+    annualOverlapCostNum: 680000,
     recommendation: "Consolidate",
     consolidationTarget: "Standardise on Microsoft Teams",
     complexity: "Low",
     savingPotential: "AED 420K/year",
+    savingPotentialNum: 420000,
     status: "Initiative Active",
     initiativeTag: "Video Consolidation Initiative",
   },
@@ -718,10 +1007,12 @@ export const rationalisationCards: RationalisationCard[] = [
     divisionsAffected: "Digital DEWA, Generation, Water Services",
     systemsInOverlap: "3 separate data warehouse instances",
     annualOverlapCost: "AED 3.2M/year",
+    annualOverlapCostNum: 3200000,
     recommendation: "Consolidate",
     consolidationTarget: "Consolidate to enterprise data mesh",
     complexity: "High",
     savingPotential: "AED 2.1M/year",
+    savingPotentialNum: 2100000,
     status: "Under Analysis",
   },
   {
@@ -731,10 +1022,12 @@ export const rationalisationCards: RationalisationCard[] = [
     divisionsAffected: "Transmission & Distribution",
     systemsInOverlap: "IBM MQ + MuleSoft (separate instances)",
     annualOverlapCost: "AED 2.8M/year",
+    annualOverlapCostNum: 2800000,
     recommendation: "Migrate",
     consolidationTarget: "Migrate to unified API gateway",
     complexity: "High",
     savingPotential: "AED 1.6M/year",
+    savingPotentialNum: 1600000,
     status: "Identified",
   },
   {
@@ -744,10 +1037,12 @@ export const rationalisationCards: RationalisationCard[] = [
     divisionsAffected: "All Divisions",
     systemsInOverlap: "SAP SuccessFactors + legacy HRMS (3 divisions)",
     annualOverlapCost: "AED 1.1M/year",
+    annualOverlapCostNum: 1100000,
     recommendation: "Migrate",
     consolidationTarget: "Full migration to SuccessFactors",
     complexity: "Medium",
     savingPotential: "AED 780K/year",
+    savingPotentialNum: 780000,
     status: "Initiative Active",
     initiativeTag: "HR System Consolidation Initiative",
   },
@@ -758,10 +1053,12 @@ export const rationalisationCards: RationalisationCard[] = [
     divisionsAffected: "Digital DEWA & Moro Hub",
     systemsInOverlap: "Datadog + Prometheus + Nagios (separate teams)",
     annualOverlapCost: "AED 560K/year",
+    annualOverlapCostNum: 560000,
     recommendation: "Consolidate",
     consolidationTarget: "Standardise on Datadog",
     complexity: "Low",
     savingPotential: "AED 340K/year",
+    savingPotentialNum: 340000,
     status: "Identified",
   },
   {
@@ -771,10 +1068,12 @@ export const rationalisationCards: RationalisationCard[] = [
     divisionsAffected: "All Divisions",
     systemsInOverlap: "SharePoint + local file servers + 3 separate DMS tools",
     annualOverlapCost: "AED 1.8M/year",
+    annualOverlapCostNum: 1800000,
     recommendation: "Consolidate",
     consolidationTarget: "Consolidate to SharePoint Online",
     complexity: "Medium",
     savingPotential: "AED 1.1M/year",
+    savingPotentialNum: 1100000,
     status: "Identified",
   },
 ];
@@ -913,11 +1212,12 @@ export const governanceCards: GovernanceCard[] = [
   },
 ];
 
-// ── Tab 6: Operational Asset Digitisation ────────────────────────────────
+// ── Tab 6 (now Tab 2): OT Asset Portfolio ────────────────────────────────
 
 export interface OADCard {
   id: string;
-  tab: "operational-asset-digitisation";
+  tab: "ot-asset-portfolio";
+  assetType: OTAssetType;
   assetClassName: string;
   division: DEWADivision;
   totalAssets: string;
@@ -930,12 +1230,16 @@ export interface OADCard {
   initiativeTag?: string;
   cardState: OADCardState;
   stateDetail?: string;
+  assetCondition?: AssetCondition;
+  connectivityStatus?: ConnectivityStatus;
+  lastInspectionDate?: string;
 }
 
 export const oadCards: OADCard[] = [
   {
     id: "OAD-01",
-    tab: "operational-asset-digitisation",
+    tab: "ot-asset-portfolio",
+    assetType: "Smart Metering",
     assetClassName: "Smart Meters",
     division: "Distribution",
     totalAssets: "1,247,000 meters",
@@ -947,10 +1251,14 @@ export const oadCards: OADCard[] = [
     projectTag: "Smart Meter Rollout Phase 2",
     initiativeTag: "Smart Grid Modernisation Programme",
     cardState: "On Track",
+    assetCondition: "Good",
+    connectivityStatus: "Connected",
+    lastInspectionDate: "2026-01-15",
   },
   {
     id: "OAD-02",
-    tab: "operational-asset-digitisation",
+    tab: "ot-asset-portfolio",
+    assetType: "Control Systems",
     assetClassName: "Transmission Substations — SCADA Integration",
     division: "Transmission",
     totalAssets: "84 substations",
@@ -963,10 +1271,14 @@ export const oadCards: OADCard[] = [
     initiativeTag: "Smart Grid Modernisation Programme",
     cardState: "At Risk",
     stateDetail: "3 critical substations behind schedule",
+    assetCondition: "Fair",
+    connectivityStatus: "Partially Connected",
+    lastInspectionDate: "2025-11-01",
   },
   {
     id: "OAD-03",
-    tab: "operational-asset-digitisation",
+    tab: "ot-asset-portfolio",
+    assetType: "Industrial Equipment",
     assetClassName: "Desalination Plants — Digital Twin",
     division: "Water Services",
     totalAssets: "12 plants",
@@ -978,10 +1290,14 @@ export const oadCards: OADCard[] = [
     projectTag: "Desalination Digital Twin Phase 1",
     initiativeTag: "Net-Zero Architecture Programme",
     cardState: "On Track",
+    assetCondition: "Good",
+    connectivityStatus: "Partially Connected",
+    lastInspectionDate: "2025-12-10",
   },
   {
     id: "OAD-04",
-    tab: "operational-asset-digitisation",
+    tab: "ot-asset-portfolio",
+    assetType: "Control Systems",
     assetClassName: "Generation PLCs — Firmware Currency",
     division: "Generation",
     totalAssets: "340 PLCs",
@@ -994,10 +1310,14 @@ export const oadCards: OADCard[] = [
     initiativeTag: undefined,
     cardState: "At Risk",
     stateDetail: "14 critical end-of-life PLCs. No active project.",
+    assetCondition: "Degraded",
+    connectivityStatus: "Partially Connected",
+    lastInspectionDate: "2025-10-01",
   },
   {
     id: "OAD-05",
-    tab: "operational-asset-digitisation",
+    tab: "ot-asset-portfolio",
+    assetType: "Monitoring Infrastructure",
     assetClassName: "Fleet Vehicles — EV Transition",
     division: "All Divisions",
     totalAssets: "1,847 vehicles",
@@ -1009,10 +1329,14 @@ export const oadCards: OADCard[] = [
     projectTag: undefined,
     initiativeTag: "Digital DEWA Programme",
     cardState: "On Track",
+    assetCondition: "Good",
+    connectivityStatus: "Partially Connected",
+    lastInspectionDate: "2026-01-01",
   },
   {
     id: "OAD-06",
-    tab: "operational-asset-digitisation",
+    tab: "ot-asset-portfolio",
+    assetType: "IoT & Field Sensors",
     assetClassName: "Water Pumping Stations — IoT Sensors",
     division: "Water Services",
     totalAssets: "67 stations",
@@ -1024,10 +1348,14 @@ export const oadCards: OADCard[] = [
     projectTag: "Distribution IoT Sensor Network",
     initiativeTag: "Smart Grid Modernisation Programme",
     cardState: "On Track",
+    assetCondition: "Good",
+    connectivityStatus: "Connected",
+    lastInspectionDate: "2025-12-20",
   },
   {
     id: "OAD-07",
-    tab: "operational-asset-digitisation",
+    tab: "ot-asset-portfolio",
+    assetType: "IoT & Field Sensors",
     assetClassName: "Distribution Feeders — Smart Monitoring",
     division: "Distribution",
     totalAssets: "312 feeders",
@@ -1040,10 +1368,14 @@ export const oadCards: OADCard[] = [
     initiativeTag: "Smart Grid Modernisation Programme",
     cardState: "At Risk",
     stateDetail: "Some feeders delayed — southern zone coverage gaps",
+    assetCondition: "Fair",
+    connectivityStatus: "Partially Connected",
+    lastInspectionDate: "2025-11-15",
   },
   {
     id: "OAD-08",
-    tab: "operational-asset-digitisation",
+    tab: "ot-asset-portfolio",
+    assetType: "Industrial Equipment",
     assetClassName: "Generation Assets — Predictive Maintenance",
     division: "Generation",
     totalAssets: "847 major assets",
@@ -1056,10 +1388,14 @@ export const oadCards: OADCard[] = [
     initiativeTag: undefined,
     cardState: "Gap",
     stateDetail: "No active project or initiative. Gap state — EA Office action required.",
+    assetCondition: "Fair",
+    connectivityStatus: "Offline",
+    lastInspectionDate: "2025-06-01",
   },
   {
     id: "OAD-09",
-    tab: "operational-asset-digitisation",
+    tab: "ot-asset-portfolio",
+    assetType: "IoT & Field Sensors",
     assetClassName: "Water Pipelines — Leak Detection",
     division: "Water Services",
     totalAssets: "4,200 km pipeline",
@@ -1072,10 +1408,14 @@ export const oadCards: OADCard[] = [
     initiativeTag: undefined,
     cardState: "Gap",
     stateDetail: "No active project or initiative. Gap state — EA Office action required.",
+    assetCondition: "Fair",
+    connectivityStatus: "Offline",
+    lastInspectionDate: "2025-07-01",
   },
   {
     id: "OAD-10",
-    tab: "operational-asset-digitisation",
+    tab: "ot-asset-portfolio",
+    assetType: "Monitoring Infrastructure",
     assetClassName: "Solar Panel Arrays — Performance Monitoring",
     division: "Generation",
     totalAssets: "2.4 GW capacity",
@@ -1087,19 +1427,468 @@ export const oadCards: OADCard[] = [
     projectTag: undefined,
     initiativeTag: "Digital DEWA Programme",
     cardState: "On Track",
+    assetCondition: "Good",
+    connectivityStatus: "Connected",
+    lastInspectionDate: "2026-02-01",
   },
+];
+
+// ── New OT Asset Cards — Control Systems ──────────────────────────────────
+
+export interface OTNewCard {
+  id: string;
+  tab: "ot-asset-portfolio";
+  assetType: OTAssetType;
+  name: string;
+  division: DEWADivision;
+  totalAssets: number;
+  digitisedCount: number;
+  digitisedPercentage: number;
+  remainingCount?: number;
+  assetCondition: AssetCondition;
+  connectivityStatus: ConnectivityStatus;
+  lastInspectionDate: string;
+  status: PMCardStatus;
+  cardState: OADCardState;
+  stateDetail?: string;
+  initiativeTag?: string | null;
+  projectTag?: string | null;
+}
+
+export const otNewCards: OTNewCard[] = [
+  {
+    id: "OTC-01",
+    tab: "ot-asset-portfolio",
+    assetType: "Control Systems",
+    name: "Generation SCADA — Jebel Ali Power Complex",
+    division: "Generation",
+    totalAssets: 1,
+    digitisedCount: 1,
+    digitisedPercentage: 100,
+    assetCondition: "Fair",
+    connectivityStatus: "Connected",
+    lastInspectionDate: "2025-10-15",
+    status: "On Track",
+    cardState: "On Track",
+    initiativeTag: "Smart Grid Modernisation Programme",
+  },
+  {
+    id: "OTC-02",
+    tab: "ot-asset-portfolio",
+    assetType: "Control Systems",
+    name: "Distribution Automation Control — Deira Network",
+    division: "Distribution",
+    totalAssets: 48,
+    digitisedCount: 31,
+    digitisedPercentage: 65,
+    assetCondition: "Fair",
+    connectivityStatus: "Partially Connected",
+    lastInspectionDate: "2025-08-01",
+    status: "At Risk",
+    cardState: "At Risk",
+    initiativeTag: "Smart Grid Modernisation Programme",
+    stateDetail: "17 feeder automation units not yet integrated into SCADA. Risk of manual override events increasing. Remediation scoped within Smart Grid programme.",
+  },
+  {
+    id: "OTC-03",
+    tab: "ot-asset-portfolio",
+    assetType: "Control Systems",
+    name: "Water Treatment Plant DCS — Hassyan",
+    division: "Water Services",
+    totalAssets: 1,
+    digitisedCount: 1,
+    digitisedPercentage: 100,
+    assetCondition: "Good",
+    connectivityStatus: "Connected",
+    lastInspectionDate: "2026-01-20",
+    status: "On Track",
+    cardState: "On Track",
+    initiativeTag: null,
+  },
+  {
+    id: "OTC-04",
+    tab: "ot-asset-portfolio",
+    assetType: "Control Systems",
+    name: "Substation Automation — 132kV Network",
+    division: "Transmission",
+    totalAssets: 22,
+    digitisedCount: 14,
+    digitisedPercentage: 64,
+    assetCondition: "Degraded",
+    connectivityStatus: "Partially Connected",
+    lastInspectionDate: "2025-05-10",
+    status: "No Initiative",
+    cardState: "Gap",
+    initiativeTag: null,
+    stateDetail: "8 of 22 132kV substations not yet automated. Legacy relay protection schemes in operation. No active initiative. EA Office action required.",
+  },
+  {
+    id: "OTI-01",
+    tab: "ot-asset-portfolio",
+    assetType: "Industrial Equipment",
+    name: "Gas Turbines — Jebel Ali Station (Units 1–12)",
+    division: "Generation",
+    totalAssets: 12,
+    digitisedCount: 9,
+    digitisedPercentage: 75,
+    assetCondition: "Good",
+    connectivityStatus: "Connected",
+    lastInspectionDate: "2026-02-01",
+    status: "On Track",
+    cardState: "On Track",
+    initiativeTag: "Virtual Engineer 2026",
+  },
+  {
+    id: "OTI-02",
+    tab: "ot-asset-portfolio",
+    assetType: "Industrial Equipment",
+    name: "Desalination Units — Reverse Osmosis Trains",
+    division: "Water Services",
+    totalAssets: 24,
+    digitisedCount: 12,
+    digitisedPercentage: 50,
+    assetCondition: "Fair",
+    connectivityStatus: "Partially Connected",
+    lastInspectionDate: "2025-09-15",
+    status: "At Risk",
+    cardState: "At Risk",
+    initiativeTag: "Water Network Digital Twin",
+    stateDetail: "12 RO trains lack digital condition monitoring. Manual inspection cycle is 90 days — insufficient for predictive maintenance goals. Water Network Digital Twin initiative is addressing this.",
+  },
+  {
+    id: "OTI-03",
+    tab: "ot-asset-portfolio",
+    assetType: "Industrial Equipment",
+    name: "HV Transformers — 400kV Grid",
+    division: "Transmission",
+    totalAssets: 38,
+    digitisedCount: 22,
+    digitisedPercentage: 58,
+    assetCondition: "Fair",
+    connectivityStatus: "Partially Connected",
+    lastInspectionDate: "2025-11-30",
+    status: "No Initiative",
+    cardState: "Gap",
+    initiativeTag: null,
+    stateDetail: "16 of 38 400kV transformers have no digital health monitoring. Asset failure risk increasing. No initiative active. EA Office review required.",
+  },
+];
+
+// ── Merged OT Asset Card Array ────────────────────────────────────────────
+export const allOTCards: (OADCard | OTNewCard)[] = [...oadCards, ...otNewCards];
+
+// ── Tab 3: Data & Digital Asset Portfolio ─────────────────────────────────
+
+export interface DataPlatformCard {
+  id: string;
+  tab: "data-digital-portfolio";
+  assetType: "Data Platform";
+  name: string;
+  division: DEWADivision;
+  healthScore: number;
+  platformType: string;
+  dataVolumeTB: number;
+  activePipelines: number;
+  dataQualityScore: number;
+  governedDomains: string[];
+  status: PMCardStatus;
+  initiativeTag?: string | null;
+  riskFlag?: string | null;
+}
+
+export interface AIModelCard {
+  id: string;
+  tab: "data-digital-portfolio";
+  assetType: "AI & ML Model";
+  name: string;
+  division: DEWADivision;
+  modelStatus: "Production" | "Pilot" | "Deprecated";
+  modelAccuracy: number;
+  lastRetrained: string;
+  trainingDataFreshness: string;
+  useCase: string;
+  biasReview: "Passed" | "Pending" | "Not Assessed";
+  linkedOTAsset?: string | null;
+  status: PMCardStatus;
+  initiativeTag?: string | null;
+  riskFlag?: string | null;
+}
+
+export interface DigitalProductCard {
+  id: string;
+  tab: "data-digital-portfolio";
+  assetType: "Digital Customer Product";
+  name: string;
+  division: DEWADivision;
+  healthScore: number;
+  channelType: string;
+  monthlyActiveUsers: number;
+  csatScore: number;
+  lastReleaseDate: string;
+  accessibilityCompliance: "Passed" | "Partial" | "Failed";
+  status: PMCardStatus;
+  initiativeTag?: string | null;
+  riskFlag?: string | null;
+}
+
+export interface ExternalAPICard {
+  id: string;
+  tab: "data-digital-portfolio";
+  assetType: "External API";
+  name: string;
+  division: DEWADivision;
+  healthScore: number;
+  apiType: string;
+  activeConsumers: number;
+  uptimePercent: number;
+  deprecationDate: string | null;
+  monetised: boolean;
+  status: PMCardStatus;
+  initiativeTag?: string | null;
+  riskFlag?: string | null;
+}
+
+export type DataDigitalCard = DataPlatformCard | AIModelCard | DigitalProductCard | ExternalAPICard;
+
+export const dataPlatformCards: DataPlatformCard[] = [
+  {
+    id: "DDA-01",
+    tab: "data-digital-portfolio",
+    assetType: "Data Platform",
+    name: "DEWA Enterprise Data Lake (Azure Data Lake Gen2)",
+    division: "Digital DEWA & Moro Hub",
+    healthScore: 85,
+    platformType: "Data Lake",
+    dataVolumeTB: 2840,
+    activePipelines: 47,
+    dataQualityScore: 78,
+    governedDomains: ["Operational", "Customer", "Financial", "HR"],
+    status: "On Track",
+    initiativeTag: "Enterprise Data & Analytics Initiative",
+  },
+  {
+    id: "DDA-02",
+    tab: "data-digital-portfolio",
+    assetType: "Data Platform",
+    name: "DEWA Analytics Warehouse (Synapse Analytics)",
+    division: "Digital DEWA & Moro Hub",
+    healthScore: 91,
+    platformType: "Data Warehouse",
+    dataVolumeTB: 480,
+    activePipelines: 28,
+    dataQualityScore: 88,
+    governedDomains: ["Financial", "Customer", "Executive Reporting"],
+    status: "On Track",
+    initiativeTag: "Enterprise Data & Analytics Initiative",
+  },
+  {
+    id: "DDA-03",
+    tab: "data-digital-portfolio",
+    assetType: "Data Platform",
+    name: "Real-Time OT Data Streaming Platform (OSIsoft PI + Kafka)",
+    division: "Generation",
+    healthScore: 71,
+    platformType: "Streaming / Real-Time",
+    dataVolumeTB: 95,
+    activePipelines: 12,
+    dataQualityScore: 64,
+    governedDomains: ["Operational — Generation", "Predictive Maintenance"],
+    status: "At Risk",
+    initiativeTag: "Virtual Engineer 2026",
+    riskFlag: "Data quality score 64% — below 80% threshold. Sensor dropouts from 3 turbine units causing gaps in predictive model training data.",
+  },
+];
+
+export const aiModelCards: AIModelCard[] = [
+  {
+    id: "DDM-01",
+    tab: "data-digital-portfolio",
+    assetType: "AI & ML Model",
+    name: "Virtual Engineer — Predictive Maintenance Model (Gas Turbines)",
+    division: "Generation",
+    modelStatus: "Production",
+    modelAccuracy: 91,
+    lastRetrained: "2026-02-15",
+    trainingDataFreshness: "Current (< 30 days)",
+    useCase: "Predictive Maintenance — Generation Turbines (Jebel Ali)",
+    biasReview: "Passed",
+    linkedOTAsset: "OTI-01",
+    status: "On Track",
+    initiativeTag: "Virtual Engineer 2026",
+  },
+  {
+    id: "DDM-02",
+    tab: "data-digital-portfolio",
+    assetType: "AI & ML Model",
+    name: "Water Demand Forecasting Model",
+    division: "Water Services",
+    modelStatus: "Production",
+    modelAccuracy: 87,
+    lastRetrained: "2026-01-20",
+    trainingDataFreshness: "Current (< 30 days)",
+    useCase: "Daily and seasonal water demand forecasting for production planning",
+    biasReview: "Passed",
+    linkedOTAsset: "OTI-02",
+    status: "On Track",
+    initiativeTag: "Water Network Digital Twin",
+  },
+  {
+    id: "DDM-03",
+    tab: "data-digital-portfolio",
+    assetType: "AI & ML Model",
+    name: "Smart Grid Load Balancing AI",
+    division: "Transmission",
+    modelStatus: "Pilot",
+    modelAccuracy: 79,
+    lastRetrained: "2025-12-01",
+    trainingDataFreshness: "Stale (> 90 days)",
+    useCase: "Real-time load balancing across 132kV transmission network",
+    biasReview: "Pending",
+    linkedOTAsset: "OTC-04",
+    status: "At Risk",
+    initiativeTag: "Smart Grid Modernisation Programme",
+    riskFlag: "Training data stale by 90+ days. Model accuracy degrading. Bias review not yet completed. Scale-to-production blocked pending review.",
+  },
+];
+
+export const digitalProductCards: DigitalProductCard[] = [
+  {
+    id: "DDP-01",
+    tab: "data-digital-portfolio",
+    assetType: "Digital Customer Product",
+    name: "DEWA Smart App (iOS & Android)",
+    division: "Customer Services",
+    healthScore: 89,
+    channelType: "Mobile App",
+    monthlyActiveUsers: 1240000,
+    csatScore: 4.4,
+    lastReleaseDate: "2026-03-01",
+    accessibilityCompliance: "Passed",
+    status: "On Track",
+    initiativeTag: "Customer Experience Transformation",
+  },
+  {
+    id: "DDP-02",
+    tab: "data-digital-portfolio",
+    assetType: "Digital Customer Product",
+    name: "EV Green Charger Platform",
+    division: "Customer Services",
+    healthScore: 76,
+    channelType: "EV Platform",
+    monthlyActiveUsers: 84000,
+    csatScore: 3.8,
+    lastReleaseDate: "2025-11-15",
+    accessibilityCompliance: "Partial",
+    status: "At Risk",
+    initiativeTag: "EV Infrastructure Expansion",
+    riskFlag: "CSAT 3.8 — below 4.0 target. Charging station availability tracking feature incomplete. Accessibility review required.",
+  },
+  {
+    id: "DDP-03",
+    tab: "data-digital-portfolio",
+    assetType: "Digital Customer Product",
+    name: "DEWA Business Portal (B2B Self-Service)",
+    division: "Customer Services",
+    healthScore: 71,
+    channelType: "Web Portal",
+    monthlyActiveUsers: 38000,
+    csatScore: 3.6,
+    lastReleaseDate: "2025-06-10",
+    accessibilityCompliance: "Failed",
+    status: "Critical",
+    initiativeTag: null,
+    riskFlag: "Accessibility compliance failed. Arabic language support gaps. B2B portal CSAT 3.6 — significantly below benchmark. No active initiative.",
+  },
+];
+
+export const externalAPICards: ExternalAPICard[] = [
+  {
+    id: "DDS-01",
+    tab: "data-digital-portfolio",
+    assetType: "External API",
+    name: "DEWA Developer API — Smart Meter Data",
+    division: "Digital DEWA & Moro Hub",
+    healthScore: 92,
+    apiType: "REST",
+    activeConsumers: 47,
+    uptimePercent: 99.7,
+    deprecationDate: null,
+    monetised: false,
+    status: "On Track",
+    initiativeTag: "Digital Platform Enablement",
+  },
+  {
+    id: "DDS-02",
+    tab: "data-digital-portfolio",
+    assetType: "External API",
+    name: "UAE Pass Integration API",
+    division: "Customer Services",
+    healthScore: 95,
+    apiType: "REST",
+    activeConsumers: 3,
+    uptimePercent: 99.9,
+    deprecationDate: null,
+    monetised: false,
+    status: "On Track",
+    initiativeTag: null,
+  },
+  {
+    id: "DDS-03",
+    tab: "data-digital-portfolio",
+    assetType: "External API",
+    name: "Legacy Billing API (v1 — Scheduled Deprecation)",
+    division: "Customer Services",
+    healthScore: 58,
+    apiType: "SOAP / Legacy",
+    activeConsumers: 12,
+    uptimePercent: 97.1,
+    deprecationDate: "2026-09-30",
+    monetised: false,
+    status: "At Risk",
+    initiativeTag: null,
+    riskFlag: "12 active consumers still using legacy SOAP billing API. Deprecation scheduled September 2026. Migration initiative required to move consumers to REST API v3 before cutoff.",
+  },
+];
+
+export const dataDigitalCards: DataDigitalCard[] = [
+  ...dataPlatformCards,
+  ...aiModelCards,
+  ...digitalProductCards,
+  ...externalAPICards,
 ];
 
 // ── Service Request Types ─────────────────────────────────────────────────
 
 export const PM_REPORT_TYPES: Record<PMTab, string[]> = {
-  "application-portfolio": [
+  "it-asset-portfolio": [
     "Application Health Assessment",
     "Application Rationalization Brief",
     "Total Cost of Ownership (TCO) Analysis",
     "Technical Debt Report",
     "Executive Application Summary (PPTX)",
     "Migration Readiness Assessment",
+    "Infrastructure Capacity Review",
+    "Cloud Cost Optimisation Report",
+    "Integration Health Assessment",
+    "Security Compliance Audit",
+  ],
+  "ot-asset-portfolio": [
+    "OT Asset Digitisation Progress Report",
+    "Operational Asset Health Assessment",
+    "OT Security & Connectivity Review",
+    "Asset Condition Report",
+    "Digitisation Milestone Summary",
+    "Risk Assessment",
+    "Recovery Options Brief",
+  ],
+  "data-digital-portfolio": [
+    "AI Model Performance Report",
+    "Data Quality Assessment",
+    "Digital Product Health Review",
+    "API Deprecation Impact Assessment",
+    "Data Governance Compliance Report",
+    "Data Platform Health Assessment",
+    "Digital Asset Executive Summary (PPTX)",
   ],
   "project-portfolio": [
     "Project Health Report",
@@ -1130,15 +1919,6 @@ export const PM_REPORT_TYPES: Record<PMTab, string[]> = {
     "Maturity Improvement Roadmap",
     "Governance Health Dashboard Brief (PPTX)",
     "Division Governance Scorecard",
-  ],
-  "operational-asset-digitisation": [
-    "Digitisation Progress Report",
-    "Milestone Summary Brief",
-    "Stakeholder Update Brief",
-    "Risk Assessment",
-    "Recovery Options Brief",
-    "Feasibility Assessment",
-    "Benefits Realisation Report",
   ],
 };
 
@@ -1171,57 +1951,179 @@ export const PM_SLA_MAP: Record<string, string> = {
   "Maturity Improvement Roadmap": "5 business days",
   "Governance Health Dashboard Brief (PPTX)": "5 business days",
   "Division Governance Scorecard": "48 hours",
-  "Digitisation Progress Report": "48 hours",
-  "Milestone Summary Brief": "48 hours",
-  "Stakeholder Update Brief": "48 hours",
+  "Infrastructure Capacity Review": "3 business days",
+  "Cloud Cost Optimisation Report": "3 business days",
+  "Integration Health Assessment": "3 business days",
+  "Security Compliance Audit": "5 business days",
+  "OT Asset Digitisation Progress Report": "48 hours",
+  "Operational Asset Health Assessment": "3 business days",
+  "OT Security & Connectivity Review": "5 business days",
+  "Asset Condition Report": "48 hours",
+  "Digitisation Milestone Summary": "48 hours",
   "Risk Assessment": "3 business days",
   "Recovery Options Brief": "5 business days",
-  "Feasibility Assessment": "5 business days",
+  "AI Model Performance Report": "3 business days",
+  "Data Quality Assessment": "3 business days",
+  "Digital Product Health Review": "3 business days",
+  "API Deprecation Impact Assessment": "3 business days",
+  "Data Governance Compliance Report": "5 business days",
+  "Data Platform Health Assessment": "3 business days",
+  "Digital Asset Executive Summary (PPTX)": "5 business days",
 };
 
 // ── Tab display config ────────────────────────────────────────────────────
 
 export const PM_TAB_CONFIG: Record<
   PMTab,
-  { label: string; description: string; gradient: string; headerColor: string }
+  { label: string; shortLabel: string; description: string; gradient: string; headerColor: string; tabColor: string; group: "asset-estate" | "governance-intelligence" }
 > = {
-  "application-portfolio": {
-    label: "Application Portfolio",
-    description: "Every software application in DEWA's estate",
+  "it-asset-portfolio": {
+    label: "IT Asset Portfolio",
+    shortLabel: "IT Assets",
+    description: "Every digital technology asset in DEWA's enterprise estate — applications, infrastructure, integration platforms, and security tooling. Health, lifecycle stage, technical debt, and EA compliance in one view.",
     gradient: "from-blue-500 to-blue-700",
     headerColor: "bg-blue-600",
+    tabColor: "border-blue-500",
+    group: "asset-estate",
+  },
+  "ot-asset-portfolio": {
+    label: "OT Asset Portfolio",
+    shortLabel: "OT Assets",
+    description: "DEWA's physical operational estate — power generation, transmission, water, and distribution infrastructure — and the degree to which each asset class has been digitised, connected, and brought under active monitoring.",
+    gradient: "from-emerald-500 to-emerald-700",
+    headerColor: "bg-emerald-600",
+    tabColor: "border-emerald-500",
+    group: "asset-estate",
+  },
+  "data-digital-portfolio": {
+    label: "Data & Digital Asset Portfolio",
+    shortLabel: "Data & Digital",
+    description: "DEWA's data platforms, AI models, digital customer products, and external APIs — governed as strategic assets with the same rigour as applications and infrastructure.",
+    gradient: "from-violet-500 to-violet-700",
+    headerColor: "bg-violet-600",
+    tabColor: "border-violet-500",
+    group: "asset-estate",
   },
   "project-portfolio": {
     label: "Project Portfolio",
+    shortLabel: "Projects",
     description: "All active projects — governance view",
     gradient: "from-purple-500 to-purple-700",
     headerColor: "bg-purple-600",
+    tabColor: "border-purple-500",
+    group: "governance-intelligence",
   },
   "transformation-initiatives": {
     label: "Transformation Initiatives",
+    shortLabel: "Initiatives",
     description: "Strategic transformation programmes",
-    gradient: "from-emerald-500 to-emerald-700",
-    headerColor: "bg-emerald-600",
+    gradient: "from-orange-500 to-orange-700",
+    headerColor: "bg-orange-600",
+    tabColor: "border-orange-500",
+    group: "governance-intelligence",
   },
   "technology-rationalisation": {
     label: "Technology Rationalisation",
+    shortLabel: "Rationalisation",
     description: "Identified duplication & consolidation opportunities",
     gradient: "from-amber-500 to-amber-700",
     headerColor: "bg-amber-600",
+    tabColor: "border-amber-500",
+    group: "governance-intelligence",
   },
   "governance-health": {
     label: "Governance Health",
+    shortLabel: "Governance",
     description: "Architecture compliance & EA maturity by division",
     gradient: "from-rose-500 to-rose-700",
     headerColor: "bg-rose-600",
-  },
-  "operational-asset-digitisation": {
-    label: "Operational Asset Digitisation",
-    description: "Physical asset digitisation progress",
-    gradient: "from-teal-500 to-teal-700",
-    headerColor: "bg-teal-600",
+    tabColor: "border-rose-500",
+    group: "governance-intelligence",
   },
 };
+
+// ── Division Gradient Map ─────────────────────────────────────────────────
+
+export const DIVISION_GRADIENT: Record<string, string> = {
+  "Generation":              "from-orange-500 to-amber-600",
+  "Transmission":            "from-blue-600 to-indigo-700",
+  "Distribution":            "from-teal-500 to-emerald-600",
+  "Water Services":          "from-cyan-500 to-blue-600",
+  "Customer Services":       "from-violet-500 to-purple-600",
+  "Digital DEWA & Moro Hub": "from-slate-600 to-gray-700",
+  "All Divisions":           "from-gray-500 to-slate-600",
+  "Corporate EA Office":     "from-rose-600 to-red-700",
+};
+
+// ── getPublishedContentCards — Stage 3 → Stage 1 sync ────────────────────
+
+const CONTENT_CARDS_KEY = "dtmp.portfolio.contentCards";
+
+export interface ContentCard {
+  id: string;
+  type: "rationalisation" | "asset-digitisation" | "ot-asset";
+  title: string;
+  division: string;
+  status: "Published" | "Draft" | "Archived";
+  lastUpdated: string;
+  flaggedForReview?: boolean;
+  // Extended fields for backward compat with Stage 3 content management
+  systemsInOverlap?: string;
+  recommendation?: string;
+  complexity?: string;
+  assetType?: string;
+  totalAssets?: number;
+  digitisedCount?: number;
+  createdAt?: string;
+}
+
+export function getPublishedContentCards(): ContentCard[] {
+  try {
+    const raw = localStorage.getItem(CONTENT_CARDS_KEY);
+    return raw ? JSON.parse(raw).filter((c: ContentCard) => c.status === "Published") : [];
+  } catch { return []; }
+}
+
+export function saveContentCards(cards: ContentCard[]): void {
+  localStorage.setItem(CONTENT_CARDS_KEY, JSON.stringify(cards));
+}
+
+export function mapContentCardToRationalisationCard(c: ContentCard): RationalisationCard {
+  return {
+    id: c.id,
+    tab: "technology-rationalisation",
+    overlapTitle: c.title,
+    divisionsAffected: c.division,
+    systemsInOverlap: c.systemsInOverlap || "TBD",
+    annualOverlapCost: "TBD",
+    annualOverlapCostNum: 0,
+    recommendation: (c.recommendation as RationalisationCard["recommendation"]) || "Evaluate",
+    consolidationTarget: "TBD",
+    complexity: (c.complexity as Complexity) || "Medium",
+    savingPotential: "TBD",
+    savingPotentialNum: 0,
+    status: "Identified",
+  };
+}
+
+export function mapContentCardToOTCard(c: ContentCard): OTNewCard {
+  return {
+    id: c.id,
+    tab: "ot-asset-portfolio",
+    assetType: (c.assetType as OTAssetType) || "IoT & Field Sensors",
+    name: c.title,
+    division: c.division as DEWADivision,
+    totalAssets: c.totalAssets || 0,
+    digitisedCount: c.digitisedCount || 0,
+    digitisedPercentage: c.totalAssets && c.digitisedCount ? Math.round((c.digitisedCount / c.totalAssets) * 100) : 0,
+    assetCondition: "Fair",
+    connectivityStatus: "Partially Connected",
+    lastInspectionDate: c.createdAt ?? c.lastUpdated,
+    status: "On Track",
+    cardState: "On Track",
+    initiativeTag: null,
+  };
+}
 
 export const DIVISION_COLORS: Record<string, string> = {
   Generation: "bg-yellow-100 text-yellow-800",
