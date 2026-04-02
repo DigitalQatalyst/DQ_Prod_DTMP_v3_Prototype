@@ -1,0 +1,16 @@
+export const DEWA_ROLE_OPTIONS: string[] = [
+  "Chief Digital Officer",
+  "Head of IT Architecture",
+  "Head of Digital Transformation",
+  "CTO",
+  "Division GM - Generation",
+  "Division GM - Distribution",
+  "Division GM - Water",
+  "Head of Customer Services",
+  "Head of Cybersecurity",
+  "Head of Data & Analytics",
+  "Head of Innovation",
+  "Project Management Office Lead",
+  "Enterprise Architect",
+  "Solution Architect",
+];

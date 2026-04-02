@@ -71,6 +71,9 @@ export const getActivityEvents = (initiativeId: string): ActivityEvent[] =>
     .filter((e) => e.initiativeId === initiativeId)
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
+export const getAllActivityEvents = (): ActivityEvent[] =>
+  readAll().sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
 /** Appends a new activity event (generates id and timestamp). */
 export const addActivityEvent = (
   data: Omit<ActivityEvent, "id" | "timestamp">

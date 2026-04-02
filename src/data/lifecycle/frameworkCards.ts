@@ -17,9 +17,18 @@ export interface InitiativeFramework {
   whatDivisionProvides: string[];
   keyPhases: string[];
   expectedOutcomes: string[];
+  compatibleTemplates: string[];
+  divisionRelevance: string[];
+  featured?: boolean;
+  activeCount?: number;
+  completedCount?: number;
+  iconName?: string;
 }
 
-export const initiativeFrameworks: InitiativeFramework[] = [
+const baseFrameworks: Omit<
+  InitiativeFramework,
+  "compatibleTemplates" | "divisionRelevance" | "featured" | "activeCount" | "completedCount" | "iconName"
+>[] = [
   {
     id: "IFW-01",
     type: "Architecture Remediation Initiative",
@@ -362,6 +371,80 @@ export const initiativeFrameworks: InitiativeFramework[] = [
     ],
   },
 ];
+
+const FRAMEWORK_METADATA: Record<
+  string,
+  Pick<InitiativeFramework, "compatibleTemplates" | "divisionRelevance" | "featured" | "iconName">
+> = {
+  "IFW-01": {
+    compatibleTemplates: ["LCT-001", "LCT-004"],
+    divisionRelevance: ["Generation", "Transmission", "Distribution", "Water"],
+    iconName: "GitBranch",
+  },
+  "IFW-02": {
+    compatibleTemplates: ["LCT-002", "LCT-005"],
+    divisionRelevance: ["Customer Services", "Corporate & Strategy", "Business Support & HR"],
+    featured: true,
+    iconName: "RefreshCw",
+  },
+  "IFW-03": {
+    compatibleTemplates: ["LCT-004", "LCT-005"],
+    divisionRelevance: ["All Divisions"],
+    iconName: "Layers",
+  },
+  "IFW-04": {
+    compatibleTemplates: ["LCT-002", "LCT-003"],
+    divisionRelevance: ["Innovation & AI", "All Divisions", "Customer Services"],
+    featured: true,
+    iconName: "Brain",
+  },
+  "IFW-05": {
+    compatibleTemplates: ["LCT-004"],
+    divisionRelevance: ["All Divisions", "Corporate & Strategy", "Water"],
+    iconName: "TrendingUp",
+  },
+  "IFW-06": {
+    compatibleTemplates: ["LCT-003"],
+    divisionRelevance: ["Customer Services", "All Divisions"],
+    iconName: "Globe",
+  },
+  "IFW-07": {
+    compatibleTemplates: ["LCT-004", "LCT-005"],
+    divisionRelevance: ["Business Support & HR", "Corporate & Strategy", "All Divisions"],
+    iconName: "Users",
+  },
+  "IFW-08": {
+    compatibleTemplates: ["LCT-004", "LCT-005"],
+    divisionRelevance: ["Generation", "Transmission", "Distribution", "Water"],
+    iconName: "Cpu",
+  },
+  "IFW-09": {
+    compatibleTemplates: ["LCT-003", "LCT-004"],
+    divisionRelevance: ["All Divisions", "Corporate & Strategy"],
+    iconName: "Leaf",
+  },
+  "IFW-10": {
+    compatibleTemplates: ["LCT-004", "LCT-005"],
+    divisionRelevance: ["All Divisions", "Transmission", "Distribution"],
+    iconName: "Shield",
+  },
+  "IFW-11": {
+    compatibleTemplates: ["LCT-002", "LCT-005"],
+    divisionRelevance: ["Innovation & AI", "All Divisions", "Corporate & Strategy"],
+    iconName: "Database",
+  },
+  "IFW-12": {
+    compatibleTemplates: ["LCT-002", "LCT-004", "LCT-005"],
+    divisionRelevance: ["All Divisions", "Corporate & Strategy", "Innovation & AI"],
+    featured: true,
+    iconName: "Server",
+  },
+};
+
+export const initiativeFrameworks: InitiativeFramework[] = baseFrameworks.map((framework) => ({
+  ...framework,
+  ...FRAMEWORK_METADATA[framework.id],
+}));
 
 export const getFrameworkById = (id: string): InitiativeFramework | undefined =>
   initiativeFrameworks.find((f) => f.id === id);

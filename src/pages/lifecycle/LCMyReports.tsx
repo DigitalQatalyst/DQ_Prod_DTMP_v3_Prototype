@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { Download, Eye } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,6 +21,7 @@ const toDeliveryDate = (r: LCServiceRequest) => {
 };
 
 export default function LCMyReports() {
+  const navigate = useNavigate();
   const role = getLifecycleRole() ?? "initiative-owner";
   const account = getDemoAccount(role);
 
@@ -79,23 +81,31 @@ export default function LCMyReports() {
                       <Button
                         variant="outline"
                         className="bg-white"
-                        onClick={() =>
+                        onClick={() => {
+                          if (r.documentStudioId) {
+                            navigate(`/stage2/document-studio/my-requests/${r.documentStudioId}`);
+                            return;
+                          }
                           toast({
                             title: "Demo-only",
                             description: "Inline report viewing is not implemented in Stage 2 yet.",
-                          })
-                        }
+                          });
+                        }}
                       >
                         <Eye className="w-4 h-4" />
                         View
                       </Button>
                       <Button
-                        onClick={() =>
+                        onClick={() => {
+                          if (r.documentStudioId) {
+                            navigate(`/stage2/document-studio/my-requests/${r.documentStudioId}`);
+                            return;
+                          }
                           toast({
                             title: "Demo-only",
                             description: `Download is demo-only. Expected format: ${fmt}.`,
-                          })
-                        }
+                          });
+                        }}
                       >
                         <Download className="w-4 h-4" />
                         Download

@@ -5,50 +5,33 @@ import { PM_TAB_CONFIG, type PMTab } from "@/data/portfolioManagement";
 
 interface SavedView {
   id: string;
-  assetName: string;
-  tabSource: PMTab;
+  name?: string;
+  assetName?: string;
+  tabSource?: PMTab;
+  tab?: PMTab;
+  filters?: Record<string, string>;
   lastVisited: string;
-  url: string;
+  createdAt?: string;
+  url?: string;
 }
 
-const SAVED_KEY = "pm_saved_views";
+const SAVED_KEY = "dtmp.portfolio.savedViews";
 
 function getSavedViews(): SavedView[] {
   try {
     const stored = localStorage.getItem(SAVED_KEY);
-    if (stored) return JSON.parse(stored) as SavedView[];
+    if (stored) {
+      const parsed = JSON.parse(stored) as SavedView[];
+      if (parsed.length) return parsed;
+    }
   } catch {}
-  return DEMO_SAVED;
+  return [];
 }
 
 function deleteSavedView(id: string): void {
   const views = getSavedViews().filter((v) => v.id !== id);
   localStorage.setItem(SAVED_KEY, JSON.stringify(views));
 }
-
-const DEMO_SAVED: SavedView[] = [
-  {
-    id: "SV-001",
-    assetName: "Transmission Division — Governance Health",
-    tabSource: "governance-health",
-    lastVisited: "2026-03-26",
-    url: "/marketplaces/portfolio-management?tab=governance-health",
-  },
-  {
-    id: "SV-002",
-    assetName: "Legacy Billing System (BIS-3)",
-    tabSource: "application-portfolio",
-    lastVisited: "2026-03-24",
-    url: "/marketplaces/portfolio-management?tab=application-portfolio",
-  },
-  {
-    id: "SV-003",
-    assetName: "Smart Grid Modernisation Programme",
-    tabSource: "transformation-initiatives",
-    lastVisited: "2026-03-22",
-    url: "/marketplaces/portfolio-management?tab=transformation-initiatives",
-  },
-];
 
 export default function PMSavedViewsPage() {
   const navigate = useNavigate();
@@ -85,7 +68,10 @@ export default function PMSavedViewsPage() {
       ) : (
         <div className="space-y-3">
           {views.map((view) => {
-            const tabCfg = PM_TAB_CONFIG[view.tabSource];
+            const resolvedTab = (view.tab || view.tabSource) as PMTab | undefined;
+            const tabCfg = resolvedTab ? PM_TAB_CONFIG[resolvedTab] : null;
+            const displayName = view.name || view.assetName || "Saved View";
+            const filterSummary = view.filters ? Object.entries(view.filters).filter(([, v]) => v && v !== "All" && v !== "All Divisions").map(([k, v]) => `${k}: ${v}`).join(" · ") : null;
             return (
               <div key={view.id} className="bg-white border border-gray-200 rounded-xl px-5 py-4 flex items-center gap-4 hover:border-orange-200 transition-colors">
                 <div className="w-9 h-9 bg-orange-50 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -93,19 +79,27 @@ export default function PMSavedViewsPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
-                      {tabCfg.label}
-                    </span>
+                    {tabCfg && (
+                      <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                        {tabCfg.shortLabel}
+                      </span>
+                    )}
                   </div>
-                  <p className="text-sm font-semibold text-gray-900">{view.assetName}</p>
+                  <p className="text-sm font-semibold text-gray-900">{displayName}</p>
+                  {filterSummary && <p className="text-xs text-gray-400 mt-0.5">{filterSummary}</p>}
                   <div className="flex items-center gap-1 mt-0.5">
                     <Clock className="w-3 h-3 text-gray-400" />
-                    <p className="text-xs text-gray-400">Last visited {view.lastVisited}</p>
+                    <p className="text-xs text-gray-400">Saved {view.createdAt ? view.createdAt.split("T")[0] : view.lastVisited}</p>
                   </div>
                 </div>
                 <div className="flex gap-2 flex-shrink-0">
                   <button
-                    onClick={() => navigate(view.url)}
+                    onClick={() => {
+                      const tab = view.tab || view.tabSource;
+                      navigate("/marketplaces/portfolio-management", {
+                        state: { tab, restoreFilters: view.filters || {} },
+                      });
+                    }}
                     className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-700 text-white transition-colors"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />

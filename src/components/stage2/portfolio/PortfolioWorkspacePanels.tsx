@@ -1,5 +1,11 @@
-import { Activity, DollarSign, Target, TrendingUp } from "lucide-react";
+import { Activity, DollarSign, Target, TrendingUp, AlertTriangle, Shield, ExternalLink } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import PortfolioHealthDashboard from "@/components/portfolio/PortfolioHealthDashboard";
+import {
+  rationalisationCards,
+  allITCards,
+  type AppCard,
+} from "@/data/portfolioManagement";
 
 interface PortfolioSubService {
   id: string;
@@ -59,6 +65,21 @@ export function PortfolioWorkspaceMain({
   activeSubService,
   portfolioSubServices,
 }: PortfolioWorkspaceMainProps) {
+  const navigate = useNavigate();
+
+  // Compute real rationalisation metrics
+  const totalOverlapCost = rationalisationCards.reduce((s, c) => s + c.annualOverlapCostNum, 0);
+  const totalSavings = rationalisationCards.reduce((s, c) => s + c.savingPotentialNum, 0);
+  const overlapCount = rationalisationCards.length;
+  const overlapLabel = totalOverlapCost >= 1000000 ? `AED ${(totalOverlapCost / 1000000).toFixed(1)}M` : `AED ${Math.round(totalOverlapCost / 1000)}K`;
+  const savingsLabel = totalSavings >= 1000000 ? `AED ${(totalSavings / 1000000).toFixed(1)}M` : `AED ${Math.round(totalSavings / 1000)}K`;
+
+  // Compute real IT health metrics
+  const appCards = allITCards.filter((c) => (c as AppCard).assetType === "Application") as AppCard[];
+  const avgHealth = Math.round(appCards.reduce((s, c) => s + c.healthScore, 0) / Math.max(appCards.length, 1));
+  const atRiskIT = allITCards.filter((c) => (c as AppCard).status === "At Risk" || (c as AppCard).status === "Critical").length;
+  const noInitIT = allITCards.filter((c) => (c as AppCard).status === "No Initiative").length;
+
   return (
     <div className="h-full">
       {activeSubService === "portfolio-health-dashboard" && (
@@ -68,37 +89,42 @@ export function PortfolioWorkspaceMain({
       {activeSubService === "application-rationalization" && (
         <div className="p-6">
           <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <div className="bg-red-50 p-4 rounded-lg">
+            <h3 className="text-base font-semibold text-gray-900 mb-4">Technology Rationalisation Summary</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+              <div className="bg-amber-50 p-4 rounded-lg border border-amber-100">
                 <div className="flex items-center gap-3 mb-2">
-                  <Activity className="w-5 h-5 text-red-600" />
-                  <h3 className="font-semibold text-red-900">Redundant Apps</h3>
+                  <Activity className="w-5 h-5 text-amber-600" />
+                  <h3 className="font-semibold text-amber-900">Identified Overlaps</h3>
                 </div>
-                <p className="text-2xl font-bold text-red-900">23</p>
-                <p className="text-sm text-red-700">Candidates for retirement</p>
+                <p className="text-2xl font-bold text-amber-900">{overlapCount}</p>
+                <p className="text-sm text-amber-700">Technology duplication opportunities</p>
               </div>
-              <div className="bg-orange-50 p-4 rounded-lg">
+              <div className="bg-red-50 p-4 rounded-lg border border-red-100">
                 <div className="flex items-center gap-3 mb-2">
-                  <DollarSign className="w-5 h-5 text-orange-600" />
-                  <h3 className="font-semibold text-orange-900">Potential Savings</h3>
+                  <DollarSign className="w-5 h-5 text-red-600" />
+                  <h3 className="font-semibold text-red-900">Annual Overlap Cost</h3>
                 </div>
-                <p className="text-2xl font-bold text-orange-900">$1.2M</p>
-                <p className="text-sm text-orange-700">Annual cost reduction</p>
+                <p className="text-2xl font-bold text-red-900">{overlapLabel}</p>
+                <p className="text-sm text-red-700">Total cost of identified duplication</p>
               </div>
-              <div className="bg-green-50 p-4 rounded-lg">
+              <div className="bg-green-50 p-4 rounded-lg border border-green-100">
                 <div className="flex items-center gap-3 mb-2">
                   <TrendingUp className="w-5 h-5 text-green-600" />
-                  <h3 className="font-semibold text-green-900">Rationalization Score</h3>
+                  <h3 className="font-semibold text-green-900">Savings Potential</h3>
                 </div>
-                <p className="text-2xl font-bold text-green-900">78%</p>
-                <p className="text-sm text-green-700">Portfolio efficiency</p>
+                <p className="text-2xl font-bold text-green-900">{savingsLabel}</p>
+                <p className="text-sm text-green-700">Estimated annual savings if resolved</p>
               </div>
             </div>
-            <div className="text-center py-12">
-              <Activity className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Application Rationalization Assessment</h3>
-              <p className="text-gray-500">Comprehensive analysis and recommendations would be displayed here</p>
-            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              <strong>{overlapLabel}</strong> in total rationalisation opportunity across <strong>{overlapCount}</strong> identified overlaps.
+            </p>
+            <button
+              onClick={() => navigate("/marketplaces/portfolio-management", { state: { tab: "technology-rationalisation" } })}
+              className="flex items-center gap-1.5 text-sm text-orange-600 hover:text-orange-800 font-medium"
+            >
+              View full rationalisation tab <ExternalLink className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
       )}
@@ -106,37 +132,42 @@ export function PortfolioWorkspaceMain({
       {activeSubService === "tco-optimization" && (
         <div className="p-6">
           <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <div className="bg-blue-50 p-4 rounded-lg">
+            <h3 className="text-base font-semibold text-gray-900 mb-4">IT Asset Health Summary</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
                 <div className="flex items-center gap-3 mb-2">
-                  <DollarSign className="w-5 h-5 text-blue-600" />
-                  <h3 className="font-semibold text-blue-900">Total TCO</h3>
+                  <Shield className="w-5 h-5 text-blue-600" />
+                  <h3 className="font-semibold text-blue-900">Average Health</h3>
                 </div>
-                <p className="text-2xl font-bold text-blue-900">$2.4M</p>
-                <p className="text-sm text-blue-700">Annual portfolio cost</p>
+                <p className="text-2xl font-bold text-blue-900">{avgHealth}%</p>
+                <p className="text-sm text-blue-700">Across IT asset portfolio</p>
               </div>
-              <div className="bg-green-50 p-4 rounded-lg">
+              <div className="bg-amber-50 p-4 rounded-lg border border-amber-100">
                 <div className="flex items-center gap-3 mb-2">
-                  <TrendingUp className="w-5 h-5 text-green-600" />
-                  <h3 className="font-semibold text-green-900">Cost per User</h3>
+                  <AlertTriangle className="w-5 h-5 text-amber-600" />
+                  <h3 className="font-semibold text-amber-900">Assets at Risk</h3>
                 </div>
-                <p className="text-2xl font-bold text-green-900">$1,200</p>
-                <p className="text-sm text-green-700">Per user annually</p>
+                <p className="text-2xl font-bold text-amber-900">{atRiskIT}</p>
+                <p className="text-sm text-amber-700">At Risk or Critical</p>
               </div>
-              <div className="bg-purple-50 p-4 rounded-lg">
+              <div className="bg-orange-50 p-4 rounded-lg border border-orange-100">
                 <div className="flex items-center gap-3 mb-2">
-                  <Target className="w-5 h-5 text-purple-600" />
-                  <h3 className="font-semibold text-purple-900">Savings Potential</h3>
+                  <Target className="w-5 h-5 text-orange-600" />
+                  <h3 className="font-semibold text-orange-900">Need Initiative</h3>
                 </div>
-                <p className="text-2xl font-bold text-purple-900">$480K</p>
-                <p className="text-sm text-purple-700">License optimization</p>
+                <p className="text-2xl font-bold text-orange-900">{noInitIT}</p>
+                <p className="text-sm text-orange-700">No active initiative</p>
               </div>
             </div>
-            <div className="text-center py-12">
-              <DollarSign className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">TCO Optimization</h3>
-              <p className="text-gray-500">Cost analysis and optimization tools would be displayed here</p>
-            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              Average health <strong>{avgHealth}%</strong> · <strong>{atRiskIT}</strong> assets at risk · <strong>{noInitIT}</strong> need initiative
+            </p>
+            <button
+              onClick={() => navigate("/marketplaces/portfolio-management", { state: { tab: "it-asset-portfolio" } })}
+              className="flex items-center gap-1.5 text-sm text-orange-600 hover:text-orange-800 font-medium"
+            >
+              View IT asset portfolio <ExternalLink className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
       )}

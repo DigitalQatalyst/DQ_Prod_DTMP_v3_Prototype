@@ -24,7 +24,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import {
   getInitiatives, getProjects, resolveBlocker, updateBlockerEscalation,
-  updateInitiativeBudgetSpent, updateInitiativeStatus, updateMilestoneStatus,
+  computeInitiativeRAG, updateInitiativeBudgetSpent, updateInitiativeStatus, updateMilestoneStatus,
   updateProjectRAG, updateRiskStatus,
   type Initiative, type Project, type RAGStatus, type MilestoneStatus,
 } from "@/data/shared/lifecyclePortfolioStore";
@@ -32,6 +32,7 @@ import { addActivityEvent, getActivityEvents, type ActivityEvent } from "@/data/
 import {
   getLifecycleRole, getDemoAccount, type LifecycleInsightsRole, LIFECYCLE_ROLE_LABELS,
 } from "@/data/shared/lifecycleRole";
+import { addApprovalWorkflow } from "@/data/lifecycle/lifecycleData";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -46,6 +47,7 @@ const SECTION_DESC: Record<InsightSection, Record<LifecycleInsightsRole, string>
   projects:   { "initiative-owner": "Which delivery workstreams are moving the initiative outcome? Review every linked project with live RAG, milestones, risks, and blockers.", "senior-stakeholder": "Which projects are carrying delivery risk and which ones remain on track?", "general-staff": "Which projects sit under this initiative?" },
   budget:     { "initiative-owner": "Are we financially on track? Review allocation, spend, commitments, variance, and intervention signals across projects.", "senior-stakeholder": "What is the executive budget position for this initiative?", "general-staff": "How much of the initiative budget has been used?" },
   milestones: { "initiative-owner": "What is due, delayed, or complete across the initiative? Review milestone movement and schedule pressure.", "senior-stakeholder": "Which milestones are complete and which ones need attention?", "general-staff": "What milestones are coming up next?" },
+  benefits:   { "initiative-owner": "What value should this initiative prove? Review expected benefits, realization progress, and evidence of outcome.", "senior-stakeholder": "What benefits are expected and how many are being realized?", "general-staff": "What outcomes is this initiative meant to deliver?" },
   risks:      { "initiative-owner": "What could derail delivery? Review the governed risk register, mitigation posture, and support needs.", "senior-stakeholder": "Which risks matter most right now?", "general-staff": "What major risks are currently recorded?" },
   blockers:   { "initiative-owner": "What needs intervention now? Review open blockers, escalation status, and what is required to unblock delivery.", "senior-stakeholder": "Which blockers are escalated and where is intervention required?", "general-staff": "What blockers are currently affecting this initiative?" },
   team:       { "initiative-owner": "Who is accountable for delivery? Review programme leadership, project ownership, workload, and EA support context.", "senior-stakeholder": "Who owns delivery and who supports governance?", "general-staff": "Who is leading this initiative?" },
@@ -91,10 +93,75 @@ const relTime = (iso: string) => {
   return new Date(iso).toLocaleDateString();
 };
 
+type BenefitStatus = "planned" | "in-progress" | "realized" | "not-realized";
+interface InitiativeBenefit {
+  id: string;
+  description: string;
+  quantifiedValue?: number;
+  realizationDate: string;
+  status: BenefitStatus;
+  actualValue?: number;
+  realizationNotes?: string;
+  lastUpdated?: string;
+}
+
+const BENEFITS_KEY = "dtmp.lifecycle.benefits";
+
+function defaultBenefitsForInitiative(initiative: Initiative): InitiativeBenefit[] {
+  return [
+    {
+      id: `${initiative.id}-benefit-1`,
+      description: `${initiative.type} outcome delivered for ${initiative.division}`,
+      quantifiedValue: Math.max(1, Math.round((initiative.budgetSpent || 1) * 0.1)),
+      realizationDate: initiative.targetDate,
+      status: initiative.status === "Completed" ? "realized" : "planned",
+    },
+    {
+      id: `${initiative.id}-benefit-2`,
+      description: "Governed delivery evidence and stakeholder confidence improved",
+      realizationDate: initiative.targetDate,
+      status: initiative.progress > 50 ? "in-progress" : "planned",
+    },
+  ];
+}
+
+function readBenefits(): Record<string, InitiativeBenefit[]> {
+  if (typeof window === "undefined") return {};
+  try {
+    return JSON.parse(window.localStorage.getItem(BENEFITS_KEY) ?? "{}") as Record<string, InitiativeBenefit[]>;
+  } catch {
+    return {};
+  }
+}
+
+function writeBenefits(store: Record<string, InitiativeBenefit[]>): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(BENEFITS_KEY, JSON.stringify(store));
+}
+
+function getInitiativeBenefits(initiative: Initiative): InitiativeBenefit[] {
+  const store = readBenefits();
+  if (!store[initiative.id]) {
+    store[initiative.id] = defaultBenefitsForInitiative(initiative);
+    writeBenefits(store);
+  }
+  return store[initiative.id];
+}
+
+function updateInitiativeBenefit(initiative: Initiative, benefitId: string, next: Partial<InitiativeBenefit>): InitiativeBenefit[] {
+  const store = readBenefits();
+  const benefits = store[initiative.id] ?? defaultBenefitsForInitiative(initiative);
+  store[initiative.id] = benefits.map((benefit) =>
+    benefit.id === benefitId ? { ...benefit, ...next, lastUpdated: new Date().toISOString() } : benefit
+  );
+  writeBenefits(store);
+  return store[initiative.id];
+}
+
 // ── Section config ─────────────────────────────────────────────────────────────
 
 type InsightSection =
-  | "health" | "projects" | "budget" | "milestones"
+  | "health" | "projects" | "budget" | "milestones" | "benefits"
   | "risks"  | "blockers" | "team"   | "activity";
 
 const SECTIONS: { id: InsightSection; label: string; icon: React.FC<{ className?: string }> }[] = [
@@ -102,6 +169,7 @@ const SECTIONS: { id: InsightSection; label: string; icon: React.FC<{ className?
   { id: "projects",   label: "Projects",   icon: BarChart2   },
   { id: "budget",     label: "Budget",     icon: DollarSign  },
   { id: "milestones", label: "Milestones", icon: CheckCircle2},
+  { id: "benefits",   label: "Benefits",   icon: TrendingUp  },
   { id: "risks",      label: "Risks",      icon: Shield      },
   { id: "blockers",   label: "Blockers",   icon: Flag        },
   { id: "team",       label: "Team",       icon: Users       },
@@ -113,6 +181,7 @@ const LEGACY_SECTION_DESC: Record<InsightSection, Record<LifecycleInsightsRole, 
   projects:   { "initiative-owner": "All linked projects — expand any row for milestones, budget, open risks and blockers, with live RAG controls", "senior-stakeholder": "Project health overview — RAG distribution and progress bars", "general-staff": "Projects linked to this initiative" },
   budget:     { "initiative-owner": "Full budget breakdown — allocation, spend, committed, variance and per-project health with visual bars", "senior-stakeholder": "Budget headline — total, spend and variance", "general-staff": "Budget utilisation summary" },
   milestones: { "initiative-owner": "Full milestone tracker grouped by status — delayed first, with days-overdue counters and Mark Complete controls", "senior-stakeholder": "Milestone completion dashboard — counts and overdue alerts", "general-staff": "Upcoming milestones across the programme" },
+  benefits:   { "initiative-owner": "Expected benefits with realization state and update controls", "senior-stakeholder": "Benefit realization summary and status", "general-staff": "Expected outcomes for this initiative" },
   risks:      { "initiative-owner": "Full risk register grouped by severity — expand any risk for likelihood, impact, mitigation plan, owner and due date", "senior-stakeholder": "Risk severity breakdown — critical and high items surfaced", "general-staff": "Risks identified on this programme" },
   blockers:   { "initiative-owner": "Open blockers grouped by escalation level — each with days open, what is needed, and the raising party", "senior-stakeholder": "Blocker escalation dashboard", "general-staff": "Open blockers across the programme" },
   team:       { "initiative-owner": "Full programme team — PM per project, active milestone workload, EA contact, division context", "senior-stakeholder": "Programme team and EA contact", "general-staff": "Initiative owner" },
@@ -161,8 +230,7 @@ function HealthSection({ initiative, projects, role, onInitiativeStatusChange }:
   const spentPct   = initiative.budget ? Math.round((initiative.budgetSpent / initiative.budget) * 100) : 0;
   const redCount   = projects.filter(p => p.rag === "Red").length;
   const amberCount = projects.filter(p => p.rag === "Amber").length;
-  const overallRAG: RAGStatus =
-    initiative.status === "At Risk" ? "Red" : redCount > 0 ? "Red" : amberCount > 0 ? "Amber" : "Green";
+  const overallRAG: RAGStatus = computeInitiativeRAG(initiative);
 
   /* ── Senior: dashboard ── */
   if (role === "senior-stakeholder") {
@@ -172,13 +240,15 @@ function HealthSection({ initiative, projects, role, onInitiativeStatusChange }:
         <div className={`rounded-xl border p-5 flex items-center gap-4 ${RAG_COLORS[overallRAG]}`}>
           <span className={`w-4 h-4 rounded-full flex-shrink-0 ${RAG_DOT[overallRAG]}`} />
           <div>
-            <p className="text-lg font-bold">{overallRAG} — Overall Programme Health</p>
+            <p className="text-lg font-bold" title="Computed from project RAG, critical open risks, delayed milestones, and escalated blockers.">
+              {overallRAG} — Overall Programme Health
+            </p>
             <p className="text-sm opacity-70">{initiative.status} · {initiative.division}</p>
           </div>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <DashStat label="Progress"          value={`${initiative.progress}%`} sub="delivery complete" accent="bg-teal-500/10 border-teal-500/20" icon={TrendingUp} />
-          <DashStat label="EA Alignment"      value={initiative.eaAlignmentScore !== null ? `${initiative.eaAlignmentScore}%` : "TBD"} sub="architecture score" />
+          <DashStat label="EA Alignment"      value={initiative.eaAlignmentScore !== null ? `${initiative.eaAlignmentScore}%` : "Not Assessed"} sub="architecture score" />
           <DashStat label="Days to Target"    value={days < 0 ? `${Math.abs(days)}d` : `${days}d`}
             sub={days < 0 ? "overdue" : "remaining"}
             accent={days < 0 ? "bg-red-500/10 border-red-500/20" : days < 90 ? "bg-amber-500/10 border-amber-500/20" : "bg-white/5"}
@@ -261,7 +331,9 @@ function HealthSection({ initiative, projects, role, onInitiativeStatusChange }:
       <div className={`rounded-xl border p-4 flex items-center gap-4 ${RAG_COLORS[overallRAG]}`}>
         <span className={`w-4 h-4 rounded-full flex-shrink-0 ${RAG_DOT[overallRAG]}`} />
         <div className="flex-1 min-w-0">
-          <p className="font-bold">{overallRAG} — Overall Programme Health</p>
+          <p className="font-bold" title="Computed from project RAG, critical open risks, delayed milestones, and escalated blockers.">
+            {overallRAG} — Overall Programme Health
+          </p>
           <p className="text-xs opacity-70 mt-0.5">{initiative.status} · {initiative.division} · {initiative.type}</p>
         </div>
       </div>
@@ -298,7 +370,7 @@ function HealthSection({ initiative, projects, role, onInitiativeStatusChange }:
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard label="Overall Progress"  value={`${initiative.progress}%`} sub="of delivery complete"
           accent="bg-teal-500/10 border-teal-500/20" />
-        <StatCard label="EA Alignment"      value={initiative.eaAlignmentScore !== null ? `${initiative.eaAlignmentScore}%` : "TBD"}
+        <StatCard label="EA Alignment"      value={initiative.eaAlignmentScore !== null ? `${initiative.eaAlignmentScore}%` : "Not Assessed"}
           sub="architecture score" />
         <StatCard label="Days to Target"    value={days < 0 ? `${Math.abs(days)}d` : `${days}d`}
           sub={days < 0 ? "overdue" : "remaining"}
@@ -987,6 +1059,134 @@ function MilestonesSection({ projects, isOwner, role, onMilestoneStatusChange }:
   );
 }
 
+function BenefitsSection({
+  benefits,
+  role,
+  onUpdateBenefit,
+}: {
+  benefits: InitiativeBenefit[];
+  role: LifecycleInsightsRole | null;
+  onUpdateBenefit: (benefitId: string, status: BenefitStatus, actualValue?: number, notes?: string) => void;
+}) {
+  const [editingBenefitId, setEditingBenefitId] = useState<string | null>(null);
+  const [status, setStatus] = useState<BenefitStatus>("planned");
+  const [actualValue, setActualValue] = useState("");
+  const [notes, setNotes] = useState("");
+  const realized = benefits.filter((benefit) => benefit.status === "realized").length;
+
+  return (
+    <div className="space-y-5">
+      <div className="bg-white/5 rounded-xl border border-white/10 p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Benefits Summary</p>
+            <p className="text-sm text-slate-300 mt-1">{realized} of {benefits.length} benefits realized</p>
+          </div>
+          <div className="w-40 h-2 bg-white/10 rounded-full overflow-hidden">
+            <div className="h-full bg-emerald-400 rounded-full" style={{ width: `${benefits.length > 0 ? (realized / benefits.length) * 100 : 0}%` }} />
+          </div>
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-xl border border-white/10">
+        <table className="w-full text-sm">
+          <thead className="bg-white/5 text-slate-400">
+            <tr>
+              <th className="text-left px-4 py-3">Benefit Description</th>
+              <th className="text-left px-4 py-3">Quantified Value</th>
+              <th className="text-left px-4 py-3">Realization Date</th>
+              <th className="text-left px-4 py-3">Status</th>
+              {role === "initiative-owner" ? <th className="text-right px-4 py-3">Action</th> : null}
+            </tr>
+          </thead>
+          <tbody>
+            {benefits.map((benefit) => (
+              <tr key={benefit.id} className="border-t border-white/10 bg-slate-900/40">
+                <td className="px-4 py-3 text-slate-200">{benefit.description}</td>
+                <td className="px-4 py-3 text-slate-300">{benefit.quantifiedValue ? fmt(benefit.quantifiedValue) : "-"}</td>
+                <td className="px-4 py-3 text-slate-300">{benefit.realizationDate}</td>
+                <td className="px-4 py-3">
+                  <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
+                    benefit.status === "realized" ? "bg-green-500/20 text-green-300" :
+                    benefit.status === "in-progress" ? "bg-blue-500/20 text-blue-300" :
+                    benefit.status === "not-realized" ? "bg-red-500/20 text-red-300" :
+                    "bg-slate-500/20 text-slate-300"
+                  }`}>
+                    {benefit.status}
+                  </span>
+                </td>
+                {role === "initiative-owner" ? (
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      onClick={() => {
+                        setEditingBenefitId(benefit.id);
+                        setStatus(benefit.status);
+                        setActualValue(benefit.actualValue ? String(benefit.actualValue) : "");
+                        setNotes(benefit.realizationNotes ?? "");
+                      }}
+                      className="text-xs text-teal-400 hover:text-teal-300"
+                    >
+                      Update
+                    </button>
+                  </td>
+                ) : null}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <Dialog open={!!editingBenefitId} onOpenChange={() => setEditingBenefitId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update Benefit</DialogTitle>
+            <DialogDescription>Capture current realization status and any measured value delivered so far.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-foreground">Status</label>
+              <Select value={status} onValueChange={(value) => setStatus(value as BenefitStatus)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {(["planned", "in-progress", "realized", "not-realized"] as BenefitStatus[]).map((item) => (
+                    <SelectItem key={item} value={item}>{item}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground">Actual Value Achieved</label>
+              <input
+                value={actualValue}
+                onChange={(e) => setActualValue(e.target.value)}
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                placeholder="Optional"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground">Realization Notes</label>
+              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} />
+            </div>
+          </div>
+          <DialogFooter>
+            <button onClick={() => setEditingBenefitId(null)} className="px-4 py-2 text-sm text-slate-600">Cancel</button>
+            <button
+              onClick={() => {
+                if (!editingBenefitId) return;
+                onUpdateBenefit(editingBenefitId, status, actualValue ? Number(actualValue) : undefined, notes);
+                setEditingBenefitId(null);
+              }}
+              className="px-4 py-2 rounded-lg bg-orange-600 text-white text-sm font-semibold"
+            >
+              Save
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 // ── RISKS ─────────────────────────────────────────────────────────────────────
 
 function RisksSection({ projects, role, onRiskStatusChange, onRequestSupport }: {
@@ -1531,7 +1731,7 @@ function TeamSection({ initiative, projects, role }: {
           <div><span className="text-slate-500">EA Alignment Score</span></div>
           <div className="text-right">
             <span className="text-slate-300 font-medium">
-              {initiative.eaAlignmentScore !== null ? `${initiative.eaAlignmentScore}%` : "TBD"}
+              {initiative.eaAlignmentScore !== null ? `${initiative.eaAlignmentScore}%` : "Not Assessed"}
             </span>
           </div>
           <div><span className="text-slate-500">Target Completion</span></div>
@@ -1565,7 +1765,7 @@ function LegacyActivitySection({ initiative, projects, role }: {
     {
       time: new Date(Date.now() - 2 * 86400000).toISOString(),
       actor: "System", action: "EA alignment score recorded",
-      note: `${initiative.eaAlignmentScore ?? "TBD"}% architecture alignment`, color: "bg-purple-400",
+      note: `${initiative.eaAlignmentScore ?? "Not Assessed"} architecture alignment`, color: "bg-purple-400",
     },
     ...completedMs.slice(0, 2).map((m, i) => ({
       time: new Date(Date.now() - (3 + i * 2) * 86400000).toISOString(),
@@ -1714,6 +1914,12 @@ export default function LCInsightsPage() {
   const [resolveModalOpen, setResolveModalOpen] = useState(false);
   const [budgetEditOpen,   setBudgetEditOpen]   = useState(false);
   const [budgetSpentInput, setBudgetSpentInput] = useState("");
+  const [gateModalOpen,    setGateModalOpen]    = useState(false);
+  const [gateName,         setGateName]         = useState("");
+  const [gateStage,        setGateStage]        = useState("");
+  const [gateEvidence,     setGateEvidence]     = useState("");
+  const [gateDocRef,       setGateDocRef]       = useState("");
+  const [gateNotes,        setGateNotes]        = useState("");
 
   useEffect(() => {
     if (!isUserAuthenticated()) navigate(`/marketplaces/lifecycle-management/initiative/${id}`);
@@ -1915,6 +2121,73 @@ export default function LCInsightsPage() {
     setBudgetEditOpen(false);
   };
 
+  const benefits = getInitiativeBenefits(initiative);
+
+  const submitGateForApproval = () => {
+    if (!gateName.trim() || !gateStage.trim() || !gateEvidence.trim()) {
+      toast({ title: "Missing evidence", description: "Gate name, stage, and completion evidence are required." });
+      return;
+    }
+    addApprovalWorkflow({
+      lifecycleInstanceId: initiative.id,
+      lifecycleInstanceName: initiative.name,
+      gate: {
+        id: `gate-${Date.now()}`,
+        name: gateName.trim(),
+        stage: gateStage.trim(),
+      },
+      submittedBy: account?.name ?? initiative.owner,
+      submittedDate: new Date().toISOString(),
+      submissionNotes: [gateEvidence.trim(), gateNotes.trim()].filter(Boolean).join("\n\n"),
+      documentStudioRef: gateDocRef.trim() || undefined,
+      status: "pending",
+      approvals: [
+        {
+          approverName: "TO Office",
+          approverRole: "Gate Approver",
+          decision: "pending",
+        },
+      ],
+      requiredApprovals: 1,
+      receivedApprovals: 0,
+      expectedDecisionDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+      escalated: false,
+    });
+    logAndRefresh({
+      initiativeId: initiative.id,
+      actor: account?.name ?? initiative.owner,
+      action: "Submitted gate for approval",
+      note: gateName.trim(),
+      eventType: "system",
+      sourceType: "initiative",
+      sourceId: initiative.id,
+    });
+    setGateModalOpen(false);
+    setGateName("");
+    setGateStage("");
+    setGateEvidence("");
+    setGateDocRef("");
+    setGateNotes("");
+    toast({ title: "Gate submitted", description: "The approval was added to the Stage 3 gate queue." });
+  };
+
+  const handleBenefitUpdate = (benefitId: string, status: BenefitStatus, actualValue?: number, notes?: string) => {
+    updateInitiativeBenefit(initiative, benefitId, {
+      status,
+      actualValue,
+      realizationNotes: notes,
+    });
+    logAndRefresh({
+      initiativeId: initiative.id,
+      actor: account?.name ?? initiative.owner,
+      action: `Benefit updated`,
+      note: status,
+      eventType: "system",
+      sourceType: "initiative",
+      sourceId: benefitId,
+    });
+  };
+
   const openRisks = projects.flatMap((project) => project.risks).filter((risk) => risk.status === "Open");
   const criticalOpenRisks = openRisks.filter((risk) => risk.severity === "Critical");
   const openBlockers = projects.flatMap((project) => project.blockers).filter((blocker) => !blocker.resolved);
@@ -1933,6 +2206,7 @@ export default function LCInsightsPage() {
       case "projects":   return <ProjectsSection   projects={projects} isOwner={isOwner} role={role} onRefresh={refresh} />;
       case "budget":     return <BudgetSection     initiative={initiative} projects={projects} role={role} budgetEditOpen={budgetEditOpen} budgetSpentInput={budgetSpentInput} onBudgetSpentInputChange={setBudgetSpentInput} onBudgetEditOpenChange={setBudgetEditOpen} onSaveBudgetSpent={saveInitiativeBudgetSpent} />;
       case "milestones": return <MilestonesSection projects={projects} isOwner={isOwner} role={role} onMilestoneStatusChange={handleMilestoneStatusChange} />;
+      case "benefits":   return <BenefitsSection   benefits={benefits} role={role} onUpdateBenefit={handleBenefitUpdate} />;
       case "risks":      return <RisksSection      projects={projects} role={role} onRiskStatusChange={handleRiskStatusChange} onRequestSupport={handleRiskSupportRequest} />;
       case "blockers":   return <BlockersSection   projects={projects} role={role} initiative={initiative} accountName={account?.name ?? initiative.owner} onEscalateBlocker={handleEscalateBlocker} onResolveBlocker={handleResolveBlocker} />;
       case "team":       return <TeamSection       initiative={initiative} projects={projects} role={role} />;
@@ -2004,14 +2278,30 @@ export default function LCInsightsPage() {
           {/* Main */}
           <div className="flex-1 min-w-0">
             <div className="mb-6">
-              <h2 className="text-xl font-bold text-white">
-                {SECTIONS.find(s => s.id === activeSection)?.label}
-              </h2>
-              <p className="text-sm text-slate-400 mt-0.5">
-                {role
-                  ? SECTION_DESC[activeSection][role]
-                  : "Select a role to see role-appropriate insights"}
-              </p>
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div>
+                  <h2 className="text-xl font-bold text-white">
+                    {SECTIONS.find(s => s.id === activeSection)?.label}
+                  </h2>
+                  <p className="text-sm text-slate-400 mt-0.5">
+                    {role
+                      ? SECTION_DESC[activeSection][role]
+                      : "Select a role to see role-appropriate insights"}
+                  </p>
+                </div>
+                {isOwner && activeSection === "milestones" ? (
+                  <button
+                    onClick={() => {
+                      setGateName(`${initiative.name} Gate Submission`);
+                      setGateStage("Milestone Review");
+                      setGateModalOpen(true);
+                    }}
+                    className="rounded-lg border border-orange-500/30 px-3 py-2 text-sm font-medium text-orange-300 hover:bg-orange-500/10"
+                  >
+                    Submit Gate for Approval
+                  </button>
+                ) : null}
+              </div>
             </div>
             {isCompleted && (
               <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 mb-6 space-y-4">
@@ -2065,7 +2355,7 @@ export default function LCInsightsPage() {
                   { label: "Owner",        value: initiative.owner },
                   { label: "Type",         value: initiative.type },
                   { label: "Target Date",  value: initiative.targetDate },
-                  { label: "EA Alignment", value: initiative.eaAlignmentScore !== null ? `${initiative.eaAlignmentScore}%` : "TBD" },
+                  { label: "EA Alignment", value: initiative.eaAlignmentScore !== null ? `${initiative.eaAlignmentScore}%` : "Not Assessed" },
                 ].map(({ label, value }) => (
                   <div key={label} className="flex justify-between gap-2">
                     <span className="text-xs text-slate-500 flex-shrink-0">{label}</span>
@@ -2079,6 +2369,18 @@ export default function LCInsightsPage() {
                   <p className="text-xs text-blue-100 leading-relaxed">
                     This initiative was raised from Portfolio Management and is now being governed here as the formal execution response.
                   </p>
+                  {initiative.portfolioCardId && (
+                    <button
+                      onClick={() =>
+                        navigate("/marketplaces/portfolio-management", {
+                          state: { tab: "ot-asset-portfolio", highlightCardId: initiative.portfolioCardId },
+                        })
+                      }
+                      className="text-xs font-medium text-blue-200 hover:text-white underline underline-offset-2"
+                    >
+                      View portfolio source
+                    </button>
+                  )}
                 </div>
               )}
               <div className="space-y-1.5">
@@ -2228,6 +2530,63 @@ export default function LCInsightsPage() {
             <button onClick={submitServiceRequest}
               className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold rounded-lg transition-colors">
               Submit Request
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={gateModalOpen} onOpenChange={setGateModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Submit Gate for Approval</DialogTitle>
+            <DialogDescription>Capture completion evidence before sending this gate to the TO approval queue.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-foreground">Gate Name</label>
+              <input
+                value={gateName}
+                onChange={(e) => setGateName(e.target.value)}
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                placeholder="Gate name"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground">Stage</label>
+              <input
+                value={gateStage}
+                onChange={(e) => setGateStage(e.target.value)}
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                placeholder="Lifecycle stage"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground">Completion Evidence</label>
+              <Textarea
+                value={gateEvidence}
+                onChange={(e) => setGateEvidence(e.target.value)}
+                rows={4}
+                placeholder="Describe the evidence that this gate's deliverables have been completed."
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground">Document Studio Reference</label>
+              <input
+                value={gateDocRef}
+                onChange={(e) => setGateDocRef(e.target.value)}
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                placeholder="Document ID or title (optional)"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground">Submission Notes</label>
+              <Textarea value={gateNotes} onChange={(e) => setGateNotes(e.target.value)} rows={3} placeholder="Any additional notes for the approver" />
+            </div>
+          </div>
+          <DialogFooter>
+            <button onClick={() => setGateModalOpen(false)} className="px-4 py-2 text-sm text-slate-600">Cancel</button>
+            <button onClick={submitGateForApproval} className="px-4 py-2 rounded-lg bg-orange-600 text-white text-sm font-semibold">
+              Submit Gate
             </button>
           </DialogFooter>
         </DialogContent>

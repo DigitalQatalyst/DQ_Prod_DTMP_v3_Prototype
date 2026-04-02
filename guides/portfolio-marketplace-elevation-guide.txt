@@ -1,0 +1,1901 @@
+================================================================================
+PORTFOLIO MANAGEMENT MARKETPLACE — ELEVATION GUIDE
+DEWA DTMP v3 Prototype
+Author: Claude Sonnet 4.6 (via audit + thinking session with project owner)
+Date: 2026-04-01
+Audience: Implementing LLM or developer. Execute exactly as prescribed.
+================================================================================
+
+TABLE OF CONTENTS
+─────────────────
+1.  What This Marketplace Is and What Story It Tells
+2.  Current Architecture Reference
+3.  Tab Structure — From 6 to 8 (The Three-Lens Model)
+4.  Visual Grouping of Tabs (Two-Tier Navigation)
+5.  New Tab: IT Asset Portfolio (replaces Application Portfolio)
+6.  New Tab: OT Asset Portfolio (replaces Operational Asset Digitisation)
+7.  New Tab: Data & Digital Asset Portfolio (new)
+8.  Seed Data — IT Asset Portfolio
+9.  Seed Data — OT Asset Portfolio
+10. Seed Data — Data & Digital Asset Portfolio
+11. Unified Card Skeleton — The Portfolio Standard
+12. Card Standard Per Tab Type (body content per asset/governance type)
+13. Retire the InsightsDrawer — Full Detail Pages Everywhere
+14. PortfolioDetailPage.tsx — Complete Rebuild Specification
+15. "Initiate in Lifecycle" — Move to Detail Page
+16. Cross-Tab Relationships on Detail Page
+17. Portfolio Health Bar — Aggregate Intelligence at the Top
+18. "No Initiative" — Visual Weight and Dedicated Filter
+19. Global Search Across All Tabs
+20. Role Selection — Once Per Session
+21. Saved Views — Add Creation Path or Remove
+22. Stage 3 Content Management → Stage 1 Connection
+23. Stage 2 Workspace Panels — Fix or Remove Stubs
+24. Data Model Additions Required
+25. File-Level Change Map
+26. Priority & Sequencing Recommendation
+
+
+================================================================================
+1. WHAT THIS MARKETPLACE IS AND WHAT STORY IT TELLS
+================================================================================
+
+PURPOSE
+-------
+The Portfolio Management marketplace is the intelligence and visibility layer
+of the DEWA DTMP. It is the EA (Enterprise Architecture) Office's control
+tower — a single, continuously updated view of DEWA's entire digital, physical
+operational, and data estate. It does not execute delivery. It identifies
+where attention is needed and routes that attention into governed action
+through Lifecycle Management.
+
+The relationship between Portfolio and Lifecycle is the most important
+intersection in the entire platform:
+  Portfolio says → "This application is Critical and has no active initiative."
+  Lifecycle responds → "We will wrap it in a governed initiative with a framework,
+  a template, and TO-monitored delivery."
+
+Portfolio is the diagnostic. Lifecycle is the treatment.
+
+NARRATIVE POSITIONING STATEMENT (keep this in the UI hero copy exactly):
+  "A single, continuously updated view of DEWA's entire digital estate —
+  applications, infrastructure, operational assets, data platforms, and
+  AI models — under one governance lens. Three dimensions of DEWA's estate.
+  One control tower."
+
+THE THREE-LENS MODEL (THE CORE CONCEPT OF THE ELEVATED MARKETPLACE)
+--------------------------------------------------------------------
+The elevated portfolio marketplace introduces a deliberate three-lens framing
+for DEWA's asset estate. This is a client perception decision as much as a
+structural one. It signals:
+
+  "We understand that DEWA is not just an IT organisation. Your estate has
+   three distinct dimensions — and we have built governance visibility
+   across all three."
+
+The three lenses:
+
+  IT ASSETS — The enterprise digital backbone:
+    Applications, infrastructure, cloud, integration platforms, security tools.
+    These are what divisions use daily. They have health scores, technical debt,
+    lifecycle stages, and TCO.
+
+  OT ASSETS — The operational physical estate:
+    Control systems, smart meters, IoT sensors, industrial equipment with digital
+    interfaces. These are what generates power, distributes water, and keeps the
+    lights on. Digitisation % and gap states are the primary metrics.
+
+  DATA & DIGITAL ASSETS — DEWA's future:
+    Data platforms, AI/ML models, digital customer products, external APIs.
+    This is where DEWA's D-Eleven and AI ambitions live. Treating these as
+    governed assets — alongside applications and infrastructure — is what
+    no traditional portfolio tool does. This is the forward-looking lens
+    that differentiates this platform.
+
+The four governance intelligence tabs remain unchanged:
+  - Project Portfolio (what is being delivered)
+  - Transformation Initiatives (why it is being delivered)
+  - Technology Rationalisation (what needs consolidating)
+  - Governance Health (how well the estate is governed)
+
+WHAT THE MARKETPLACE DOES NOT DO
+---------------------------------
+It does not execute delivery. It does not manage tasks or timelines directly.
+It is a read-and-act intelligence surface. Every "act" button (Initiate in
+Lifecycle, Request Report) is a hand-off to another marketplace or the TO
+office. This distinction must be preserved in every design decision.
+
+
+================================================================================
+2. CURRENT ARCHITECTURE REFERENCE
+================================================================================
+
+KEY FILES (do not rename without updating all imports):
+  src/pages/PortfolioManagementPage.tsx        — Stage 1 main marketplace (6 tabs)
+  src/pages/PortfolioDetailPage.tsx            — Card detail page (ORPHANED — rebuild)
+  src/pages/portfolio/PMOverviewPage.tsx       — Stage 2 overview
+  src/pages/portfolio/PMMyRequestsPage.tsx     — Stage 2 request tracker
+  src/pages/portfolio/PMMyReportsPage.tsx      — Stage 2 report library
+  src/pages/portfolio/PMSavedViewsPage.tsx     — Stage 2 saved views
+  src/pages/portfolio/PMStage3Page.tsx         — Stage 3 TO office console
+  src/components/portfolio/PortfolioCard.tsx   — Reusable card component
+  src/components/portfolio/PortfolioHealthDashboard.tsx
+  src/components/stage2/portfolio/PortfolioWorkspacePanels.tsx
+  src/data/portfolioManagement.ts              — All 54 seeded cards, types, config
+  src/data/portfolioManagement/serviceRequests.ts — Request/report persistence
+  src/components/stage3/Stage3Shell.tsx        — Shared Stage 3 wrapper (already used)
+
+CURRENT TAB ENUM (to be expanded):
+  type PMTab =
+    | "application-portfolio"
+    | "project-portfolio"
+    | "transformation-initiatives"
+    | "technology-rationalisation"
+    | "governance-health"
+    | "operational-asset-digitisation"
+
+NEW TAB ENUM (replace the above):
+  type PMTab =
+    | "it-asset-portfolio"          // renamed from application-portfolio
+    | "ot-asset-portfolio"          // renamed from operational-asset-digitisation
+    | "data-digital-portfolio"      // NEW
+    | "project-portfolio"           // unchanged
+    | "transformation-initiatives"  // unchanged
+    | "technology-rationalisation"  // unchanged
+    | "governance-health"           // unchanged
+
+NOTE: The tab rename from "application-portfolio" to "it-asset-portfolio" is
+a meaningful conceptual expansion, not just a label change. The card interface,
+the seed data, the filters, and the detail page must all reflect the broader
+IT asset scope (see Sections 5 and 8).
+
+ROUTING (src/App.tsx):
+  Current route for portfolio detail: verify and update to:
+  /marketplaces/portfolio-management/:tab/:cardId  → PortfolioDetailPage
+  This route must be present and wired. Currently PortfolioDetailPage is
+  never navigated to. This must be fixed (see Section 13).
+
+ROLE SYSTEM:
+  type PMRole = "EA Office / Portfolio Manager"
+              | "Division Head / Senior Stakeholder"
+              | "General DEWA Staff"
+  Currently set per-card in the InsightsDrawer. Must move to session-level
+  (see Section 20).
+
+
+================================================================================
+3. TAB STRUCTURE — FROM 6 TO 8 (THE THREE-LENS MODEL)
+================================================================================
+
+BEFORE (6 tabs, flat):
+  1. Application Portfolio
+  2. Project Portfolio
+  3. Transformation Initiatives
+  4. Technology Rationalisation
+  5. Governance Health
+  6. Operational Asset Digitisation
+
+AFTER (8 tabs, grouped into two visual sections):
+
+  ASSET ESTATE (3 tabs):
+  1. IT Assets
+  2. OT Assets
+  3. Data & Digital
+
+  GOVERNANCE INTELLIGENCE (4 tabs — unchanged in name and content):
+  4. Projects
+  5. Initiatives
+  6. Rationalisation
+  7. Governance
+
+NOTE ON TAB LABELS: Use short labels in the tab bar (IT Assets, OT Assets,
+Data & Digital, Projects, Initiatives, Rationalisation, Governance). The full
+descriptive names appear in the tab content header below the tab bar.
+
+WHY THIS STRUCTURE MATTERS FOR CLIENT PERCEPTION:
+  A client such as DEWA — which sees itself as a global benchmark utility and
+  a technology leader — will immediately notice that this platform understands
+  their estate beyond IT. The presence of OT Assets and Data & Digital as
+  first-class governed dimensions communicates that the platform was designed
+  for DEWA specifically, not adapted from a generic IT governance tool.
+  This structural decision is a statement about how deeply the builder
+  understands the client's world.
+
+
+================================================================================
+4. VISUAL GROUPING OF TABS (TWO-TIER NAVIGATION)
+================================================================================
+
+The tab bar needs visual grouping to prevent 8 tabs from feeling overwhelming.
+
+IMPLEMENTATION:
+
+Above the tab bar, add a two-label section row:
+  "ASSET ESTATE"              "GOVERNANCE INTELLIGENCE"
+  (above tabs 1-3)            (above tabs 4-7)
+
+Style for section labels:
+  text-xs font-semibold tracking-widest uppercase text-muted-foreground
+  displayed as a flex row above the TabsList component
+  Each label is left-aligned above its group of tabs
+  A subtle vertical divider line separates the two groups inside the tab bar
+
+Inside the TabsList:
+  After Tab 3 (Data & Digital) and before Tab 4 (Projects), insert a
+  visual separator: a 1px vertical line (border-r border-gray-300 h-6 mx-2)
+  This is an inline element inside the tab bar, not a separate row.
+
+COLOUR CODING (border-bottom indicator per tab):
+  IT Assets:           border-blue-500
+  OT Assets:           border-emerald-500
+  Data & Digital:      border-violet-500
+  Projects:            border-purple-500
+  Initiatives:         border-orange-500
+  Rationalisation:     border-amber-500
+  Governance:          border-rose-500
+
+Each active tab shows its colour as a 2px border-bottom on the tab trigger
+(data-[state=active]:border-[colour]) — same pattern as existing tab triggers
+in PortfolioManagementPage.tsx.
+
+RESPONSIVE BEHAVIOUR:
+  On screens < md: tabs wrap to two rows. Keep the section labels visible
+  but allow the tab bar to scroll horizontally (overflow-x: auto) rather
+  than wrap, to preserve the grouping logic.
+
+
+================================================================================
+5. NEW TAB: IT ASSET PORTFOLIO (REPLACES APPLICATION PORTFOLIO)
+================================================================================
+
+CONCEPT EXPANSION:
+  The current "Application Portfolio" tab is renamed and expanded to
+  "IT Asset Portfolio." It encompasses all enterprise digital technology assets,
+  not just software applications. The tab acknowledges that DEWA's IT estate
+  includes infrastructure, cloud subscriptions, integration platforms, and
+  security tools — not just the apps divisions use.
+
+TAB HEADER COPY:
+  Title: "IT Asset Portfolio"
+  Subtitle: "Every digital technology asset in DEWA's enterprise estate —
+  applications, infrastructure, integration platforms, and security tooling.
+  Health, lifecycle stage, technical debt, and EA compliance in one view."
+
+ASSET TYPES (shown as a filter within the tab):
+  - Application (existing app cards — all 10 carry over, re-tagged)
+  - Infrastructure & Cloud (new cards — see Section 8)
+  - Integration Platform (new cards — see Section 8)
+  - Security & Identity (new cards — see Section 8)
+
+FILTER SIDEBAR:
+  Division: dropdown (same as current — all 8 divisions)
+  Asset Type: checkboxes — Application | Infrastructure & Cloud |
+              Integration Platform | Security & Identity
+  Status: checkboxes — On Track | At Risk | Critical | No Initiative
+  Lifecycle Stage (for Application type): Optimise | Sustain | Modernise |
+              Replace | Retire
+  Has Active Initiative: Yes / No / All
+  Technical Debt (for Application type): None | Low | Medium | High | Critical
+  Clear Filters button
+
+CARD BODY (IT Asset type variations):
+  All cards share the universal skeleton (see Section 11).
+  Body content differs by asset type:
+
+  Application cards (existing + re-tagged):
+    Health Score | Technical Debt | Lifecycle Stage | Annual TCO
+    Risk flag banner (if riskFlag present)
+    Linked project tag | Linked initiative tag
+
+  Infrastructure & Cloud cards:
+    Health Score | Cloud Provider (Azure / AWS / On-Premise / Moro Hub)
+    Contract Renewal Date | Annual Cost | Redundancy Status
+    Linked initiative tag
+
+  Integration Platform cards:
+    Health Score | Integration Type (ESB / API Gateway / ETL / Middleware)
+    Connected Systems Count | Uptime % | Annual Cost
+
+  Security & Identity cards:
+    Compliance Score | Framework Coverage (ISO 27001 / NESA / IEC 62443)
+    Last Audit Date | Open Vulnerabilities count | Licence Expiry
+
+
+================================================================================
+6. NEW TAB: OT ASSET PORTFOLIO (REPLACES OPERATIONAL ASSET DIGITISATION)
+================================================================================
+
+CONCEPT EXPANSION:
+  The current "Operational Asset Digitisation" tab is renamed to "OT Asset
+  Portfolio" and re-framed from a digitisation progress tracker into a full
+  asset health and digitisation governance view. The core question shifts from
+  "how far along are we digitising this?" to "what is the health and digital
+  readiness of our operational estate?"
+
+  This is the tab that most clearly differentiates this platform from any
+  standard IT portfolio tool. DEWA's operational estate — its turbines,
+  substations, smart meters, desalination units, water pipelines — is
+  literally the reason the organisation exists. Treating it with the same
+  governance rigour as IT assets is the right move.
+
+TAB HEADER COPY:
+  Title: "OT Asset Portfolio"
+  Subtitle: "DEWA's physical operational estate — power generation, transmission,
+  water, and distribution infrastructure — and the degree to which each asset
+  class has been digitised, connected, and brought under active monitoring.
+  The bridge between physical operations and digital governance."
+
+ASSET TYPES (filter within the tab):
+  - Control Systems (SCADA, DCS, PLC networks)
+  - Smart Metering (electricity and water AMI networks)
+  - IoT & Field Sensors (condition monitoring, environmental, predictive)
+  - Industrial Equipment (turbines, transformers, pumps, desalination)
+  - Monitoring Infrastructure (substations, CCTV, environmental monitoring)
+
+FILTER SIDEBAR:
+  Division: dropdown (same divisions)
+  Asset Type: checkboxes — all 5 types above
+  Digitisation Status: On Track | At Risk | No Initiative | Completed
+  Asset State: checkboxes — Digitised | Partially Digitised | Not Digitised
+  Has Active Initiative: Yes / No / All
+  Clear Filters button
+
+CARD BODY (OT Asset cards):
+  All share the universal skeleton (Section 11).
+  Body content:
+    Digitised count & percentage (e.g., "847 of 1,200 — 71%")
+    Progress bar (visual, same as current OAD cards)
+    Asset condition: Good | Fair | Degraded | End of Life
+    Last inspection date
+    Connectivity status: Connected | Partially Connected | Offline
+    Gap state banner (amber/orange if No Initiative or At Risk)
+    Linked initiative tag (if active initiative exists)
+
+NOTE: The existing 10 OAD cards are carried forward and re-tagged as OT Asset
+cards. Add new cards to reach 15+ OT cards across all asset types (see Section 9).
+
+
+================================================================================
+7. NEW TAB: DATA & DIGITAL ASSET PORTFOLIO
+================================================================================
+
+CONCEPT:
+  This tab is entirely new. It governs DEWA's data, AI, and digital product
+  assets as first-class governed entities. This is DEWA's most forward-looking
+  asset class — the place where D-Eleven ambitions, Virtual Engineer, and
+  digital service delivery live.
+
+  No traditional portfolio management tool has this tab. Its presence signals
+  that the platform was designed for where DEWA is going, not just where it
+  is today.
+
+TAB HEADER COPY:
+  Title: "Data & Digital Asset Portfolio"
+  Subtitle: "DEWA's data platforms, AI models, digital customer products, and
+  external APIs — governed as strategic assets with the same rigour as
+  applications and infrastructure. The intelligence and innovation layer
+  of DEWA's digital estate."
+
+ASSET TYPES (filter within the tab):
+  - Data Platforms (data lake, warehouse, analytics infrastructure)
+  - AI & ML Models (deployed models, pipelines, model registries)
+  - Digital Customer Products (customer-facing apps, portals, channels)
+  - External APIs & Digital Services (developer APIs, partner integrations)
+
+FILTER SIDEBAR:
+  Division: dropdown (all divisions)
+  Asset Type: checkboxes — all 4 types above
+  Status: On Track | At Risk | Critical | No Initiative
+  Model/Platform Maturity: Conceptual | Pilot | Production | Scaling | Deprecated
+  Has Active Initiative: Yes / No / All
+  Clear Filters button
+
+CARD BODY (Data & Digital asset cards):
+  All share the universal skeleton (Section 11).
+  Body content varies by asset type:
+
+  Data Platform cards:
+    Health Score | Platform Type (Data Lake / Warehouse / Analytics / Streaming)
+    Data Volume (TB) | Active Pipelines count | Data Quality Score %
+    Governed Domains (e.g., "Customer, Financial, Operational")
+
+  AI & ML Model cards:
+    Model Status (Production / Pilot / Deprecated)
+    Model Accuracy % (or performance metric relevant to the model type)
+    Last Retrained date | Training Data Freshness
+    Use Case (e.g., "Predictive Maintenance — Generation Turbines")
+    Bias/Fairness Review: Passed | Pending | Not Assessed
+    Linked OT Asset (if the model operates on operational data)
+
+  Digital Customer Product cards:
+    Health Score | Channel Type (Mobile App / Web Portal / EV Platform / Chatbot)
+    Monthly Active Users | Customer Satisfaction Score (CSAT)
+    Last Release Date | Accessibility Compliance: Passed / Partial / Failed
+
+  External API & Digital Service cards:
+    Health Score | API Type (REST / GraphQL / Streaming)
+    Active Consumers (count of systems/partners consuming the API)
+    Uptime % (last 30 days) | Deprecation Date (if scheduled)
+    Monetisation: Yes / No
+
+
+================================================================================
+8. SEED DATA — IT ASSET PORTFOLIO
+================================================================================
+
+EXISTING CARDS (carry forward, re-tag to asset type "Application"):
+  APP-01 through APP-10 — all existing application cards unchanged in data.
+  Only change: add field `assetType: "Application"` to each.
+
+NEW CARDS — Infrastructure & Cloud (add 5 cards):
+
+  ITI-01:
+    id: "ITI-01", tab: "it-asset-portfolio", assetType: "Infrastructure & Cloud"
+    name: "Moro Hub Private Cloud — Core Infrastructure"
+    division: "Digital DEWA & Moro Hub"
+    healthScore: 87
+    cloudProvider: "Moro Hub (Private)"
+    contractRenewalDate: "2027-06-30"
+    annualCost: "AED 18.5M"
+    redundancyStatus: "Full Active-Active"
+    status: "On Track"
+    initiativeTag: "Digital Platform Enablement"
+    riskFlag: null
+
+  ITI-02:
+    id: "ITI-02", tab: "it-asset-portfolio", assetType: "Infrastructure & Cloud"
+    name: "Azure Government Cloud — Disaster Recovery"
+    division: "Digital DEWA & Moro Hub"
+    healthScore: 91
+    cloudProvider: "Microsoft Azure"
+    contractRenewalDate: "2026-12-31"
+    annualCost: "AED 4.2M"
+    redundancyStatus: "Warm Standby"
+    status: "On Track"
+    initiativeTag: null
+    riskFlag: null
+
+  ITI-03:
+    id: "ITI-03", tab: "it-asset-portfolio", assetType: "Infrastructure & Cloud"
+    name: "Core Network & MPLS Backbone"
+    division: "Transmission"
+    healthScore: 74
+    cloudProvider: "On-Premise"
+    contractRenewalDate: "2025-09-30"
+    annualCost: "AED 9.1M"
+    redundancyStatus: "Partial"
+    status: "At Risk"
+    initiativeTag: "Smart Grid Modernisation Programme"
+    riskFlag: "MPLS contract expiry in 6 months. Renewal or migration decision pending."
+
+  ITI-04:
+    id: "ITI-04", tab: "it-asset-portfolio", assetType: "Infrastructure & Cloud"
+    name: "DEWA Data Centre — Al Quoz"
+    division: "Corporate EA Office"
+    healthScore: 69
+    cloudProvider: "On-Premise"
+    contractRenewalDate: "2028-01-01"
+    annualCost: "AED 22.4M"
+    redundancyStatus: "Active-Passive"
+    status: "Critical"
+    initiativeTag: null
+    riskFlag: "Cooling infrastructure approaching end of life. PUE ratio 1.9 — above DEWA target of 1.5. Initiative required."
+
+  ITI-05:
+    id: "ITI-05", tab: "it-asset-portfolio", assetType: "Infrastructure & Cloud"
+    name: "End-User Computing — Microsoft 365 Estate"
+    division: "All Divisions"
+    healthScore: 94
+    cloudProvider: "Microsoft 365 (SaaS)"
+    contractRenewalDate: "2027-03-31"
+    annualCost: "AED 3.8M"
+    redundancyStatus: "N/A — SaaS"
+    status: "On Track"
+    initiativeTag: null
+    riskFlag: null
+
+NEW CARDS — Integration Platform (add 4 cards):
+
+  ITP-01:
+    id: "ITP-01", tab: "it-asset-portfolio", assetType: "Integration Platform"
+    name: "SAP Integration Suite (BTP)"
+    division: "All Divisions"
+    healthScore: 88
+    integrationType: "ESB / API Gateway"
+    connectedSystemsCount: 34
+    uptimePercent: 99.4
+    annualCost: "AED 2.1M"
+    status: "On Track"
+    initiativeTag: null
+
+  ITP-02:
+    id: "ITP-02", tab: "it-asset-portfolio", assetType: "Integration Platform"
+    name: "DEWA API Gateway — External Services"
+    division: "Digital DEWA & Moro Hub"
+    healthScore: 83
+    integrationType: "API Gateway"
+    connectedSystemsCount: 18
+    uptimePercent: 98.7
+    annualCost: "AED 0.9M"
+    status: "On Track"
+    initiativeTag: "Digital Platform Enablement"
+
+  ITP-03:
+    id: "ITP-03", tab: "it-asset-portfolio", assetType: "Integration Platform"
+    name: "OT/IT Integration Middleware (OSIsoft PI)"
+    division: "Generation"
+    healthScore: 66
+    integrationType: "OT-IT Middleware"
+    connectedSystemsCount: 11
+    uptimePercent: 96.1
+    annualCost: "AED 1.4M"
+    status: "At Risk"
+    initiativeTag: "Smart Grid Modernisation Programme"
+    riskFlag: "OSIsoft PI server version 3 versions behind. Vendor support ends 2026-Q3."
+
+  ITP-04:
+    id: "ITP-04", tab: "it-asset-portfolio", assetType: "Integration Platform"
+    name: "GIS Integration Platform"
+    division: "Distribution"
+    healthScore: 78
+    integrationType: "ETL / Data Integration"
+    connectedSystemsCount: 7
+    uptimePercent: 97.8
+    annualCost: "AED 0.7M"
+    status: "On Track"
+    initiativeTag: null
+
+NEW CARDS — Security & Identity (add 4 cards):
+
+  ITS-01:
+    id: "ITS-01", tab: "it-asset-portfolio", assetType: "Security & Identity"
+    name: "Identity & Access Management (Microsoft Entra)"
+    division: "All Divisions"
+    complianceScore: 94
+    frameworkCoverage: ["ISO 27001", "NESA"]
+    lastAuditDate: "2025-11-01"
+    openVulnerabilities: 2
+    licenceExpiry: "2027-01-31"
+    status: "On Track"
+    riskFlag: null
+
+  ITS-02:
+    id: "ITS-02", tab: "it-asset-portfolio", assetType: "Security & Identity"
+    name: "OT Security Platform (Claroty)"
+    division: "Generation"
+    complianceScore: 71
+    frameworkCoverage: ["IEC 62443"]
+    lastAuditDate: "2025-06-15"
+    openVulnerabilities: 14
+    licenceExpiry: "2026-09-30"
+    status: "At Risk"
+    initiativeTag: "OT Cybersecurity Enhancement"
+    riskFlag: "14 open OT vulnerabilities. IEC 62443 compliance review overdue by 4 months."
+
+  ITS-03:
+    id: "ITS-03", tab: "it-asset-portfolio", assetType: "Security & Identity"
+    name: "Security Operations Centre (SOC) Platform"
+    division: "Corporate EA Office"
+    complianceScore: 89
+    frameworkCoverage: ["ISO 27001", "NESA", "UAE IA Standards"]
+    lastAuditDate: "2026-01-10"
+    openVulnerabilities: 5
+    licenceExpiry: "2028-06-30"
+    status: "On Track"
+    riskFlag: null
+
+  ITS-04:
+    id: "ITS-04", tab: "it-asset-portfolio", assetType: "Security & Identity"
+    name: "Data Loss Prevention (DLP) — Microsoft Purview"
+    division: "All Divisions"
+    complianceScore: 77
+    frameworkCoverage: ["ISO 27001", "PDPL (UAE)"]
+    lastAuditDate: "2025-09-20"
+    openVulnerabilities: 8
+    licenceExpiry: "2026-12-31"
+    status: "At Risk"
+    initiativeTag: null
+    riskFlag: "UAE Personal Data Protection Law (PDPL) classification coverage at 62%. Target is 90%. Initiative needed."
+
+
+================================================================================
+9. SEED DATA — OT ASSET PORTFOLIO
+================================================================================
+
+EXISTING CARDS (carry forward, re-tag):
+  OAD-01 through OAD-10 — all existing OAD cards unchanged in data.
+  Add field: `assetType` mapped as follows:
+    Water Pumping Stations → "IoT & Field Sensors"
+    Power Generation equipment → "Industrial Equipment"
+    Smart Meters → "Smart Metering"
+    Control Systems → "Control Systems"
+    (map each existing card to the closest asset type)
+
+NEW CARDS — Control Systems (add 4 cards):
+
+  OTC-01:
+    id: "OTC-01", tab: "ot-asset-portfolio", assetType: "Control Systems"
+    name: "Generation SCADA — Jebel Ali Power Complex"
+    division: "Generation"
+    totalAssets: 1   (one unified SCADA system)
+    digitisedCount: 1
+    digitisedPercentage: 100
+    assetCondition: "Fair"
+    connectivityStatus: "Connected"
+    lastInspectionDate: "2025-10-15"
+    status: "On Track"
+    cardState: "On Track"
+    initiativeTag: "Smart Grid Modernisation Programme"
+
+  OTC-02:
+    id: "OTC-02", tab: "ot-asset-portfolio", assetType: "Control Systems"
+    name: "Distribution Automation Control — Deira Network"
+    division: "Distribution"
+    totalAssets: 48   (feeder automation units)
+    digitisedCount: 31
+    digitisedPercentage: 65
+    assetCondition: "Fair"
+    connectivityStatus: "Partially Connected"
+    lastInspectionDate: "2025-08-01"
+    status: "At Risk"
+    cardState: "At Risk"
+    initiativeTag: "Smart Grid Modernisation Programme"
+    stateDetail: "17 feeder automation units not yet integrated into SCADA. Risk of manual
+    override events increasing. Remediation scoped within Smart Grid programme."
+
+  OTC-03:
+    id: "OTC-03", tab: "ot-asset-portfolio", assetType: "Control Systems"
+    name: "Water Treatment Plant DCS — Hassyan"
+    division: "Water Services"
+    totalAssets: 1
+    digitisedCount: 1
+    digitisedPercentage: 100
+    assetCondition: "Good"
+    connectivityStatus: "Connected"
+    lastInspectionDate: "2026-01-20"
+    status: "On Track"
+    cardState: "On Track"
+    initiativeTag: null
+
+  OTC-04:
+    id: "OTC-04", tab: "ot-asset-portfolio", assetType: "Control Systems"
+    name: "Substation Automation — 132kV Network"
+    division: "Transmission"
+    totalAssets: 22   (substations)
+    digitisedCount: 14
+    digitisedPercentage: 64
+    assetCondition: "Degraded"
+    connectivityStatus: "Partially Connected"
+    lastInspectionDate: "2025-05-10"
+    status: "No Initiative"
+    cardState: "Gap"
+    initiativeTag: null
+    stateDetail: "8 of 22 132kV substations not yet automated. Legacy relay protection
+    schemes in operation. No active initiative. EA Office action required."
+
+NEW CARDS — Industrial Equipment (add 3 cards):
+
+  OTI-01:
+    id: "OTI-01", tab: "ot-asset-portfolio", assetType: "Industrial Equipment"
+    name: "Gas Turbines — Jebel Ali Station (Units 1–12)"
+    division: "Generation"
+    totalAssets: 12
+    digitisedCount: 9
+    digitisedPercentage: 75
+    assetCondition: "Good"
+    connectivityStatus: "Connected"
+    lastInspectionDate: "2026-02-01"
+    status: "On Track"
+    cardState: "On Track"
+    initiativeTag: "Virtual Engineer 2026"
+
+  OTI-02:
+    id: "OTI-02", tab: "ot-asset-portfolio", assetType: "Industrial Equipment"
+    name: "Desalination Units — Reverse Osmosis Trains"
+    division: "Water Services"
+    totalAssets: 24
+    digitisedCount: 12
+    digitisedPercentage: 50
+    assetCondition: "Fair"
+    connectivityStatus: "Partially Connected"
+    lastInspectionDate: "2025-09-15"
+    status: "At Risk"
+    cardState: "At Risk"
+    initiativeTag: "Water Network Digital Twin"
+    stateDetail: "12 RO trains lack digital condition monitoring. Manual inspection cycle
+    is 90 days — insufficient for predictive maintenance goals. Water Network Digital Twin
+    initiative is addressing this."
+
+  OTI-03:
+    id: "OTI-03", tab: "ot-asset-portfolio", assetType: "Industrial Equipment"
+    name: "HV Transformers — 400kV Grid"
+    division: "Transmission"
+    totalAssets: 38
+    digitisedCount: 22
+    digitisedPercentage: 58
+    assetCondition: "Fair"
+    connectivityStatus: "Partially Connected"
+    lastInspectionDate: "2025-11-30"
+    status: "No Initiative"
+    cardState: "Gap"
+    initiativeTag: null
+    stateDetail: "16 of 38 400kV transformers have no digital health monitoring.
+    Asset failure risk increasing. No initiative active. EA Office review required."
+
+
+================================================================================
+10. SEED DATA — DATA & DIGITAL ASSET PORTFOLIO
+================================================================================
+
+Create 12 new cards across the 4 asset types. These cards must reference
+real DEWA programmes and digital assets for authenticity.
+
+DATA PLATFORM CARDS (3 cards):
+
+  DDA-01:
+    id: "DDA-01", tab: "data-digital-portfolio", assetType: "Data Platform"
+    name: "DEWA Enterprise Data Lake (Azure Data Lake Gen2)"
+    division: "Digital DEWA & Moro Hub"
+    healthScore: 85
+    platformType: "Data Lake"
+    dataVolumeTB: 2840
+    activePipelines: 47
+    dataQualityScore: 78
+    governedDomains: ["Operational", "Customer", "Financial", "HR"]
+    status: "On Track"
+    initiativeTag: "Enterprise Data & Analytics Initiative"
+
+  DDA-02:
+    id: "DDA-02", tab: "data-digital-portfolio", assetType: "Data Platform"
+    name: "DEWA Analytics Warehouse (Synapse Analytics)"
+    division: "Digital DEWA & Moro Hub"
+    healthScore: 91
+    platformType: "Data Warehouse"
+    dataVolumeTB: 480
+    activePipelines: 28
+    dataQualityScore: 88
+    governedDomains: ["Financial", "Customer", "Executive Reporting"]
+    status: "On Track"
+    initiativeTag: "Enterprise Data & Analytics Initiative"
+
+  DDA-03:
+    id: "DDA-03", tab: "data-digital-portfolio", assetType: "Data Platform"
+    name: "Real-Time OT Data Streaming Platform (OSIsoft PI + Kafka)"
+    division: "Generation"
+    healthScore: 71
+    platformType: "Streaming / Real-Time"
+    dataVolumeTB: 95
+    activePipelines: 12
+    dataQualityScore: 64
+    governedDomains: ["Operational — Generation", "Predictive Maintenance"]
+    status: "At Risk"
+    initiativeTag: "Virtual Engineer 2026"
+    riskFlag: "Data quality score 64% — below 80% threshold. Sensor dropouts from
+    3 turbine units causing gaps in predictive model training data."
+
+AI & ML MODEL CARDS (3 cards):
+
+  DDM-01:
+    id: "DDM-01", tab: "data-digital-portfolio", assetType: "AI & ML Model"
+    name: "Virtual Engineer — Predictive Maintenance Model (Gas Turbines)"
+    division: "Generation"
+    modelStatus: "Production"
+    modelAccuracy: 91
+    lastRetrained: "2026-02-15"
+    trainingDataFreshness: "Current (< 30 days)"
+    useCase: "Predictive Maintenance — Generation Turbines (Jebel Ali)"
+    biasReview: "Passed"
+    linkedOTAsset: "OTI-01"
+    status: "On Track"
+    initiativeTag: "Virtual Engineer 2026"
+
+  DDM-02:
+    id: "DDM-02", tab: "data-digital-portfolio", assetType: "AI & ML Model"
+    name: "Water Demand Forecasting Model"
+    division: "Water Services"
+    modelStatus: "Production"
+    modelAccuracy: 87
+    lastRetrained: "2026-01-20"
+    trainingDataFreshness: "Current (< 30 days)"
+    useCase: "Daily and seasonal water demand forecasting for production planning"
+    biasReview: "Passed"
+    linkedOTAsset: "OTI-02"
+    status: "On Track"
+    initiativeTag: "Water Network Digital Twin"
+
+  DDM-03:
+    id: "DDM-03", tab: "data-digital-portfolio", assetType: "AI & ML Model"
+    name: "Smart Grid Load Balancing AI"
+    division: "Transmission"
+    modelStatus: "Pilot"
+    modelAccuracy: 79
+    lastRetrained: "2025-12-01"
+    trainingDataFreshness: "Stale (> 90 days)"
+    useCase: "Real-time load balancing across 132kV transmission network"
+    biasReview: "Pending"
+    linkedOTAsset: "OTC-04"
+    status: "At Risk"
+    initiativeTag: "Smart Grid Modernisation Programme"
+    riskFlag: "Training data stale by 90+ days. Model accuracy degrading.
+    Bias review not yet completed. Scale-to-production blocked pending review."
+
+DIGITAL CUSTOMER PRODUCT CARDS (3 cards):
+
+  DDP-01:
+    id: "DDP-01", tab: "data-digital-portfolio", assetType: "Digital Customer Product"
+    name: "DEWA Smart App (iOS & Android)"
+    division: "Customer Services"
+    healthScore: 89
+    channelType: "Mobile App"
+    monthlyActiveUsers: 1240000
+    csatScore: 4.4
+    lastReleaseDate: "2026-03-01"
+    accessibilityCompliance: "Passed"
+    status: "On Track"
+    initiativeTag: "Customer Experience Transformation"
+
+  DDP-02:
+    id: "DDP-02", tab: "data-digital-portfolio", assetType: "Digital Customer Product"
+    name: "EV Green Charger Platform"
+    division: "Customer Services"
+    healthScore: 76
+    channelType: "EV Platform"
+    monthlyActiveUsers: 84000
+    csatScore: 3.8
+    lastReleaseDate: "2025-11-15"
+    accessibilityCompliance: "Partial"
+    status: "At Risk"
+    initiativeTag: "EV Infrastructure Expansion"
+    riskFlag: "CSAT 3.8 — below 4.0 target. Charging station availability tracking
+    feature incomplete. Accessibility review required."
+
+  DDP-03:
+    id: "DDP-03", tab: "data-digital-portfolio", assetType: "Digital Customer Product"
+    name: "DEWA Business Portal (B2B Self-Service)"
+    division: "Customer Services"
+    healthScore: 71
+    channelType: "Web Portal"
+    monthlyActiveUsers: 38000
+    csatScore: 3.6
+    lastReleaseDate: "2025-06-10"
+    accessibilityCompliance: "Failed"
+    status: "Critical"
+    initiativeTag: null
+    riskFlag: "Accessibility compliance failed. Arabic language support gaps.
+    B2B portal CSAT 3.6 — significantly below benchmark. No active initiative."
+
+EXTERNAL API CARDS (3 cards):
+
+  DDS-01:
+    id: "DDS-01", tab: "data-digital-portfolio", assetType: "External API"
+    name: "DEWA Developer API — Smart Meter Data"
+    division: "Digital DEWA & Moro Hub"
+    healthScore: 92
+    apiType: "REST"
+    activeConsumers: 47
+    uptimePercent: 99.7
+    deprecationDate: null
+    monetised: false
+    status: "On Track"
+    initiativeTag: "Digital Platform Enablement"
+
+  DDS-02:
+    id: "DDS-02", tab: "data-digital-portfolio", assetType: "External API"
+    name: "UAE Pass Integration API"
+    division: "Customer Services"
+    healthScore: 95
+    apiType: "REST"
+    activeConsumers: 3
+    uptimePercent: 99.9
+    deprecationDate: null
+    monetised: false
+    status: "On Track"
+    initiativeTag: null
+
+  DDS-03:
+    id: "DDS-03", tab: "data-digital-portfolio", assetType: "External API"
+    name: "Legacy Billing API (v1 — Scheduled Deprecation)"
+    division: "Customer Services"
+    healthScore: 58
+    apiType: "SOAP / Legacy"
+    activeConsumers: 12
+    uptimePercent: 97.1
+    deprecationDate: "2026-09-30"
+    monetised: false
+    status: "At Risk"
+    initiativeTag: null
+    riskFlag: "12 active consumers still using legacy SOAP billing API.
+    Deprecation scheduled September 2026. Migration initiative required to
+    move consumers to REST API v3 before cutoff."
+
+
+================================================================================
+11. UNIFIED CARD SKELETON — THE PORTFOLIO STANDARD
+================================================================================
+
+ALL cards across all 8 tabs must share one skeleton. This is non-negotiable.
+The content of the body varies (see Section 12), but the structure is fixed.
+
+REFERENCE STANDARD: Lifecycle Management Tab 1 (Active Initiatives cards).
+  Those cards define the visual and interaction baseline. Portfolio cards
+  must match that standard.
+
+CARD SKELETON:
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ GRADIENT HEADER BAND (h-28)                                         │
+│   • Background: division-gradient (see DIVISION_GRADIENT map)       │
+│   • Tab-type icon centred: w-10 h-10 text-white/35 (lucide-react)   │
+│   • Status badge: top-right, small pill                             │
+│   • Asset Type badge: top-left (e.g. "Application", "AI Model")     │
+│   • "No Initiative" alert icon: bottom-left if status=No Initiative │
+├─────────────────────────────────────────────────────────────────────┤
+│ CARD BODY (p-4)                                                     │
+│   Division label: text-xs text-muted-foreground mb-1               │
+│   Asset/card name: text-base font-semibold text-gray-900 mb-2       │
+│      (2-line clamp)                                                 │
+│   Tab-specific metadata rows (see Section 12)                       │
+│   Risk flag banner (if present): amber bg, alert icon + text        │
+│   Linked tags: projectTag / initiativeTag as small pill badges       │
+├─────────────────────────────────────────────────────────────────────┤
+│ CARD FOOTER (border-t pt-3)                                         │
+│   Left: key metric (health score / digitised % / RAG / score)       │
+│   Right: secondary metric (TCO / date / pipeline count / users)     │
+└─────────────────────────────────────────────────────────────────────┘
+
+HOVER BEHAVIOUR:
+  className="hover:shadow-xl hover:border-orange-300 hover:-translate-y-1
+  transition-all duration-300"
+  (matches lifecycle Tab 1 exactly)
+
+CLICK BEHAVIOUR:
+  Full card is clickable (cursor-pointer).
+  onClick → navigate(`/marketplaces/portfolio-management/${tab}/${card.id}`)
+  NO buttons on the card face. No "View Insights" button. No "Initiate" button.
+  The card is purely a browse/scan surface. All actions live on the detail page.
+
+GRADIENT HEADER — DIVISION_GRADIENT MAP:
+  Define/extend the DIVISION_GRADIENT record in portfolioManagement.ts:
+  {
+    "Generation":              "from-orange-500 to-amber-600",
+    "Transmission":            "from-blue-600 to-indigo-700",
+    "Distribution":            "from-teal-500 to-emerald-600",
+    "Water Services":          "from-cyan-500 to-blue-600",
+    "Customer Services":       "from-violet-500 to-purple-600",
+    "Digital DEWA & Moro Hub": "from-slate-600 to-gray-700",
+    "All Divisions":           "from-gray-500 to-slate-600",
+    "Corporate EA Office":     "from-rose-600 to-red-700",
+  }
+
+ICON MAP — TAB DEFAULT ICONS (shown in gradient header):
+  it-asset-portfolio (Application):       Monitor
+  it-asset-portfolio (Infrastructure):    Server
+  it-asset-portfolio (Integration):       GitMerge
+  it-asset-portfolio (Security):          Shield
+  ot-asset-portfolio (Control Systems):   Cpu
+  ot-asset-portfolio (Smart Metering):    Zap
+  ot-asset-portfolio (IoT Sensors):       Wifi
+  ot-asset-portfolio (Industrial):        Settings
+  data-digital-portfolio (Data Platform): Database
+  data-digital-portfolio (AI Model):      Brain
+  data-digital-portfolio (Digital Product): Smartphone
+  data-digital-portfolio (External API):  Globe
+  project-portfolio:                       Briefcase
+  transformation-initiatives:             TrendingUp
+  technology-rationalisation:             Layers
+  governance-health:                       BarChart3
+
+STATUS BADGE CLASSES (extend existing STATUS_COLORS):
+  "On Track":       "bg-teal-100 text-teal-700 border-teal-200"
+  "At Risk":        "bg-amber-100 text-amber-700 border-amber-200"
+  "Critical":       "bg-red-100 text-red-700 border-red-200"
+  "No Initiative":  "bg-orange-100 text-orange-700 border-orange-200"
+  "Completed":      "bg-gray-100 text-gray-600 border-gray-200"
+  "Scoping":        "bg-blue-100 text-blue-700 border-blue-200"
+
+"NO INITIATIVE" SPECIAL TREATMENT (see also Section 18):
+  Cards with status "No Initiative" get:
+  1. An amber-orange left border (border-l-4 border-orange-400)
+  2. An AlertCircle icon in the gradient header bottom-left
+  3. Status badge with stronger styling: bg-orange-500 text-white (not just outline)
+  4. Risk flag banner always shown with text:
+     "No active initiative. EA Office action required."
+
+
+================================================================================
+12. CARD STANDARD PER TAB TYPE (BODY CONTENT)
+================================================================================
+
+All cards use the skeleton from Section 11. This section defines what goes
+in the body metadata rows and footer for each tab/asset type.
+
+IT ASSET — APPLICATION:
+  Row 1: Health Score badge (coloured) | Technical Debt badge
+  Row 2: Lifecycle Stage badge | Annual TCO
+  Footer Left: Health score number large
+  Footer Right: Lifecycle Stage
+
+IT ASSET — INFRASTRUCTURE & CLOUD:
+  Row 1: Cloud Provider badge | Redundancy Status badge
+  Row 2: Contract Renewal Date | Annual Cost
+  Footer Left: Health Score
+  Footer Right: Renewal date (red if < 6 months away)
+
+IT ASSET — INTEGRATION PLATFORM:
+  Row 1: Integration Type badge | Uptime %
+  Row 2: Connected Systems count | Annual Cost
+  Footer Left: Health Score
+  Footer Right: "X systems connected"
+
+IT ASSET — SECURITY & IDENTITY:
+  Row 1: Compliance Score badge | Framework badges (ISO/NESA/IEC)
+  Row 2: Open Vulnerabilities count (red if > 0) | Licence Expiry
+  Footer Left: Compliance Score % (large)
+  Footer Right: "X open vulnerabilities"
+
+OT ASSET (all subtypes):
+  Row 1: Digitised count + percentage badge
+  Progress bar (h-2, full width)
+  Row 2: Asset Condition badge | Connectivity Status badge
+  Row 3: Last Inspection Date
+  Gap banner (if cardState === "Gap" or status === "No Initiative")
+  Footer Left: digitisedPercentage% (large)
+  Footer Right: remaining count "X remaining"
+
+DATA — DATA PLATFORM:
+  Row 1: Platform Type badge | Data Volume (TB)
+  Row 2: Active Pipelines count | Data Quality Score %
+  Row 3: Governed Domains (comma-separated, truncated)
+  Footer Left: Health Score
+  Footer Right: "Quality: X%"
+
+DATA — AI MODEL:
+  Row 1: Model Status badge (Production/Pilot/Deprecated) | Accuracy %
+  Row 2: Last Retrained date | Training Data Freshness badge
+  Row 3: Bias Review status badge
+  Footer Left: Accuracy % (large)
+  Footer Right: "Retrained [date]"
+
+DATA — DIGITAL PRODUCT:
+  Row 1: Channel Type badge | MAU count (e.g. "1.24M users")
+  Row 2: CSAT Score (star display) | Last Release Date
+  Row 3: Accessibility badge (Passed/Partial/Failed)
+  Footer Left: CSAT score large (X.X / 5.0)
+  Footer Right: MAU count
+
+DATA — EXTERNAL API:
+  Row 1: API Type badge | Uptime %
+  Row 2: Active Consumers count | Deprecation date (if set, shown in red)
+  Footer Left: Uptime %
+  Footer Right: "X consumers"
+
+PROJECT PORTFOLIO:
+  Row 1: RAG circle indicator + label | Budget Health badge
+  Row 2: Progress bar with % label
+  Row 3: Parent Initiative link (pill badge, clickable → initiative card detail)
+  Row 4: Target Completion date (red "OVERDUE" badge if overdue)
+  Footer Left: progress % (large)
+  Footer Right: EA Alignment %
+
+TRANSFORMATION INITIATIVES:
+  Row 1: Status badge | Initiative Type text
+  Row 2: EA Alignment Score % (coloured large number)
+  Row 3: Projects Count | Programme Budget (AED)
+  Footer Left: EA Score
+  Footer Right: Target completion
+
+TECHNOLOGY RATIONALISATION:
+  Row 1: Status badge | Complexity badge
+  Row 2: Annual Overlap Cost (large red number) | Saving Potential (green)
+  Row 3: Recommendation badge + consolidation target
+  Footer Left: "Save AED X" (green)
+  Footer Right: "Complexity: X"
+
+GOVERNANCE HEALTH:
+  Row 1: Overall Governance Score (large, coloured) | Trend badge
+  Row 2: EA Maturity X/5.0 | Architecture Compliance %
+  Row 3: Critical Violations (red badge if > 0) | Non-Compliant Projects count
+  Footer Left: Governance Score %
+  Footer Right: Trend (↗ / — / ↘)
+
+
+================================================================================
+13. RETIRE THE INSIGHTSDRAWER — FULL DETAIL PAGES EVERYWHERE
+================================================================================
+
+DECISION: The InsightsDrawer is retired from the Portfolio Management
+marketplace. All card interactions navigate to a full detail page.
+
+RATIONALE:
+  - Every other marketplace in the platform uses detail pages, not drawers.
+  - PortfolioDetailPage.tsx already exists (though orphaned) — it was always
+    meant to be the destination.
+  - The drawer pattern forces role selection on every card open. The detail
+    page allows role selection once (or reads from session).
+  - Detail pages support deep-linking, browser back navigation, and proper
+    breadcrumb trails — drawers do not.
+  - The drawer conflates browsing (reading insights) with transacting
+    (requesting reports, initiating lifecycle actions). The detail page
+    separates these clearly.
+
+WHAT TO REMOVE:
+  In PortfolioManagementPage.tsx:
+  - Remove all InsightsDrawer JSX and state (insightsOpen, selectedCard,
+    insightsRole, showRoleSelector, and all related handlers)
+  - Remove the role selector modal from the portfolio page
+  - Remove the "View Insights" button from all card renders
+  - Remove the "Initiate in Lifecycle" button from all card renders
+  - Keep: card onClick navigating to the detail page
+
+  The InsightsDrawer component file may be kept if used elsewhere, but it
+  must not be rendered by PortfolioManagementPage.tsx.
+
+WHAT TO ADD:
+  In App.tsx, ensure this route is present and wired:
+    path="/marketplaces/portfolio-management/:tab/:cardId"
+    element={<PortfolioDetailPage />}
+
+  This route must be inside the standard layout wrapper (with Header/Footer).
+
+
+================================================================================
+14. PORTFOLIODETAILPAGE.TSX — COMPLETE REBUILD SPECIFICATION
+================================================================================
+
+CURRENT STATE:
+  PortfolioDetailPage.tsx is orphaned. It imports from "@/data/portfolio"
+  (a different data file from the main portfolioManagement.ts) and renders
+  a generic service detail structure borrowed from the learning/support
+  marketplaces. It does not know about the 6 (soon 8) portfolio card types.
+  It must be completely rebuilt.
+
+PARAMS (from react-router useParams):
+  tab: PMTab string
+  cardId: string (e.g. "APP-01", "OTC-02", "DDM-01")
+
+DATA RESOLUTION:
+  Based on tab, look up the card from the appropriate card array:
+  - "it-asset-portfolio"          → allITCards (merged appCards + new IT cards)
+  - "ot-asset-portfolio"          → allOTCards (merged oadCards + new OT cards)
+  - "data-digital-portfolio"      → dataDigitalCards (new)
+  - "project-portfolio"           → projectCards
+  - "transformation-initiatives"  → initiativeCards
+  - "technology-rationalisation"  → rationalisationCards
+  - "governance-health"           → governanceCards
+
+  Create a helper function in portfolioManagement.ts:
+    getPortfolioCard(tab: PMTab, cardId: string): AnyCard | null
+
+ROLE-GATED CONTENT:
+  Read role from session (getSessionPMRole() — see Section 20).
+  If no role set → show role selection UI at top of page (one-time, persistent).
+  Do not open a modal. Show an inline banner:
+  ┌──────────────────────────────────────────────────────────────────┐
+  │ 👤 Select your role to see content tailored to your perspective  │
+  │ [EA Office / Portfolio Manager] [Division Head] [General Staff]  │
+  └──────────────────────────────────────────────────────────────────┘
+  On click: setSessionPMRole(role), banner dismisses, page re-renders
+  with role-appropriate content.
+
+  Role visibility matrix:
+    EA Office / Portfolio Manager  → ALL sections, full metrics, all actions
+    Division Head / Senior Stakeholder → Summary metrics, risks, linked assets,
+                                         no raw compliance data, no TCO breakdown
+    General DEWA Staff             → Name, status, division, linked initiative —
+                                     nothing else
+
+PAGE STRUCTURE (top to bottom):
+
+  a) BREADCRUMB
+     Marketplaces / Portfolio Management / [Tab Label] / [Card Name]
+
+  b) PAGE HEADER
+     Gradient banner (h-36) matching the card's division gradient colour
+     Asset type icon (w-16 h-16 text-white/30) centred
+     Card name overlaid (bottom-left, text-2xl font-bold text-white)
+     Status badge (top-right)
+     Asset Type badge (top-left)
+     Division badge (bottom-right)
+
+  c) QUICK STATS ROW (below header, 4 tiles)
+     Show the 4 most important metrics for the card type.
+     Example for Application card:
+       Health Score | Technical Debt | Lifecycle Stage | Annual TCO
+     Example for OT Asset card:
+       Digitised % | Asset Condition | Connectivity | Last Inspection
+     Example for AI Model card:
+       Accuracy % | Model Status | Last Retrained | Bias Review
+     Style: same 4-tile KPI row as Lifecycle cockpit header.
+
+  d) TAB BAR (within detail page — shadcn Tabs):
+     Tabs vary slightly by card type but follow this pattern:
+
+     For ASSET tabs (IT / OT / Data & Digital):
+       "Overview"  "Technical Detail"  "Linked Assets"  "Governance"  "History"
+
+     For GOVERNANCE tabs (Projects / Initiatives / Rationalisation / Health):
+       "Overview"  "Metrics"  "Related Portfolio Items"  "Actions"
+
+  e) OVERVIEW TAB CONTENT:
+     Full description / narrative for the asset.
+     Key metrics displayed in a 2-column grid of stat cards.
+     Risk flag section (if riskFlag present) — amber box, full text.
+     For EA Office role: additional EA commentary and compliance notes.
+     For Division Head: summary paragraph only, top 2 metrics.
+     For General Staff: status + division + linked initiative name only.
+
+  f) TECHNICAL DETAIL TAB (asset tabs only):
+     Full breakdown of all technical fields (the fields listed in Section 12
+     for the card type, expanded with labels and explanations).
+     Insights breakdown chart (for application cards — the 5-dimension
+     radar/bar chart showing performance, security, integration, support,
+     compliance scores).
+
+  g) LINKED ASSETS TAB:
+     CROSS-TAB RELATIONSHIPS — see Section 16.
+     Shows related cards from other tabs. Each related card is a compact
+     mini-card with name, status badge, and a link to that card's detail page.
+     This is what connects the six portfolio dimensions into one estate view.
+
+  h) GOVERNANCE TAB:
+     EA alignment notes (for EA Office role).
+     Architecture compliance status.
+     Initiative history (all past and current initiatives linked to this asset).
+     Request Report button → opens report request flow (modal or inline form).
+
+  i) HISTORY TAB (asset tabs only):
+     Timeline of key events for this asset:
+       - Date added to portfolio
+       - Status changes
+       - Initiative links created/removed
+       - Reports requested/delivered
+     Simple chronological list. Style: same as lifecycle activity log.
+
+  j) PRIMARY CTA (sticky bottom bar or prominent section):
+     "Initiate in Lifecycle" button — see Section 15.
+     "Request Report" button — opens report request form.
+     Both visible to EA Office role. Division Head sees Request Report only.
+     General Staff sees neither.
+
+  k) BACK NAVIGATION:
+     "← Back to Portfolio Management" link at top of page (below breadcrumb).
+     Navigates back to the portfolio marketplace, restoring the active tab
+     and any active filters (pass tab name back via router state).
+
+
+================================================================================
+15. "INITIATE IN LIFECYCLE" — MOVE TO DETAIL PAGE
+================================================================================
+
+REMOVE FROM: All card renders in PortfolioManagementPage.tsx.
+             The card grid is a browse surface only. No action buttons on cards.
+
+ADD TO: PortfolioDetailPage.tsx — as a prominent primary CTA.
+
+PLACEMENT ON DETAIL PAGE:
+  Option A (recommended): Sticky bottom bar, full-width on mobile.
+    Background: bg-white border-t border-orange-200 shadow-lg
+    Content:
+      Left: "Ready to take action on this [asset type]?"
+      Right: [Initiate in Lifecycle →] bg-orange-600 text-white button
+    Height: h-16. Push page content up by 64px (pb-16 on main content).
+
+  Option B: Large CTA section near the bottom of the Overview tab.
+    "This [asset type] requires governed intervention."
+    Subtext: explanation of what happens (TO reviews, initiative created, etc.)
+    [Initiate in Lifecycle →] button, prominent, below the text.
+
+CONDITIONAL DISPLAY:
+  Show the "Initiate in Lifecycle" CTA only when:
+    - status is "Critical", "At Risk", or "No Initiative"
+    - OR lifecycleStage is "Replace" or "Retire" (for application cards)
+    - OR cardState is "Gap" (for OT cards)
+    - OR modelStatus is "Deprecated" (for AI model cards)
+    - OR any riskFlag is present
+
+  When the condition is met, the CTA is orange and prominent.
+  When condition is not met (status On Track, no risk): show a ghost/outline
+  version with text "Governance is healthy — no initiative required at this time."
+  This ensures the section is always present but tonally appropriate.
+
+PREFILL LOGIC (unchanged from current implementation):
+  onClick → navigate("/marketplaces/lifecycle-management", {
+    state: {
+      openStartInitiative: true,
+      fromPortfolio: true,
+      prefill: {
+        name: [derived from card name + recommended action],
+        division: card.division,
+        objective: [derived from card's risk flag or status],
+        scope: [derived from card type and lifecycle stage],
+        portfolioCardId: card.id,
+        portfolioTab: tab,
+      }
+    }
+  })
+
+  Also navigate to "Explore & Start" tab specifically (not just the marketplace)
+  so the user lands on the initiative submission flow, not the active initiatives list.
+
+VISUAL INDICATOR ON PORTFOLIO CARD (after initiative is initiated):
+  When an initiative has been created from a portfolio card
+  (portfolioCardId matches), show a small indicator on the card:
+    A teal dot + "Initiative Active" label in the card's linked-tags area.
+  This closes the feedback loop — the user browsing the portfolio can see
+  that a card already has an initiative in progress.
+
+  Mechanism: when navigating back to portfolio from lifecycle after submitting,
+  pass { initiatedForCardId: cardId } in router state. The portfolio page reads
+  this and temporarily highlights the relevant card. For persistence, store
+  the linkage in localStorage: `pm.initiativeLinks` = { [cardId]: initiativeId }
+
+
+================================================================================
+16. CROSS-TAB RELATIONSHIPS ON DETAIL PAGE
+================================================================================
+
+CONCEPT:
+  The portfolio's six (now eight) tabs represent different views of the same
+  estate. An application card is related to a project card (the project
+  delivering work on it) which is related to an initiative card (the programme
+  it sits under). These relationships exist in the data (projectTag,
+  initiativeTag, parentInitiative fields) but are not navigable in the current
+  UX. The detail page is where these connections become visible and traversable.
+
+IMPLEMENTATION IN "LINKED ASSETS" TAB:
+
+  For each card, resolve its relationships:
+
+  Application / IT Asset cards:
+    - Linked Project: find projectCard where projectCard.name matches card.projectTag
+    - Linked Initiative: find initiativeCard where initiativeCard.name matches card.initiativeTag
+    - Linked OT Asset: if the application is a control system application,
+      find OT cards in the same division
+
+  Project cards:
+    - Parent Initiative: find initiativeCard where name matches card.parentInitiative
+    - Related Applications: find appCards where projectTag matches card.name
+    - Rationalisation items: find rationalisationCards where divisionsAffected
+      includes card.division
+
+  Initiative cards:
+    - Related Projects: find projectCards where parentInitiative matches card.name
+    - Related Applications: find appCards where initiativeTag matches card.name
+
+  OT Asset cards:
+    - Linked AI Model: find AI model cards where linkedOTAsset matches card.id
+    - Linked Initiative: find initiativeCard where name matches card.initiativeTag
+    - Linked Data Platform: find data platform cards in same division
+
+  AI Model cards:
+    - Linked OT Asset: resolve card.linkedOTAsset to the OT card
+    - Linked Data Platform: find data platform cards in same division
+    - Parent Initiative: find initiativeCard where name matches card.initiativeTag
+
+DISPLAY FORMAT (inside "Linked Assets" tab):
+
+  Each relationship group has a label:
+    "Linked Projects" | "Parent Initiative" | "Related Applications" |
+    "Linked OT Assets" | "AI Models Operating on This Asset" | etc.
+
+  Each linked item renders as a compact relationship card:
+  ┌────────────────────────────────────────────────────────┐
+  │ [small gradient chip by division colour]               │
+  │ [Card Name]              [Status badge]                │
+  │ [Tab label] · [Division]      [→ View detail] link     │
+  └────────────────────────────────────────────────────────┘
+
+  "→ View detail" navigates to that card's detail page.
+  This allows traversal through the portfolio graph — from an application
+  to its project to its initiative to its governance score — without
+  returning to the browse grid.
+
+  If no relationships found for a group: don't show the group.
+  If no relationships found at all: show a message:
+    "No cross-portfolio links found for this asset. If this asset has
+    related projects or initiatives, link them by updating the relevant
+    portfolio cards."
+
+
+================================================================================
+17. PORTFOLIO HEALTH BAR — AGGREGATE INTELLIGENCE AT THE TOP
+================================================================================
+
+CURRENT GAP:
+  The marketplace claims to be a "control tower" and "real-time analytics"
+  platform. But when you land on PortfolioManagementPage.tsx, there are no
+  aggregate metrics — no summary of how many assets are at risk, how many
+  have no active initiative, what the overall EA score is. You have to
+  browse through all 8 tabs to build that picture yourself.
+
+SOLUTION: Add a Portfolio Health Bar above the tab bar.
+
+PLACEMENT: Between the page hero/title section and the two-tier tab bar.
+
+CONTENT (5 KPI tiles, computed live from all card data):
+
+  Tile 1: Total Assets Governed
+    Value: count of all cards across all tabs
+    Icon: LayoutGrid
+    Label: "Assets Governed"
+
+  Tile 2: At Risk or Critical
+    Value: count of cards where status is "At Risk" or "Critical"
+    Colour: amber if > 5, red if > 10
+    Icon: AlertTriangle
+    Label: "Requiring Attention"
+    Click: activates a "Needs Attention" filter (see Section 18)
+
+  Tile 3: No Active Initiative
+    Value: count of cards where status is "No Initiative"
+    Colour: orange if > 0
+    Icon: AlertCircle
+    Label: "No Initiative"
+    Click: activates the "No Initiative" cross-tab filter
+
+  Tile 4: EA Compliance Score
+    Value: average architectureCompliance across all governance health cards
+    Display: as a percentage (e.g. 84%)
+    Icon: Shield
+    Label: "Avg. EA Compliance"
+
+  Tile 5: Rationalisation Opportunity
+    Value: sum of savingPotential across all rationalisation cards
+    Display: formatted as "AED X.XM"
+    Icon: TrendingUp
+    Label: "Rationalisation Savings"
+
+STYLE:
+  Full-width horizontal strip, 5-column grid.
+  bg-white border border-gray-100 rounded-xl shadow-sm px-4 py-3
+  Each tile: flex-col, icon + large number + small label
+  Responsive: 3+2 on tablet, 1-column on mobile (scrollable)
+  Gap: gap-4
+
+COMPUTED FROM:
+  All card arrays: allITCards, allOTCards, dataDigitalCards, projectCards,
+  initiativeCards, rationalisationCards, governanceCards.
+  Use useMemo() so computation only runs when card data changes.
+
+
+================================================================================
+18. "NO INITIATIVE" — VISUAL WEIGHT AND DEDICATED FILTER
+================================================================================
+
+CURRENT PROBLEM:
+  "No Initiative" is the most important signal in the portfolio — it means
+  DEWA has an asset that needs governance attention but nobody owns a response.
+  Currently it is just another status badge, visually identical to "On Track"
+  except for the colour.
+
+VISUAL TREATMENT UPGRADES:
+
+  On the card in the grid:
+    - Orange-left border: add border-l-4 border-orange-500 to the card wrapper
+    - Alert icon in gradient header bottom-left:
+      AlertCircle w-5 h-5 text-white/70 absolute bottom-2 left-3
+    - Risk flag banner always shown (even if riskFlag field is null):
+      "No active initiative. EA Office action required."
+      Style: bg-orange-50 border border-orange-200 text-orange-800 rounded px-3 py-2
+
+  On the detail page:
+    The "Initiate in Lifecycle" CTA should be shown prominently with
+    additional urgency copy:
+    "This asset has no active initiative. The EA Office has flagged it as
+    requiring governed intervention."
+
+DEDICATED "NEEDS ATTENTION" FILTER / VIEW:
+
+  Add a filter shortcut above the tab bar (or in the health bar — see Section 17):
+    [⚠ Show All Needing Attention]  button / toggle
+
+  When active: overrides the current tab and shows a CROSS-TAB results view
+  displaying ALL cards across all tabs where:
+    status === "No Initiative" OR status === "Critical" OR cardState === "Gap"
+  Grouped by tab label (IT Assets, OT Assets, Data & Digital, etc.)
+  Each group is collapsible. Cards render in the standard skeleton.
+
+  This view has no filters sidebar — it is a single-purpose alert view.
+  An "Exit attention view" button returns to normal tab browsing.
+  This feature makes "No Initiative" a first-class governance workflow, not
+  just a status flag.
+
+
+================================================================================
+19. GLOBAL SEARCH ACROSS ALL TABS
+================================================================================
+
+CURRENT STATE:
+  Search is scoped per tab. A search on "Smart Grid" only searches the
+  currently active tab's cards.
+
+SOLUTION:
+  When a search term is active (> 2 characters), replace the tab content
+  with a unified cross-tab results view.
+
+SEARCH SCOPE — match against:
+  - Card name / title / assetClassName / overlapTitle / division
+  - description fields (if present)
+  - projectTag / initiativeTag / parentInitiative
+  - riskFlag text
+  - assetType
+
+RESULTS VIEW:
+  Grouped by tab label. Each group shows matching cards in the standard
+  card skeleton. Groups with 0 results are hidden.
+  Group header: "IT Assets (3)" / "OT Assets (1)" / etc.
+  Clicking a card → navigates to its detail page (same as tab browse).
+
+CLEARING SEARCH:
+  X button in search input. Restores the active tab view.
+  Active tab selection persists while searching.
+
+SEARCH INPUT PLACEMENT:
+  Full-width search bar between the Portfolio Health Bar and the two-tier
+  tab bar.
+  placeholder="Search across all 8 portfolio views..."
+  Icon: Search (lucide-react), left-aligned inside input
+  Width: full-width of the content area (max-w-none)
+
+STATE: add searchQuery: string to PortfolioManagementPage component state.
+
+
+================================================================================
+20. ROLE SELECTION — ONCE PER SESSION
+================================================================================
+
+CURRENT PROBLEM:
+  The role selector modal opens every time a card is clicked in Stage 1.
+  If a user opens and closes 5 cards in a session, they select their role 5 times.
+  This is friction that damages the browsing experience.
+
+SOLUTION:
+  Store PMRole in session (localStorage) — same pattern as lifecycle role.
+
+  Create: src/data/shared/portfolioRole.ts
+    const PM_ROLE_KEY = "dtmp.portfolio.role"
+    export function getSessionPMRole(): PMRole | null
+    export function setSessionPMRole(role: PMRole): void
+    export function clearSessionPMRole(): void
+
+  On the detail page (PortfolioDetailPage.tsx):
+    const role = getSessionPMRole()
+    If role is null → show the inline role selection banner (see Section 14d)
+    If role is set → render role-appropriate content immediately, no prompt.
+
+  In PortfolioManagementPage.tsx:
+    Add a small "Viewing as: [Role] · Change" indicator in the page header,
+    top-right, next to any other header controls.
+    "Change" clears the role via clearSessionPMRole() and the next card detail
+    view will prompt for re-selection.
+
+  ROLE ALIGNMENT WITH SESSION ROLE:
+    The portfolio PMRole should attempt to auto-map from the global session role:
+      "to-ops" / "to-admin" → "EA Office / Portfolio Manager"
+      "business-user"       → prompt for PMRole (could be Division Head or Staff)
+    This reduces double-selection for TO office users.
+
+
+================================================================================
+21. SAVED VIEWS — ADD CREATION PATH OR REMOVE
+================================================================================
+
+CURRENT PROBLEM:
+  PMSavedViewsPage shows a "Saved Views" concept in Stage 2 but there is
+  no mechanism to create a saved view from Stage 1. The feature is described
+  but not achievable. This is a credibility gap.
+
+DECISION: Add the creation path.
+
+IMPLEMENTATION:
+
+  In PortfolioManagementPage.tsx, add a "Save this view" button in the
+  filter sidebar — visible only when at least one filter is active:
+    [🔖 Save this view]
+    Position: at the bottom of the sidebar, below the filter options.
+    Style: ghost button, small, full-width within sidebar.
+
+  On click: show a small popover/inline form:
+    View name: [text input]   e.g. "At Risk — Generation Division"
+    [Save] [Cancel]
+
+  On save: store in localStorage under key "dtmp.portfolio.savedViews":
+    Array of { id, name, tab, filters: { status, division, assetType, ... },
+               createdAt, lastVisited }
+
+  PMSavedViewsPage reads from this localStorage key.
+  Each saved view shows: Name, tab label, filter summary, last visited date.
+  "Open" button → navigates to /marketplaces/portfolio-management with
+    router state: { tab, restoreFilters: filters }
+  PortfolioManagementPage reads router state on mount and restores the
+  filter panel state.
+  "Delete" button → removes from localStorage array.
+
+  This is a lightweight but complete saved views workflow.
+  Update PMSavedViewsPage to read from localStorage instead of hardcoded demo data.
+
+
+================================================================================
+22. STAGE 3 CONTENT MANAGEMENT → STAGE 1 CONNECTION
+================================================================================
+
+CURRENT PROBLEM:
+  The TO office can publish new Technology Rationalisation or OAD (now OT Asset)
+  cards via Content Management in PMStage3Page.tsx. But these published cards
+  are stored in component state (useState) — they disappear on page reload and
+  they never appear in Stage 1 for portfolio users.
+
+SOLUTION:
+
+  Step 1: Move Content Management card storage from component state to localStorage.
+    Key: "dtmp.portfolio.contentCards"
+    On mount: read from localStorage.
+    On publish/edit/archive: write to localStorage.
+    This persists cards across page reloads in the same session.
+
+  Step 2: In portfolioManagement.ts, add a function:
+    getPublishedContentCards(): ContentCard[]
+    Reads from localStorage key "dtmp.portfolio.contentCards".
+    Returns only cards with status === "Published".
+
+  Step 3: In PortfolioManagementPage.tsx, when building the card arrays for
+    technology-rationalisation and ot-asset-portfolio tabs, merge in the
+    published content cards from getPublishedContentCards():
+      const allRationalisationCards = [
+        ...rationalisationCards,           // seeded data
+        ...getPublishedContentCards()      // TO-published cards
+          .filter(c => c.type === "rationalisation")
+          .map(c => mapContentCardToRationalisationCard(c))
+      ]
+
+    Write a mapper function mapContentCardToRationalisationCard(c: ContentCard):
+    RationalisationCard that sets default values for fields not captured
+    in the publish form (e.g., complexity: "Medium", status: "Identified",
+    annualOverlapCost: "TBD", savingPotential: "TBD").
+
+  Step 4: TO office sees a "Card is live in Stage 1" indicator on published
+    content cards in Stage 3 — a small green "Live" badge next to the title.
+    This closes the feedback loop for the TO officer.
+
+  EXTEND THE CONTENT MANAGEMENT PUBLISH FORM:
+    Currently the form captures: Type, Title, Division.
+    Extend to also capture:
+    For Rationalisation cards: Systems in Overlap (text) | Recommendation | Complexity
+    For OT Asset cards: Asset Type | Total Assets | Digitised Count | Division
+    This gives the published card enough data to render properly in Stage 1.
+
+
+================================================================================
+23. STAGE 2 WORKSPACE PANELS — FIX OR REMOVE STUBS
+================================================================================
+
+CURRENT PROBLEM:
+  PortfolioWorkspacePanels.tsx in Stage 2 shows two stub panels:
+  1. "Application Rationalization": 23 redundant apps, $1.2M savings, 78% score
+  2. "TCO Optimization": $2.4M total TCO, $1,200 per user, $480K savings
+
+  These are hardcoded, fake numbers that do not connect to the real card data.
+  For a platform claiming to be a "real-time analytics" control tower, static
+  stub metrics are a credibility problem if a client clicks through.
+
+SOLUTION OPTIONS:
+
+  Option A (Compute from real data — recommended):
+    "Technology Rationalisation Summary" panel:
+      Total rationalisation cards: count of rationalisationCards
+      Total overlap cost: sum of annualOverlapCost across all ratCards
+        (requires parsing "AED X.XM" strings to numbers — add numeric fields
+        annualOverlapCostNum and savingPotentialNum to RationalisationCard)
+      Total saving potential: sum of savingPotential
+      Render: "AED [X.XM] total rationalisation opportunity across
+               [N] identified overlaps"
+      Link: → navigate to portfolio marketplace, technology-rationalisation tab
+
+    "IT Asset Health Summary" panel:
+      Average health score: mean of healthScore across all IT asset cards
+      At risk count: cards with status At Risk or Critical
+      No initiative count: cards with status No Initiative
+      Render: "Average health: [X]%  ·  [N] assets at risk  ·  [N] need initiative"
+      Link: → navigate to portfolio marketplace, it-asset-portfolio tab
+
+  Option B (Remove the stubs entirely):
+    Remove PortfolioWorkspacePanels.tsx sub-panels for Application Rationalization
+    and TCO Optimization. Keep only the PortfolioHealthDashboard panel.
+    Simpler, cleaner, no credibility risk.
+
+  RECOMMENDATION: Option A if the numeric field additions are feasible in the
+  same implementation sprint. Option B if not — better to remove stubs than
+  show fake numbers.
+
+
+================================================================================
+24. DATA MODEL ADDITIONS REQUIRED
+================================================================================
+
+FILE: src/data/portfolioManagement.ts
+
+  EXTEND PMTab type:
+    Remove: "application-portfolio" | "operational-asset-digitisation"
+    Add:    "it-asset-portfolio" | "ot-asset-portfolio" | "data-digital-portfolio"
+
+  EXTEND AppCard interface:
+    Add: assetType: "Application" | "Infrastructure & Cloud" |
+                    "Integration Platform" | "Security & Identity"
+
+  ADD new card interfaces:
+    InfrastructureCard (fields from Section 8 — Infrastructure cards)
+    IntegrationCard (fields from Section 8 — Integration cards)
+    SecurityCard (fields from Section 8 — Security cards)
+    OTControlCard, OTMeteringCard, OTIndustrialCard (fields from Section 9)
+      OR: unify all OT cards into OTAssetCard with assetType discriminator
+    DataPlatformCard, AIModelCard, DigitalProductCard, ExternalAPICard
+      (fields from Section 10)
+      OR: unify into DataDigitalCard with assetType discriminator
+
+  RECOMMENDATION: Use a discriminated union per tab rather than per sub-type.
+    type ITCard = AppCard & { assetType: ITAssetType }
+    type OTCard = OADCard & { assetType: OTAssetType; assetCondition: AssetCondition;
+                              connectivityStatus: ConnectivityStatus; ... }
+    type DataDigitalCard = { ... all data/digital fields ... }
+
+  ADD: DIVISION_GRADIENT record (see Section 11)
+  ADD: IT_ASSET_ICON_MAP, OT_ASSET_ICON_MAP, DATA_ASSET_ICON_MAP records
+       (maps assetType to lucide-react icon component — Section 11)
+
+  ADD numeric fields to RationalisationCard:
+    annualOverlapCostNum: number   (AED value as number, e.g. 1200000)
+    savingPotentialNum: number     (AED value as number)
+
+  ADD to PM_TAB_CONFIG: entries for new tabs
+    "it-asset-portfolio": { label: "IT Assets", icon: Monitor, colour: "blue" }
+    "ot-asset-portfolio": { label: "OT Assets", icon: Cpu, colour: "emerald" }
+    "data-digital-portfolio": { label: "Data & Digital", icon: Database, colour: "violet" }
+
+FILE: src/data/shared/portfolioRole.ts  (NEW FILE — create)
+  export type PMRole = "EA Office / Portfolio Manager"
+                     | "Division Head / Senior Stakeholder"
+                     | "General DEWA Staff"
+  const PM_ROLE_KEY = "dtmp.portfolio.role"
+  export function getSessionPMRole(): PMRole | null
+  export function setSessionPMRole(role: PMRole): void
+  export function clearSessionPMRole(): void
+
+FILE: src/data/portfolioManagement/serviceRequests.ts
+  ADD: PM_REPORT_TYPES entries for new tabs:
+    "it-asset-portfolio": expand from application-portfolio types, add:
+      - "Infrastructure Capacity Review"
+      - "Cloud Cost Optimisation Report"
+      - "Integration Health Assessment"
+      - "Security Compliance Audit"
+    "ot-asset-portfolio": new:
+      - "OT Asset Digitisation Progress Report"
+      - "Operational Asset Health Assessment"
+      - "OT Security & Connectivity Review"
+      - "Asset Condition Report"
+    "data-digital-portfolio": new:
+      - "AI Model Performance Report"
+      - "Data Quality Assessment"
+      - "Digital Product Health Review"
+      - "API Deprecation Impact Assessment"
+      - "Data Governance Compliance Report"
+
+FILE: src/pages/PortfolioDetailPage.tsx
+  Complete rebuild per Section 14.
+
+FILE: src/data/portfolioManagement.ts (content management)
+  ADD: getPublishedContentCards() function (Section 22)
+  ADD: mapContentCardToRationalisationCard() function (Section 22)
+  ADD: mapContentCardToOTCard() function (Section 22)
+
+FILE: src/data/portfolio.ts
+  This is the old data file imported by the orphaned PortfolioDetailPage.
+  Once PortfolioDetailPage is rebuilt, this import should be removed.
+  Check if any other files import from "@/data/portfolio" — if none, the
+  file can be deprecated/archived.
+
+
+================================================================================
+25. FILE-LEVEL CHANGE MAP
+================================================================================
+
+MODIFY (existing files):
+  src/data/portfolioManagement.ts
+    — Expand PMTab type (remove 2 old values, add 3 new)
+    — Add DIVISION_GRADIENT, icon map records
+    — Add assetType field to AppCard and OADCard
+    — Add new card interfaces and seed data (Sections 8, 9, 10)
+    — Add numeric cost fields to RationalisationCard
+    — Add PM_TAB_CONFIG entries for 3 new tabs
+    — Add getPublishedContentCards(), mapper functions
+
+  src/pages/PortfolioManagementPage.tsx
+    — Remove InsightsDrawer, role modal, "View Insights"/"Initiate" buttons
+    — Add two-tier tab header grouping (Section 4)
+    — Add 3 new tabs (IT Assets, OT Assets, Data & Digital)
+    — Add Portfolio Health Bar (Section 17)
+    — Add global search (Section 19)
+    — Add "Save this view" button in sidebar (Section 21)
+    — Add "No Initiative" cross-tab filter shortcut (Section 18)
+    — Update all card renders to unified skeleton (Section 11)
+    — Update card onClick to navigate to detail page
+    — Add "Viewing as: [Role]" indicator in header (Section 20)
+    — Read restored filters from router state (Section 21)
+
+  src/pages/PortfolioDetailPage.tsx
+    — Complete rebuild per Section 14
+    — Remove old data/portfolio.ts import
+    — Add role-gated content with getSessionPMRole()
+    — Add all tab sections: Overview, Technical Detail, Linked Assets, Governance, History
+    — Add "Initiate in Lifecycle" CTA (Section 15)
+    — Add cross-tab relationship resolution (Section 16)
+
+  src/pages/portfolio/PMStage3Page.tsx
+    — Move content cards from useState to localStorage (Section 22)
+    — Extend publish form with additional fields (Section 22)
+    — Add "Live in Stage 1" indicator on published cards
+
+  src/pages/portfolio/PMSavedViewsPage.tsx
+    — Replace hardcoded demo data with localStorage read (Section 21)
+    — Add restore-filters navigation on "Open"
+
+  src/components/stage2/portfolio/PortfolioWorkspacePanels.tsx
+    — Replace stub metric panels with computed values or remove (Section 23)
+
+  src/App.tsx
+    — Verify /marketplaces/portfolio-management/:tab/:cardId route is wired
+    — Update any routes referencing old tab names
+
+CREATE (new files):
+  src/data/shared/portfolioRole.ts
+    — PMRole type, getSessionPMRole, setSessionPMRole, clearSessionPMRole
+
+DEPRECATE (do not delete yet, but stop importing):
+  src/data/portfolio.ts
+    — Old portfolio service data. Remove import from PortfolioDetailPage once
+      it is rebuilt. Archive after confirming no other imports.
+
+
+================================================================================
+26. PRIORITY & SEQUENCING RECOMMENDATION
+================================================================================
+
+PHASE 1 — STRUCTURAL FOUNDATION (do first, highest impact on client perception)
+  [ ] Expand PMTab type with 3 new tabs
+  [ ] Add DIVISION_GRADIENT and icon maps to portfolioManagement.ts
+  [ ] Add seed data for new IT Asset cards (Section 8)
+  [ ] Add seed data for new OT Asset cards (Section 9)
+  [ ] Add seed data for Data & Digital cards (Section 10)
+  [ ] Implement two-tier tab grouping in PortfolioManagementPage (Section 4)
+  [ ] Implement unified card skeleton across all tabs (Section 11)
+  [ ] Remove InsightsDrawer, update all card onClicks to navigate (Section 13)
+
+PHASE 2 — DETAIL PAGE (enables all downstream features)
+  [ ] Rebuild PortfolioDetailPage.tsx per Section 14 specification
+  [ ] Wire route in App.tsx
+  [ ] Role session management: portfolioRole.ts + detail page inline banner (Section 20)
+  [ ] "Initiate in Lifecycle" CTA on detail page (Section 15)
+  [ ] Cross-tab relationship resolution in Linked Assets tab (Section 16)
+
+PHASE 3 — INTELLIGENCE LAYER
+  [ ] Portfolio Health Bar (Section 17)
+  [ ] "No Initiative" visual treatment on cards (Section 18)
+  [ ] "No Initiative" cross-tab filter / attention view (Section 18)
+  [ ] Global search across all tabs (Section 19)
+
+PHASE 4 — STAGE 2 & 3 CONNECTIONS
+  [ ] Content Management localStorage persistence (Section 22)
+  [ ] Content Management → Stage 1 card sync (Section 22)
+  [ ] Extend publish form fields (Section 22)
+  [ ] Saved Views creation path (Section 21)
+  [ ] Stage 2 workspace panels — compute from real data or remove (Section 23)
+
+PHASE 5 — REPORTING & DATA MODEL CLEANUP
+  [ ] Add new PM_REPORT_TYPES for new tabs
+  [ ] Add numeric cost fields to RationalisationCard
+  [ ] Deprecate src/data/portfolio.ts
+  [ ] portfolioRole.ts role-to-session-role auto-mapping
+
+================================================================================
+END OF DOCUMENT
+Portfolio Management Marketplace Elevation Guide — DEWA DTMP v3
+================================================================================

@@ -464,7 +464,7 @@ export default function LCInitiativeDetailPanel({ initiative, onClose, onSeeInsi
                 onClick={() => {
                   onClose();
                   navigate("/marketplaces/portfolio-management", {
-                    state: { tab: "operational-asset-digitisation", highlightCardId: initiative.portfolioCardId },
+                    state: { tab: "ot-asset-portfolio", highlightCardId: initiative.portfolioCardId },
                   });
                 }}
               >

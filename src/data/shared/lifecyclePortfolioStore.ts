@@ -71,7 +71,9 @@ export interface Blocker {
   whatIsNeeded: string;
   escalationStatus: "Not Escalated" | "Escalated to TO" | "Escalated to Division Head";
   resolved: boolean;
+  acknowledgedByTO?: boolean;
   resolvedNote?: string;
+  resolutionNote?: string;
 }
 
 export interface Project {
@@ -262,7 +264,7 @@ const SEED_INITIATIVES: Initiative[] = [
     type: "Architecture Remediation",
     status: "Scoping",
     progress: 5,
-    eaAlignmentScore: null,
+    eaAlignmentScore: 82,
     budget: null,
     budgetSpent: 0,
     targetDate: "2026-06-30",
@@ -981,6 +983,45 @@ export const getProjectById = (id: string): Project | undefined =>
 export const getProjectsByDivision = (division: Division): Project[] =>
   readStore().projects.filter((p) => p.division === division || p.division === "All Divisions");
 
+export const getProjectsByInitiativeId = (initiativeId: string): Project[] =>
+  readStore().projects.filter((project) => project.parentInitiativeId === initiativeId);
+
+export const getRisksByInitiativeId = (initiativeId: string): Risk[] =>
+  getProjectsByInitiativeId(initiativeId).flatMap((project) => project.risks);
+
+export const getBlockersByInitiativeId = (initiativeId: string): Blocker[] =>
+  getProjectsByInitiativeId(initiativeId).flatMap((project) => project.blockers);
+
+export const getAllBlockers = (): Blocker[] =>
+  readStore().projects.flatMap((project) => project.blockers);
+
+export const computeInitiativeRAG = (initiative: Initiative): RAGStatus => {
+  const projects = getProjectsByInitiativeId(initiative.id);
+  const risks = projects.flatMap((project) => project.risks);
+  const blockers = projects.flatMap((project) => project.blockers);
+  const delayedMilestones = projects.flatMap((project) => project.milestones).filter((milestone) => milestone.status === "Delayed");
+
+  if (
+    initiative.status === "At Risk" ||
+    projects.some((project) => project.rag === "Red") ||
+    risks.some((risk) => risk.status === "Open" && risk.severity === "Critical") ||
+    blockers.some((blocker) => !blocker.resolved && blocker.escalationStatus === "Escalated to Division Head")
+  ) {
+    return "Red";
+  }
+
+  if (
+    projects.some((project) => project.rag === "Amber") ||
+    delayedMilestones.length > 0 ||
+    blockers.some((blocker) => !blocker.resolved) ||
+    risks.some((risk) => risk.status === "Open" && (risk.severity === "High" || risk.severity === "Medium"))
+  ) {
+    return "Amber";
+  }
+
+  return "Green";
+};
+
 // ── Update — Project RAG ──────────────────────────────────────────────────────
 
 export const updateProjectRAG = (projectId: string, rag: RAGStatus): Project | null => {
@@ -1092,7 +1133,7 @@ export const resolveBlocker = (
   const nextProjects = store.projects.map((p) => {
     if (p.id !== projectId) return p;
     const nextBlockers = p.blockers.map((b) =>
-      b.id === blockerId ? { ...b, resolved: true, resolvedNote } : b
+      b.id === blockerId ? { ...b, resolved: true, resolvedNote, resolutionNote: resolvedNote } : b
     );
     updated = { ...p, blockers: nextBlockers, updatedAt: now };
     return updated;

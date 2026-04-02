@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Activity, BookOpen, Brain, ChevronRight, Cpu, Database, Eye, FileText, Globe, Layers, Leaf, Network, RefreshCw, Server, Shield, SlidersHorizontal, TrendingUp, X, Zap } from "lucide-react";
+import { Activity, ArrowRight, Brain, ChevronRight, Cpu, Database, Eye, FileText, Globe, Layers, Leaf, Network, RefreshCw, Search, Server, Shield, SlidersHorizontal, TrendingUp, Users, X, Zap } from "lucide-react";
 import LCInitiativeDetailPanel from "./lifecycle/LCInitiativeDetailPanel";
-import TemplatesLibrary from "./lifecycle/TemplatesLibrary";
 
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { SeeInsightsDrawer } from "@/components/lifecycle/SeeInsightsDrawer";
 import { RoleSelectorModal } from "@/components/lifecycle/RoleSelectorModal";
+import FrameworkSidePanel from "@/components/lifecycle/FrameworkSidePanel";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -37,7 +37,6 @@ import { toast } from "@/hooks/use-toast";
 
 import {
   getInitiatives,
-  getPortfolioSummary,
   type Division,
   type Initiative,
   type InitiativeStatus,
@@ -54,6 +53,7 @@ import {
   initiativeFrameworks,
   type InitiativeFramework,
 } from "@/data/lifecycle/frameworkCards";
+import { lifecycleTemplates } from "@/data/lifecycle/lifecycleData";
 import {
   INITIATIVE_LEVEL_SERVICES,
   LC_SERVICE_SLA,
@@ -61,8 +61,9 @@ import {
   addLCRequest,
   type LCServiceType,
 } from "@/data/lifecycle/serviceRequestState";
+import { DEWA_ROLE_OPTIONS } from "@/data/shared/dewaRoles";
 
-type Stage1Tab = "initiatives" | "templates" | "start-initiative";
+type Stage1Tab = "initiatives" | "explore-start";
 
 const STATUS_BADGE_CLASSES: Record<InitiativeStatus, string> = {
   Active: "bg-teal-100 text-teal-700 border-teal-200",
@@ -147,6 +148,44 @@ function getInitiativeIcon(type: InitiativeType) {
   return map[type] ?? Activity;
 }
 
+const FRAMEWORK_ICON_MAP: Record<string, typeof Activity> = {
+  Brain,
+  Cpu,
+  Database,
+  Globe,
+  Layers,
+  Leaf,
+  Network,
+  RefreshCw,
+  Server,
+  Shield,
+  TrendingUp,
+  Users: Activity,
+};
+
+function normalizeFrameworkLabel(label: string): string {
+  return label
+    .replace(" Initiative", "")
+    .replace(" Programme", "")
+    .replace(" Program", "")
+    .trim()
+    .toLowerCase();
+}
+
+function templateComplexity(templateId?: string): "simple" | "moderate" | "complex" {
+  const template = lifecycleTemplates.find((item) => item.id === templateId);
+  return template?.complexity ?? "moderate";
+}
+
+function matchesDuration(duration: string, filter: string): boolean {
+  const lower = duration.toLowerCase();
+  if (filter === "under-3") return lower.includes("2") || lower.includes("3 months");
+  if (filter === "3-6") return lower.includes("3") || lower.includes("4") || lower.includes("5") || lower.includes("6");
+  if (filter === "6-12") return lower.includes("6") || lower.includes("7") || lower.includes("8") || lower.includes("9") || lower.includes("12");
+  if (filter === "12-plus") return lower.includes("12") || lower.includes("18") || lower.includes("24") || lower.includes("36");
+  return true;
+}
+
 export default function LifecycleManagementPage() {
   const [activeTab, setActiveTab] = useState<Stage1Tab>("initiatives");
 
@@ -155,8 +194,7 @@ export default function LifecycleManagementPage() {
 
   const [initiatives, setInitiatives] = useState<Initiative[]>(() => getInitiatives());
   const refreshInitiatives = () => setInitiatives(getInitiatives());
-
-  const portfolioSummary = useMemo(() => getPortfolioSummary(), [initiatives.length]);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // ── Sidebar filters ─────────────────────────────────────────────────────────
   const [filterStatuses, setFilterStatuses] = useState<Set<InitiativeStatus>>(new Set());
@@ -183,14 +221,19 @@ export default function LifecycleManagementPage() {
 
   const filteredInitiatives = useMemo(() => {
     const ownerQ = filterOwner.trim().toLowerCase();
+    const query = searchQuery.trim().toLowerCase();
     return initiatives.filter((ini) => {
       if (filterStatuses.size > 0 && !filterStatuses.has(ini.status)) return false;
       if (filterDivision !== "all" && ini.division !== filterDivision) return false;
       if (filterTypes.size > 0 && !filterTypes.has(ini.type as InitiativeType)) return false;
       if (ownerQ && !ini.owner?.toLowerCase().includes(ownerQ)) return false;
+      if (query) {
+        const haystack = [ini.name, ini.description, ini.type, ini.division, ini.owner].join(" ").toLowerCase();
+        if (!haystack.includes(query)) return false;
+      }
       return true;
     });
-  }, [initiatives, filterStatuses, filterDivision, filterTypes, filterOwner]);
+  }, [initiatives, filterStatuses, filterDivision, filterTypes, filterOwner, searchQuery]);
 
   // ── See Insights (role-gated) ───────────────────────────────────────────────
   const [drawerInitiative, setDrawerInitiative] = useState<Initiative | null>(null);
@@ -243,22 +286,43 @@ export default function LifecycleManagementPage() {
     if (drawerInitiative) setDrawerOpen(true);
   };
 
-  // ── Start an Initiative (framework → request form) ─────────────────────────
-  const [frameworkFilter, setFrameworkFilter] = useState<"all" | "internal" | "external">("all");
+  // ── Explore & Start ────────────────────────────────────────────────────────
+  const [frameworkCategories, setFrameworkCategories] = useState<Set<"Internal" | "External">>(new Set());
+  const [frameworkComplexities, setFrameworkComplexities] = useState<Set<"simple" | "moderate" | "complex">>(new Set());
+  const [frameworkDuration, setFrameworkDuration] = useState("all");
+  const [frameworkDivision, setFrameworkDivision] = useState("all");
+  const [frameworkFiltersOpen, setFrameworkFiltersOpen] = useState(true);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [stakeholderRoles, setStakeholderRoles] = useState<string[]>([]);
+
   const visibleFrameworks = useMemo(() => {
-    return initiativeFrameworks.filter((f) => {
-      if (frameworkFilter === "all") return true;
-      const wantsExternal = frameworkFilter === "external";
-      return wantsExternal ? f.category === "External" : f.category === "Internal";
+    const query = searchQuery.trim().toLowerCase();
+    return initiativeFrameworks.filter((framework) => {
+      if (frameworkCategories.size > 0 && !frameworkCategories.has(framework.category)) return false;
+      if (frameworkComplexities.size > 0 && !frameworkComplexities.has(templateComplexity(framework.compatibleTemplates[0]))) return false;
+      if (
+        frameworkDivision !== "all" &&
+        !framework.divisionRelevance.includes(frameworkDivision) &&
+        !framework.divisionRelevance.includes("All Divisions")
+      ) {
+        return false;
+      }
+      if (frameworkDuration !== "all" && !matchesDuration(framework.typicalDuration, frameworkDuration)) return false;
+      if (query) {
+        const haystack = [
+          framework.type,
+          framework.description,
+          framework.keyPhases.join(" "),
+          framework.expectedOutcomes.join(" "),
+        ].join(" ").toLowerCase();
+        if (!haystack.includes(query)) return false;
+      }
+      return true;
     });
-  }, [frameworkFilter]);
+  }, [frameworkCategories, frameworkComplexities, frameworkDivision, frameworkDuration, searchQuery]);
 
   const [requestModalOpen, setRequestModalOpen] = useState(false);
   const [selectedFramework, setSelectedFramework] = useState<InitiativeFramework | null>(null);
-
-  // ── Framework Detail (view details modal) ───────────────────────────────────
-  const [detailFramework, setDetailFramework] = useState<InitiativeFramework | null>(null);
-  const [detailModalOpen, setDetailModalOpen] = useState(false);
 
   const [initiativeName, setInitiativeName] = useState("");
   const [initiativeDivision, setInitiativeDivision] = useState<Division>("Transmission");
@@ -284,7 +348,7 @@ export default function LifecycleManagementPage() {
     } | null;
     if (!state?.openStartInitiative) return;
 
-    setActiveTab("start-initiative");
+    setActiveTab("explore-start");
 
     if (state.prefill) {
       const { name, division, objective: obj, scope: sc } = state.prefill;
@@ -301,6 +365,7 @@ export default function LifecycleManagementPage() {
 
   const openInitiativeRequest = (framework: InitiativeFramework) => {
     setSelectedFramework(framework);
+    setStakeholderRoles([]);
     setRequestModalOpen(true);
 
     // Reset form fields
@@ -337,12 +402,17 @@ export default function LifecycleManagementPage() {
       isExternal: selectedFramework.category === "External",
       objective: trimmed(objective),
       scope: trimmed(scope),
-      keyStakeholders: trimmed(keyStakeholders),
+      keyStakeholders: trimmed([keyStakeholders, stakeholderRoles.join(", ")].filter(Boolean).join(" | ")),
       proposedOwner: trimmed(proposedOwner),
       targetStartDate,
       estimatedBudget: trimmed(estimatedBudget) || undefined,
       priority,
-      additionalContext: trimmed(additionalContext) || undefined,
+      additionalContext: trimmed(
+        [
+          selectedTemplateId ? `Selected template: ${selectedTemplateId}` : "",
+          additionalContext,
+        ].filter(Boolean).join("\n")
+      ) || undefined,
       submittedBy: account.name,
     });
 
@@ -405,6 +475,20 @@ export default function LifecycleManagementPage() {
   const [detailInitiative, setDetailInitiative] = useState<Initiative | null>(null);
 
   const getInitiativeProjectCount = (i: Initiative) => i.projects.length;
+  const frameworkStats = useMemo(() => {
+    return initiativeFrameworks.reduce<Record<string, { active: number; completed: number }>>((acc, framework) => {
+      const normalized = normalizeFrameworkLabel(framework.type);
+      acc[framework.id] = {
+        active: initiatives.filter((initiative) => normalizeFrameworkLabel(initiative.type) === normalized && initiative.status !== "Completed").length,
+        completed: initiatives.filter((initiative) => normalizeFrameworkLabel(initiative.type) === normalized && initiative.status === "Completed").length,
+      };
+      return acc;
+    }, {});
+  }, [initiatives]);
+  const compatibleTemplates = useMemo(
+    () => (selectedFramework ? lifecycleTemplates.filter((template) => selectedFramework.compatibleTemplates.includes(template.id)) : []),
+    [selectedFramework]
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -433,18 +517,6 @@ export default function LifecycleManagementPage() {
             The operational execution layer for DEWA transformation initiatives — from conception through delivery and verified outcome.
           </p>
 
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex flex-wrap gap-6 text-sm text-muted-foreground" role="list" aria-label="Lifecycle summary stats">
-              <span className="flex items-center gap-2" role="listitem">
-                <RefreshCw className="w-4 h-4" />
-                {portfolioSummary.activeInitiatives} Governed Initiatives
-              </span>
-              <span className="flex items-center gap-2" role="listitem">
-                <TrendingUp className="w-4 h-4" />
-                {portfolioSummary.totalProjects} Delivery Workstreams
-              </span>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -456,20 +528,14 @@ export default function LifecycleManagementPage() {
                 value="initiatives"
                 className="flex items-center gap-2 px-6 py-4 text-muted-foreground hover:text-foreground font-medium transition-colors relative rounded-none border-b-2 border-transparent data-[state=active]:border-orange-600 data-[state=active]:text-primary-navy bg-transparent"
               >
-                Initiatives
+                Active Initiatives
               </TabsTrigger>
               <TabsTrigger
-                value="templates"
+                value="explore-start"
                 className="flex items-center gap-2 px-6 py-4 text-muted-foreground hover:text-foreground font-medium transition-colors relative rounded-none border-b-2 border-transparent data-[state=active]:border-orange-600 data-[state=active]:text-primary-navy bg-transparent"
               >
-                <BookOpen className="w-4 h-4" />
-                Templates Library
-              </TabsTrigger>
-              <TabsTrigger
-                value="start-initiative"
-                className="flex items-center gap-2 px-6 py-4 text-muted-foreground hover:text-foreground font-medium transition-colors relative rounded-none border-b-2 border-transparent data-[state=active]:border-orange-600 data-[state=active]:text-primary-navy bg-transparent"
-              >
-                Start an Initiative
+                <Search className="w-4 h-4" />
+                Explore & Start
               </TabsTrigger>
             </TabsList>
           </div>
@@ -579,7 +645,7 @@ export default function LifecycleManagementPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-4">
                   <p className="text-sm text-gray-500">
-                    {filteredInitiatives.length} of {initiatives.length} initiatives
+                    {filteredInitiatives.length} of {initiatives.length} active initiatives
                     {activeFilterCount > 0 && <span className="ml-1 text-orange-600 font-medium">(filtered)</span>}
                   </p>
                 </div>
@@ -641,6 +707,22 @@ export default function LifecycleManagementPage() {
                                 <p className="text-xs text-blue-700 mt-1">
                                   Initiated as the governed execution response to a portfolio-level signal or finding.
                                 </p>
+                                {initiative.portfolioCardId && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      navigate("/marketplaces/portfolio-management", {
+                                        state: {
+                                          tab: "ot-asset-portfolio",
+                                          highlightCardId: initiative.portfolioCardId,
+                                        },
+                                      });
+                                    }}
+                                    className="mt-2 text-xs font-medium text-blue-800 hover:text-blue-900 underline underline-offset-2"
+                                  >
+                                    View portfolio source
+                                  </button>
+                                )}
                               </div>
                             )}
 
@@ -649,9 +731,11 @@ export default function LifecycleManagementPage() {
                               <Badge variant="outline" className={`text-xs ${pickTypeBadgeClasses(initiative.type)} border`}>
                                 {initiative.type}
                               </Badge>
-                              <Badge className="text-xs bg-slate-50 text-slate-700 border border-slate-200">
-                                EA: {initiative.eaAlignmentScore === null ? "TBD" : `${initiative.eaAlignmentScore}%`}
-                              </Badge>
+                              {initiative.eaAlignmentScore !== null && (
+                                <Badge className="text-xs bg-slate-50 text-slate-700 border border-slate-200">
+                                  EA: {initiative.eaAlignmentScore}%
+                                </Badge>
+                              )}
                               {initiative.status === "Completed" && (
                                 <Badge className="text-xs bg-green-50 text-green-700 border border-green-200">
                                   Closure Recorded
@@ -687,78 +771,176 @@ export default function LifecycleManagementPage() {
             </div>
           </TabsContent>
 
-          <TabsContent value="templates" className="mt-0">
-            <TemplatesLibrary />
-          </TabsContent>
-
-          <TabsContent value="start-initiative" className="mt-0">
-            <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-              <div>
-                <h2 className="text-lg font-semibold text-foreground">Initiative Type Frameworks</h2>
-                <p className="text-sm text-muted-foreground">Browse what DEWA needs next and submit a request to start.</p>
+          <TabsContent value="explore-start" className="mt-0">
+            <div className="space-y-6">
+              <div className="flex items-end justify-between gap-4 flex-wrap">
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground">Explore & Start</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Browse lifecycle frameworks, open one for details, then begin a governed initiative request.
+                  </p>
+                </div>
+                <div className="w-full max-w-sm">
+                  <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3">
+                    <Search className="h-4 w-4 text-gray-400" />
+                    <Input
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search frameworks..."
+                      className="border-0 px-0 shadow-none focus-visible:ring-0"
+                    />
+                  </div>
+                  <p className="mt-2 text-xs text-gray-500">
+                    Showing {visibleFrameworks.length} of {initiativeFrameworks.length} frameworks
+                  </p>
+                </div>
               </div>
 
-              <div className="min-w-[220px]">
-                <Select value={frameworkFilter} onValueChange={(v) => setFrameworkFilter(v as any)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Filter by category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="internal">Internal only</SelectItem>
-                    <SelectItem value="external">External only</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {visibleFrameworks.map((framework) => (
-                <Card
-                  key={framework.id}
-                  className="bg-white border border-gray-200 rounded-xl hover:border-orange-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden"
-                >
-                  <CardContent className="p-5 space-y-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-xs text-gray-500 mb-2">Type</p>
-                        <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">{framework.type}</h3>
+              <div className="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
+                <aside className={frameworkFiltersOpen ? "w-full" : "w-auto"}>
+                  <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+                    <button
+                      onClick={() => setFrameworkFiltersOpen((prev) => !prev)}
+                      className="flex w-full items-center justify-between px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                    >
+                      <span className="flex items-center gap-2">
+                        <SlidersHorizontal className="h-4 w-4" />
+                        {frameworkFiltersOpen ? "Framework Filters" : "Filters"}
+                      </span>
+                      <span className="text-xs text-gray-400">{frameworkCategories.size + frameworkComplexities.size + (frameworkDuration !== "all" ? 1 : 0) + (frameworkDivision !== "all" ? 1 : 0)}</span>
+                    </button>
+                    {frameworkFiltersOpen ? (
+                      <div className="space-y-5 border-t border-gray-100 px-4 py-4">
+                        <div className="space-y-2">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Category</p>
+                          {(["Internal", "External"] as const).map((category) => (
+                            <label key={category} className="flex items-center gap-2 text-sm text-gray-700">
+                              <input
+                                type="checkbox"
+                                checked={frameworkCategories.has(category)}
+                                onChange={() =>
+                                  setFrameworkCategories((prev) => {
+                                    const next = new Set(prev);
+                                    next.has(category) ? next.delete(category) : next.add(category);
+                                    return next;
+                                  })
+                                }
+                              />
+                              {category}
+                            </label>
+                          ))}
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Duration</p>
+                          <Select value={frameworkDuration} onValueChange={setFrameworkDuration}>
+                            <SelectTrigger className="h-9 text-sm">
+                              <SelectValue placeholder="All durations" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All</SelectItem>
+                              <SelectItem value="under-3">Under 3 months</SelectItem>
+                              <SelectItem value="3-6">3-6 months</SelectItem>
+                              <SelectItem value="6-12">6-12 months</SelectItem>
+                              <SelectItem value="12-plus">12+ months</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Complexity</p>
+                          {(["simple", "moderate", "complex"] as const).map((complexity) => (
+                            <label key={complexity} className="flex items-center gap-2 text-sm capitalize text-gray-700">
+                              <input
+                                type="checkbox"
+                                checked={frameworkComplexities.has(complexity)}
+                                onChange={() =>
+                                  setFrameworkComplexities((prev) => {
+                                    const next = new Set(prev);
+                                    next.has(complexity) ? next.delete(complexity) : next.add(complexity);
+                                    return next;
+                                  })
+                                }
+                              />
+                              {complexity}
+                            </label>
+                          ))}
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Division Relevance</p>
+                          <Select value={frameworkDivision} onValueChange={setFrameworkDivision}>
+                            <SelectTrigger className="h-9 text-sm">
+                              <SelectValue placeholder="All divisions" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All divisions</SelectItem>
+                              {DIVISION_OPTIONS.map((division) => (
+                                <SelectItem key={division} value={division}>{division}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
-                      <Badge
-                        className={`text-xs border ${framework.category === "Internal" ? "bg-teal-50 text-teal-800 border-teal-200" : "bg-blue-50 text-blue-800 border-blue-200"}`}
-                      >
-                        {framework.category}
-                      </Badge>
-                    </div>
+                    ) : null}
+                  </div>
+                </aside>
 
-                    <p className="text-sm text-gray-600 line-clamp-3">{framework.description}</p>
-
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                      <Badge variant="outline" className="border-slate-200 text-slate-700">
-                        Duration: {framework.typicalDuration}
-                      </Badge>
-                      <Badge variant="outline" className="border-slate-200 text-slate-700">
-                        Scope: {framework.typicalScope}
-                      </Badge>
-                    </div>
-
-                    <Separator />
-
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        className="flex-1 border-gray-200 text-gray-700 hover:bg-gray-50"
-                        onClick={() => { setDetailFramework(framework); setDetailModalOpen(true); }}
-                      >
-                        View Details
-                      </Button>
-                      <Button className="flex-1 bg-orange-600 hover:bg-orange-700 text-white" onClick={() => openInitiativeRequest(framework)}>
-                        Start Initiative
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    {visibleFrameworks.map((framework) => {
+                      const Icon = FRAMEWORK_ICON_MAP[framework.iconName ?? "Activity"] ?? Activity;
+                      const complexity = templateComplexity(framework.compatibleTemplates[0]);
+                      const stats = frameworkStats[framework.id] ?? { active: 0, completed: 0 };
+                      return (
+                        <button
+                          key={framework.id}
+                          type="button"
+                          onClick={() => navigate(`/marketplaces/lifecycle-management/framework/${framework.id}`)}
+                          className="overflow-hidden rounded-2xl border border-gray-200 bg-white text-left transition-all hover:-translate-y-1 hover:border-orange-300 hover:shadow-xl"
+                        >
+                          <div className={`relative flex h-28 items-center justify-center bg-gradient-to-br ${framework.category === "Internal" ? "from-teal-500 to-emerald-600" : "from-blue-500 to-indigo-600"}`}>
+                            <Badge className="absolute right-3 top-3 border border-white/20 bg-white/15 text-white">{framework.category}</Badge>
+                            <Icon className="h-10 w-10 text-white/40" />
+                          </div>
+                          <div className="space-y-4 p-5">
+                            <div>
+                              <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">{framework.type}</h3>
+                              <p className="mt-2 text-sm text-gray-600 line-clamp-3">{framework.description}</p>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between text-xs text-gray-500">
+                                <span>Complexity</span>
+                                <span className="capitalize">{complexity}</span>
+                              </div>
+                              <div className="flex gap-1">
+                                {[1, 2, 3].map((segment) => (
+                                  <span
+                                    key={segment}
+                                    className={`h-2 flex-1 rounded-full ${
+                                      segment <= (complexity === "simple" ? 1 : complexity === "moderate" ? 2 : 3)
+                                        ? "bg-orange-500"
+                                        : "bg-gray-100"
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                            <div className="flex flex-wrap gap-2 text-xs text-gray-500">
+                              <span>{stats.active} active</span>
+                              <span>•</span>
+                              <span>{stats.completed} completed</span>
+                              <span>•</span>
+                              <span>Avg. {framework.typicalDuration}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm font-medium text-orange-700">
+                              <span>Open framework</span>
+                              <ArrowRight className="h-4 w-4" />
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
             </div>
           </TabsContent>
         </div>
@@ -778,8 +960,8 @@ export default function LifecycleManagementPage() {
         <DialogContent className="flex flex-col sm:max-w-2xl max-h-[90vh] p-0 gap-0">
           <div className="px-6 pt-6 pb-4 border-b border-gray-100 flex-shrink-0">
             <DialogHeader>
-              <DialogTitle>Start an Initiative</DialogTitle>
-              <DialogDescription>Complete the form below and submit for TO approval.</DialogDescription>
+              <DialogTitle>Submit Governed Initiative Request</DialogTitle>
+              <DialogDescription>Confirm the framework, template, and operating intent before sending this request to the TO approval queue.</DialogDescription>
             </DialogHeader>
           </div>
 
@@ -797,6 +979,29 @@ export default function LifecycleManagementPage() {
                 </div>
                 <p className="text-sm text-gray-600">{selectedFramework.description}</p>
               </div>
+
+              {selectedTemplateId && (
+                <div className="rounded-lg border border-orange-100 bg-orange-50 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-orange-700">Selected Template</p>
+                  <p className="mt-1 text-sm font-medium text-orange-950">
+                    {lifecycleTemplates.find((template) => template.id === selectedTemplateId)?.title ?? selectedTemplateId}
+                  </p>
+                  <p className="mt-1 text-xs text-orange-800">This template will govern the stage-gate path and evidence requirements for the request.</p>
+                </div>
+              )}
+
+              {selectedTemplateId && (
+                <div className="rounded-lg border border-gray-200 bg-white p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Stage Preview</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {(lifecycleTemplates.find((template) => template.id === selectedTemplateId)?.stages ?? []).slice(0, 4).map((stage) => (
+                      <Badge key={stage.id} variant="outline" className="bg-gray-50">
+                        {stage.name}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-2">
                 <p className="text-xs font-semibold text-slate-600">Key phases</p>
@@ -877,6 +1082,35 @@ export default function LifecycleManagementPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="text-sm font-medium text-foreground">DEWA Stakeholder Roles</label>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {DEWA_ROLE_OPTIONS.map((roleOption) => {
+                      const selected = stakeholderRoles.includes(roleOption);
+                      return (
+                        <button
+                          key={roleOption}
+                          type="button"
+                          onClick={() =>
+                            setStakeholderRoles((prev) =>
+                              prev.includes(roleOption)
+                                ? prev.filter((item) => item !== roleOption)
+                                : [...prev, roleOption]
+                            )
+                          }
+                          className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                            selected
+                              ? "border-orange-200 bg-orange-50 text-orange-700"
+                              : "border-gray-200 bg-white text-gray-600 hover:border-orange-200 hover:text-gray-900"
+                          }`}
+                        >
+                          {roleOption}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 <div className="sm:col-span-2">
@@ -973,103 +1207,20 @@ export default function LifecycleManagementPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Framework detail modal */}
-      <Dialog open={detailModalOpen} onOpenChange={setDetailModalOpen}>
-        <DialogContent className="flex flex-col sm:max-w-2xl max-h-[90vh] p-0 gap-0">
-          <div className="px-6 pt-6 pb-4 border-b border-gray-100 flex-shrink-0">
-            <div className="flex items-start justify-between gap-3 flex-wrap">
-              <div>
-                <DialogTitle className="text-xl">{detailFramework?.type}</DialogTitle>
-                <div className="flex items-center gap-2 mt-2 flex-wrap">
-                  {detailFramework && (
-                    <Badge className={`text-xs border ${detailFramework.category === "Internal" ? "bg-teal-50 text-teal-800 border-teal-200" : "bg-blue-50 text-blue-800 border-blue-200"}`}>
-                      {detailFramework.category}
-                    </Badge>
-                  )}
-                  <Badge variant="outline" className="text-xs border-slate-200 text-slate-700">
-                    {detailFramework?.typicalDuration}
-                  </Badge>
-                  <Badge variant="outline" className="text-xs border-slate-200 text-slate-700">
-                    {detailFramework?.typicalScope}
-                  </Badge>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5">
-            {detailFramework && (
-              <>
-                <p className="text-sm text-gray-600 leading-relaxed">{detailFramework.description}</p>
-
-                <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Key Phases</p>
-                  <div className="flex flex-wrap gap-2">
-                    {detailFramework.keyPhases.map((p) => (
-                      <Badge key={p} variant="outline" className="border-slate-200 text-slate-700 bg-slate-50">{p}</Badge>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="bg-teal-50 border border-teal-100 rounded-xl p-4 space-y-2">
-                    <p className="text-xs font-semibold text-teal-700 uppercase tracking-wide">What TO Provides</p>
-                    <ul className="space-y-1.5">
-                      {detailFramework.whatTOProvides.map((item) => (
-                        <li key={item} className="text-sm text-teal-900 flex items-start gap-2">
-                          <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-teal-500 flex-shrink-0" />
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 space-y-2">
-                    <p className="text-xs font-semibold text-orange-700 uppercase tracking-wide">What Division Provides</p>
-                    <ul className="space-y-1.5">
-                      {detailFramework.whatDivisionProvides.map((item) => (
-                        <li key={item} className="text-sm text-orange-900 flex items-start gap-2">
-                          <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0" />
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2">
-                  <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Expected Outcomes</p>
-                  <ul className="space-y-1.5">
-                    {detailFramework.expectedOutcomes.map((item) => (
-                      <li key={item} className="text-sm text-slate-700 flex items-start gap-2">
-                        <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-slate-400 flex-shrink-0" />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </>
-            )}
-          </div>
-
-          <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex-shrink-0">
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDetailModalOpen(false)}>
-                Close
-              </Button>
-              <Button
-                className="bg-orange-600 hover:bg-orange-700 text-white"
-                onClick={() => {
-                  setDetailModalOpen(false);
-                  if (detailFramework) openInitiativeRequest(detailFramework);
-                }}
-              >
-                Start Initiative
-              </Button>
-            </DialogFooter>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <FrameworkSidePanel
+        framework={selectedFramework && !requestModalOpen ? selectedFramework : null}
+        templates={compatibleTemplates}
+        selectedTemplateId={selectedTemplateId}
+        onClose={() => {
+          setSelectedFramework(null);
+          setSelectedTemplateId(null);
+        }}
+        onSelectTemplate={setSelectedTemplateId}
+        onBeginRequest={() => {
+          if (!selectedFramework) return;
+          openInitiativeRequest(selectedFramework);
+        }}
+      />
 
       {/* See Insights drawer — portal to document.body to guarantee visibility regardless of stacking context */}
       {drawerOpen && drawerInitiative && drawerRole && createPortal(

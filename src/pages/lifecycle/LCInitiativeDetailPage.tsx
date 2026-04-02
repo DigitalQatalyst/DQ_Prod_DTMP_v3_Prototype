@@ -325,9 +325,11 @@ export default function LCInitiativeDetailPage() {
               <Badge className="bg-gray-100 text-gray-700 border border-gray-200 text-xs">
                 {initiative.type}
               </Badge>
-              <Badge className="bg-gray-100 text-gray-700 border border-gray-200 text-xs">
-                EA: {initiative.eaAlignmentScore === null ? "TBD" : `${initiative.eaAlignmentScore}%`}
-              </Badge>
+              {initiative.eaAlignmentScore !== null && (
+                <Badge className="bg-gray-100 text-gray-700 border border-gray-200 text-xs">
+                  EA: {initiative.eaAlignmentScore}%
+                </Badge>
+              )}
               <Badge className="bg-gray-100 text-gray-700 border border-gray-200 text-xs">
                 {initiativeProjects.length} Projects
               </Badge>
@@ -343,6 +345,18 @@ export default function LCInitiativeDetailPage() {
                 <p className="text-sm text-blue-900 mt-1">
                   This initiative was raised from Portfolio Management and now acts as the governed execution response.
                 </p>
+                {initiative.portfolioCardId && (
+                  <button
+                    onClick={() =>
+                      navigate("/marketplaces/portfolio-management", {
+                        state: { tab: "ot-asset-portfolio", highlightCardId: initiative.portfolioCardId },
+                      })
+                    }
+                    className="mt-2 text-sm font-medium text-blue-800 hover:text-blue-900 underline underline-offset-2"
+                  >
+                    View portfolio source
+                  </button>
+                )}
               </div>
             )}
 
@@ -426,7 +440,7 @@ export default function LCInitiativeDetailPage() {
                     <Metric label="Budget" value={fmtBudget(initiative.budget)} />
                     <Metric label="Budget Spent" value={fmtBudget(initiative.budgetSpent)} />
                     <Metric label="Target Date" value={initiative.targetDate} />
-                    <Metric label="EA Alignment" value={initiative.eaAlignmentScore === null ? "TBD" : `${initiative.eaAlignmentScore}%`} />
+                    <Metric label="EA Alignment" value={initiative.eaAlignmentScore === null ? "Not Assessed" : `${initiative.eaAlignmentScore}%`} />
                   </div>
 
                   {isActive && (
@@ -565,7 +579,7 @@ export default function LCInitiativeDetailPage() {
                       { label: "Type", value: initiative.type },
                       { label: "Budget", value: fmtBudget(initiative.budget) },
                       { label: "Target Date", value: initiative.targetDate },
-                      { label: "EA Alignment", value: initiative.eaAlignmentScore === null ? "TBD" : `${initiative.eaAlignmentScore}%` },
+                      { label: "EA Alignment", value: initiative.eaAlignmentScore === null ? "Not Assessed" : `${initiative.eaAlignmentScore}%` },
                     ].map(({ label, value }) => (
                       <tr key={label} className="border-b border-gray-100 last:border-0">
                         <td className="text-xs text-muted-foreground py-2.5 pr-3 w-28">{label}</td>
@@ -606,7 +620,7 @@ export default function LCInitiativeDetailPage() {
                       className="w-full border-blue-200 text-blue-700 hover:bg-blue-50"
                       onClick={() =>
                         navigate("/marketplaces/portfolio-management", {
-                          state: { tab: "operational-asset-digitisation", highlightCardId: initiative.portfolioCardId },
+                          state: { tab: "ot-asset-portfolio", highlightCardId: initiative.portfolioCardId },
                         })
                       }
                     >

@@ -18,7 +18,8 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { getPMRequests, type PMRequest, type PMRequestStatus } from "@/data/portfolioManagement/serviceRequests";
-import { PM_TAB_CONFIG, type PMTab } from "@/data/portfolioManagement";
+import { PM_TAB_CONFIG, type PMTab, type ContentCard, saveContentCards } from "@/data/portfolioManagement";
+import Stage3Shell from "@/components/stage3/Stage3Shell";
 
 type Stage3Nav = "overview" | "request-queue" | "active-requests" | "completed" | "content-management";
 
@@ -30,25 +31,30 @@ const STATUS_COLOR: Record<PMRequestStatus, string> = {
   Completed: "bg-gray-100 text-gray-700",
 };
 
-// ── Content Management demo data ─────────────────────────────────────────
+// ── Content Management — localStorage-backed ─────────────────────────────
 
-interface ContentCard {
-  id: string;
-  type: "rationalisation" | "asset-digitisation";
-  title: string;
-  division: string;
-  status: "Published" | "Draft" | "Archived";
-  lastUpdated: string;
-  flaggedForReview?: boolean;
-}
+const CONTENT_KEY = "dtmp.portfolio.contentCards";
 
 const DEMO_CONTENT: ContentCard[] = [
-  { id: "C-01", type: "rationalisation", title: "CRM Platform Duplication", division: "Customer Services & Distribution", status: "Published", lastUpdated: "2026-03-01" },
-  { id: "C-02", type: "rationalisation", title: "Data Warehouse Proliferation", division: "Digital DEWA, Generation, Water Services", status: "Published", lastUpdated: "2026-02-15" },
-  { id: "C-03", type: "rationalisation", title: "Document Management Duplication", division: "All Divisions", status: "Published", lastUpdated: "2026-01-20", flaggedForReview: true },
-  { id: "C-04", type: "asset-digitisation", title: "Generation PLCs — Firmware Currency", division: "Generation", status: "Published", lastUpdated: "2026-03-10", flaggedForReview: true },
-  { id: "C-05", type: "asset-digitisation", title: "Water Pipelines — Leak Detection", division: "Water Services", status: "Published", lastUpdated: "2026-02-28" },
+  { id: "C-01", type: "rationalisation", title: "CRM Platform Duplication", division: "Customer Services & Distribution", status: "Published", lastUpdated: "2026-03-01", createdAt: "2026-03-01" },
+  { id: "C-02", type: "rationalisation", title: "Data Warehouse Proliferation", division: "Digital DEWA, Generation, Water Services", status: "Published", lastUpdated: "2026-02-15", createdAt: "2026-02-15" },
+  { id: "C-03", type: "rationalisation", title: "Document Management Duplication", division: "All Divisions", status: "Published", lastUpdated: "2026-01-20", flaggedForReview: true, createdAt: "2026-01-20" },
+  { id: "C-04", type: "ot-asset", title: "Generation PLCs — Firmware Currency", division: "Generation", status: "Published", lastUpdated: "2026-03-10", flaggedForReview: true, createdAt: "2026-03-10" },
+  { id: "C-05", type: "ot-asset", title: "Water Pipelines — Leak Detection", division: "Water Services", status: "Published", lastUpdated: "2026-02-28", createdAt: "2026-02-28" },
 ];
+
+function loadContentCards(): ContentCard[] {
+  try {
+    const stored = localStorage.getItem(CONTENT_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored) as ContentCard[];
+      if (parsed.length) return parsed;
+    }
+  } catch {}
+  // Seed with demo content and persist
+  localStorage.setItem(CONTENT_KEY, JSON.stringify(DEMO_CONTENT));
+  return DEMO_CONTENT;
+}
 
 export default function PMStage3Page() {
   const navigate = useNavigate();
@@ -56,11 +62,25 @@ export default function PMStage3Page() {
   const [expandedReq, setExpandedReq] = useState<string | null>(null);
   const [generating, setGenerating] = useState<string | null>(null);
   const [generated, setGenerated] = useState<Set<string>>(new Set());
-  const [contentCards, setContentCards] = useState<ContentCard[]>(DEMO_CONTENT);
+  const [contentCards, setContentCardsState] = useState<ContentCard[]>(() => loadContentCards());
   const [showPublishForm, setShowPublishForm] = useState(false);
-  const [publishType, setPublishType] = useState<"rationalisation" | "asset-digitisation">("rationalisation");
+  const [publishType, setPublishType] = useState<"rationalisation" | "ot-asset">("rationalisation");
   const [newTitle, setNewTitle] = useState("");
   const [newDivision, setNewDivision] = useState("");
+  const [newSystemsInOverlap, setNewSystemsInOverlap] = useState("");
+  const [newRecommendation, setNewRecommendation] = useState("Consolidate");
+  const [newComplexity, setNewComplexity] = useState("Medium");
+  const [newAssetType, setNewAssetType] = useState("IoT & Field Sensors");
+  const [newTotalAssets, setNewTotalAssets] = useState("");
+  const [newDigitisedCount, setNewDigitisedCount] = useState("");
+
+  function setContentCards(updater: ContentCard[] | ((prev: ContentCard[]) => ContentCard[])) {
+    setContentCardsState((prev) => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      saveContentCards(next);
+      return next;
+    });
+  }
 
   const all = getPMRequests();
   const queue = all.filter((r) => r.status === "Submitted");
@@ -78,17 +98,34 @@ export default function PMStage3Page() {
 
   const handlePublishCard = () => {
     if (!newTitle || !newDivision) return;
+    const today = new Date().toISOString().split("T")[0];
     const card: ContentCard = {
-      id: `C-${String(contentCards.length + 1).padStart(2, "0")}`,
+      id: `C-${Date.now()}`,
       type: publishType,
       title: newTitle,
       division: newDivision,
       status: "Published",
-      lastUpdated: new Date().toISOString().split("T")[0],
+      lastUpdated: today,
+      createdAt: today,
+      ...(publishType === "rationalisation" ? {
+        systemsInOverlap: newSystemsInOverlap,
+        recommendation: newRecommendation,
+        complexity: newComplexity,
+      } : {
+        assetType: newAssetType,
+        totalAssets: newTotalAssets ? parseInt(newTotalAssets) : undefined,
+        digitisedCount: newDigitisedCount ? parseInt(newDigitisedCount) : undefined,
+      }),
     };
     setContentCards((prev) => [card, ...prev]);
     setNewTitle("");
     setNewDivision("");
+    setNewSystemsInOverlap("");
+    setNewRecommendation("Consolidate");
+    setNewComplexity("Medium");
+    setNewAssetType("IoT & Field Sensors");
+    setNewTotalAssets("");
+    setNewDigitisedCount("");
     setShowPublishForm(false);
   };
 
@@ -101,7 +138,12 @@ export default function PMStage3Page() {
   ];
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <Stage3Shell
+      scope="portfolio-management"
+      title="Portfolio Management"
+      subtitle="Operate portfolio-level governance, content signals, and support demand from the shared TO workspace."
+    >
+    <div className="flex min-h-[calc(100vh-64px)] rounded-2xl border border-gray-200 bg-white shadow-sm">
       {/* Sidebar */}
       <aside className="w-56 bg-white border-r border-gray-200 flex flex-col flex-shrink-0">
         <div className="px-5 py-4 border-b border-gray-100">
@@ -291,25 +333,25 @@ export default function PMStage3Page() {
                   <label className="text-xs font-medium text-gray-600 block mb-1">Card Type</label>
                   <select
                     value={publishType}
-                    onChange={(e) => setPublishType(e.target.value as "rationalisation" | "asset-digitisation")}
+                    onChange={(e) => setPublishType(e.target.value as "rationalisation" | "ot-asset")}
                     className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2"
                   >
                     <option value="rationalisation">Technology Rationalisation</option>
-                    <option value="asset-digitisation">Operational Asset Digitisation</option>
+                    <option value="ot-asset">OT Asset Portfolio</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-600 block mb-1">Title / Overlap Name</label>
+                  <label className="text-xs font-medium text-gray-600 block mb-1">Title</label>
                   <input
                     type="text"
                     value={newTitle}
                     onChange={(e) => setNewTitle(e.target.value)}
                     className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2"
-                    placeholder="e.g. ERP Platform Duplication"
+                    placeholder={publishType === "rationalisation" ? "e.g. ERP Platform Duplication" : "e.g. Substation SCADA Integration"}
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-600 block mb-1">Divisions Affected</label>
+                  <label className="text-xs font-medium text-gray-600 block mb-1">Division</label>
                   <input
                     type="text"
                     value={newDivision}
@@ -318,6 +360,47 @@ export default function PMStage3Page() {
                     placeholder="e.g. All Divisions"
                   />
                 </div>
+                {publishType === "rationalisation" ? (
+                  <>
+                    <div>
+                      <label className="text-xs font-medium text-gray-600 block mb-1">Systems in Overlap</label>
+                      <input type="text" value={newSystemsInOverlap} onChange={(e) => setNewSystemsInOverlap(e.target.value)} className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2" placeholder="e.g. SAP + Oracle Legacy" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-medium text-gray-600 block mb-1">Recommendation</label>
+                        <select value={newRecommendation} onChange={(e) => setNewRecommendation(e.target.value)} className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2">
+                          <option>Consolidate</option><option>Migrate</option><option>Retire</option><option>Evaluate</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-600 block mb-1">Complexity</label>
+                        <select value={newComplexity} onChange={(e) => setNewComplexity(e.target.value)} className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2">
+                          <option>Low</option><option>Medium</option><option>High</option>
+                        </select>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <label className="text-xs font-medium text-gray-600 block mb-1">Asset Type</label>
+                      <select value={newAssetType} onChange={(e) => setNewAssetType(e.target.value)} className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2">
+                        <option>Control Systems</option><option>Smart Metering</option><option>IoT & Field Sensors</option><option>Industrial Equipment</option><option>Monitoring Infrastructure</option>
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-medium text-gray-600 block mb-1">Total Assets</label>
+                        <input type="number" value={newTotalAssets} onChange={(e) => setNewTotalAssets(e.target.value)} className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2" placeholder="e.g. 24" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-600 block mb-1">Digitised Count</label>
+                        <input type="number" value={newDigitisedCount} onChange={(e) => setNewDigitisedCount(e.target.value)} className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2" placeholder="e.g. 12" />
+                      </div>
+                    </div>
+                  </>
+                )}
                 <div className="flex gap-2">
                   <button
                     onClick={handlePublishCard}
@@ -344,10 +427,15 @@ export default function PMStage3Page() {
                 >
                   <div className={`w-2 h-8 rounded-full flex-shrink-0 ${card.type === "rationalisation" ? "bg-amber-400" : "bg-teal-400"}`} />
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
+                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${card.type === "rationalisation" ? "bg-amber-100 text-amber-700" : "bg-teal-100 text-teal-700"}`}>
-                        {card.type === "rationalisation" ? "Tech Rationalisation" : "Asset Digitisation"}
+                        {card.type === "rationalisation" ? "Tech Rationalisation" : "OT Asset"}
                       </span>
+                      {card.status === "Published" && (
+                        <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full flex items-center gap-1 font-medium">
+                          <CheckCircle className="w-3 h-3" /> Live in Stage 1
+                        </span>
+                      )}
                       {card.flaggedForReview && (
                         <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full flex items-center gap-1">
                           <AlertTriangle className="w-3 h-3" /> Review needed
@@ -378,6 +466,7 @@ export default function PMStage3Page() {
         )}
       </div>
     </div>
+    </Stage3Shell>
   );
 }
 
