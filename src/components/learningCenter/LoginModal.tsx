@@ -217,9 +217,11 @@ export function LoginModal({
                   ? `Log in to submit your request for "${context.dashboardName || context.serviceName || "Digital Intelligence"}".`
                   : context.marketplace === "knowledge-center"
                     ? "Log in to save this item to your Knowledge Centre workspace."
-                    : (context.marketplace === "document-studio" || context.marketplace === "templates") && context.serviceName
-                      ? `Log in to request an AI-generated document for "${context.serviceName}".`
-                      : "Please log in to continue with your enrollment"}
+                    : context.marketplace === "support-services" && context.serviceName
+                      ? `Log in to submit a request for "${context.serviceName}".`
+                      : (context.marketplace === "document-studio" || context.marketplace === "templates") && context.serviceName
+                        ? `Log in to request an AI-generated document for "${context.serviceName}".`
+                        : "Please log in to continue."}
         </p>
 
         {/* Form */}
@@ -262,20 +264,9 @@ export function LoginModal({
           </Button>
         </form>
 
-        {/* Signup Link */}
+        {/* Account access note */}
         <p className="text-sm text-center text-muted-foreground">
-          Don't have an account?{" "}
-          <button 
-            type="button"
-            onClick={() => {
-              console.log('Sign up clicked - navigating to registration');
-              // TODO: Implement registration flow or navigate to registration page
-              // navigate('/register');
-            }}
-            className="text-orange-600 hover:text-orange-700 font-medium"
-          >
-            Sign up
-          </button>
+          Need an account? Contact your administrator for access.
         </p>
 
         {/* Demo credential hints */}

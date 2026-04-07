@@ -1768,19 +1768,33 @@ export default function Stage2AppPage() {
             )}
 
             <button
-              className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg text-gray-700 hover:bg-gray-50"
-              title="Dashboards"
+              disabled
+              aria-disabled="true"
+              className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg text-gray-400 cursor-not-allowed"
+              title="Dashboards - Coming Soon"
             >
               <BarChart3 className="w-4 h-4 flex-shrink-0" />
-              {!leftSidebarCollapsed && "Dashboards"}
+              {!leftSidebarCollapsed && (
+                <span className="flex items-center gap-2">
+                  Dashboards
+                  <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">Soon</span>
+                </span>
+              )}
             </button>
 
             <button
-              className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg text-gray-700 hover:bg-gray-50"
-              title="Reports"
+              disabled
+              aria-disabled="true"
+              className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg text-gray-400 cursor-not-allowed"
+              title="Reports - Coming Soon"
             >
               <FileText className="w-4 h-4 flex-shrink-0" />
-              {!leftSidebarCollapsed && "Reports"}
+              {!leftSidebarCollapsed && (
+                <span className="flex items-center gap-2">
+                  Reports
+                  <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">Soon</span>
+                </span>
+              )}
             </button>
           </div>
         </nav>
