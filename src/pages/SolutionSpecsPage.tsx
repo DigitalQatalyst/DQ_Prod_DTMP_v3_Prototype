@@ -1,50 +1,59 @@
 import { useState, useMemo, useCallback } from "react";
-import { useNavigate, useSearchParams, Link } from "react-router-dom";
-import { ChevronRight, Plus, Check, FileX } from "lucide-react";
-import { solutionSpecs, SolutionType } from "@/data/blueprints/solutionSpecs";
-import { solutionSpecsFilters } from "@/data/blueprints/filters";
+import { useSearchParams, Link, useNavigate } from "react-router-dom";
 import {
-  addBlueprintTORequest,
-  linkBlueprintTORequestToStage3,
-} from "@/data/blueprints/requestState";
-import { createStage3Request } from "@/data/stage3";
+  ChevronRight, FileX, Layout, Layers, Monitor, Building2,
+  BarChart3, ShieldCheck, FileText, GitBranch, ArrowRight,
+} from "lucide-react";
+import { solutionSpecs, SolutionType } from "@/data/blueprints/solutionSpecs";
+import { solutionSpecsFiltersKC } from "@/data/blueprints/filters";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
-import { MarketplaceHeader } from "@/components/shared/MarketplaceHeader";
 import { TypeTabs } from "@/components/shared/TypeTabs";
-import { FilterPanel } from "@/components/shared/FilterPanel";
+import { FilterPanel, MobileFilterButton } from "@/components/learningCenter/FilterPanel";
+import { SearchBar } from "@/components/learningCenter/SearchBar";
 import { SolutionSpecCard } from "@/components/cards/SolutionSpecCard";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
 
-type FilterValue = string | string[] | number | boolean | undefined;
-type RequestType = "current-build" | "enhancement" | "integration" | "";
+// ── Solution type display metadata ───────────────────────────────────────────
 
-interface SpecFormData {
-  requestType: RequestType;
-  solutionName: string;
-  businessNeed: string;
-  requirements: string;
-  timeline: string;
-}
+const solutionTypeDetails: Record<SolutionType, {
+  fullName: string;
+  description: string;
+  icon: React.ElementType;
+  colorClasses: { bg: string; text: string; border: string; badge: string };
+}> = {
+  DBP: {
+    fullName: "Digital Business Platform",
+    description: "Integration, microservices, API management, and event-driven architectures for seamless digital operations.",
+    icon: Layers,
+    colorClasses: { bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200", badge: "bg-blue-100 text-blue-700" },
+  },
+  DXP: {
+    fullName: "Digital Experience Platform",
+    description: "Customer journeys, personalisation, omnichannel experiences, and mobile-first architectures.",
+    icon: Monitor,
+    colorClasses: { bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-200", badge: "bg-purple-100 text-purple-700" },
+  },
+  DWS: {
+    fullName: "Digital Workplace Solution",
+    description: "Collaboration platforms, productivity tooling, knowledge management, and employee experience design.",
+    icon: Building2,
+    colorClasses: { bg: "bg-green-50", text: "text-green-700", border: "border-green-200", badge: "bg-green-100 text-green-700" },
+  },
+  DIA: {
+    fullName: "Digital Intelligence & Analytics",
+    description: "Data platforms, AI/ML pipelines, real-time analytics, and governance frameworks for data-driven decisions.",
+    icon: BarChart3,
+    colorClasses: { bg: "bg-orange-50", text: "text-orange-700", border: "border-orange-200", badge: "bg-orange-100 text-orange-700" },
+  },
+  SDO: {
+    fullName: "Secure Digital Operations",
+    description: "Security architecture, identity management, zero-trust frameworks, and operational resilience patterns.",
+    icon: ShieldCheck,
+    colorClasses: { bg: "bg-red-50", text: "text-red-700", border: "border-red-200", badge: "bg-red-100 text-red-700" },
+  },
+};
 
-const REQUEST_TYPES = [
-  { value: "current-build", label: "Current Build",  description: "Adopt the blueprint as-is without modifications" },
-  { value: "enhancement",   label: "Enhancement",    description: "Enhance an existing solution" },
-  { value: "integration",   label: "Integration",    description: "Integrate multiple systems" },
-] as const;
-
-const TIMELINE_OPTIONS = [
-  "Less than 1 month",
-  "1 – 3 months",
-  "3 – 6 months",
-  "6 – 12 months",
-  "More than 12 months",
-];
+// ── Page component ────────────────────────────────────────────────────────────
 
 export function SolutionSpecsPage() {
   const navigate = useNavigate();
@@ -53,24 +62,22 @@ export function SolutionSpecsPage() {
   const initialType = (searchParams.get("type") as SolutionType | null) || "all";
   const [searchQuery, setSearchQuery] = useState("");
   const [activeType, setActiveType] = useState<SolutionType | "all">(initialType);
-  const [activeFilters, setActiveFilters] = useState<Record<string, FilterValue>>({});
+  const [selectedFilters, setSelectedFilters] = useState<Record<string, string[]>>({});
+  const [filterOpen, setFilterOpen] = useState(false);
 
-  const [showFormDialog, setShowFormDialog] = useState(false);
-  const [formData, setFormData] = useState<SpecFormData>({
-    requestType: "",
-    solutionName: "",
-    businessNeed: "",
-    requirements: "",
-    timeline: "",
-  });
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-
+  // ── Derived counts ──────────────────────────────────────────────────────────
   const typeCounts = useMemo(() => {
     const counts: Record<SolutionType, number> = { DBP: 0, DXP: 0, DWS: 0, DIA: 0, SDO: 0 };
-    solutionSpecs.forEach((spec) => { counts[spec.solutionType]++; });
+    solutionSpecs.forEach((s) => { counts[s.solutionType]++; });
     return counts;
   }, []);
 
+  const heroStats = useMemo(() => ({
+    total: solutionSpecs.length,
+    totalDiagrams: solutionSpecs.reduce((sum, s) => sum + s.diagramCount, 0),
+  }), []);
+
+  // ── Filtered results ────────────────────────────────────────────────────────
   const filteredSpecs = useMemo(() => {
     let results = solutionSpecs;
     if (activeType !== "all") results = results.filter((s) => s.solutionType === activeType);
@@ -80,15 +87,23 @@ export function SolutionSpecsPage() {
         (s) => s.title.toLowerCase().includes(q) || s.description.toLowerCase().includes(q) || s.tags.some((t) => t.toLowerCase().includes(q))
       );
     }
-    const scopeFilters = activeFilters.scope as string[] | undefined;
-    if (scopeFilters?.length) results = results.filter((s) => scopeFilters.includes(s.scope));
-    const maturityFilters = activeFilters.maturityLevel as string[] | undefined;
-    if (maturityFilters?.length) results = results.filter((s) => maturityFilters.includes(s.maturityLevel));
-    const hasDiagrams = activeFilters.hasDiagrams as string[] | undefined;
-    if (hasDiagrams?.includes("true")) results = results.filter((s) => s.diagramCount > 0);
+    const scopeFilters = selectedFilters.scope;
+    if (scopeFilters?.length) results = results.filter((s) => scopeFilters.some((f) => f.toLowerCase() === s.scope));
+    const maturityFilters = selectedFilters.maturityLevel;
+    if (maturityFilters?.length) results = results.filter((s) => maturityFilters.some((f) => f.toLowerCase() === s.maturityLevel));
+    if (selectedFilters.hasDiagrams?.includes("Yes")) results = results.filter((s) => s.diagramCount > 0);
+    const complexityFilters = selectedFilters.complexity;
+    if (complexityFilters?.length) results = results.filter((s) => complexityFilters.some((f) => f.toLowerCase() === s.complexity));
+    const techStackFilters = selectedFilters.technologyStack;
+    if (techStackFilters?.length) {
+      results = results.filter((s) =>
+        techStackFilters.some((tech) => s.tags.some((tag) => tag.toLowerCase().includes(tech.toLowerCase())))
+      );
+    }
     return results;
-  }, [searchQuery, activeType, activeFilters]);
+  }, [searchQuery, activeType, selectedFilters]);
 
+  // ── Handlers ────────────────────────────────────────────────────────────────
   const handleTypeChange = useCallback(
     (type: SolutionType | "all") => {
       setActiveType(type);
@@ -99,259 +114,191 @@ export function SolutionSpecsPage() {
     [searchParams, setSearchParams]
   );
 
-  const handleFilterChange = useCallback((key: string, value: FilterValue) => {
-    setActiveFilters((prev) => ({ ...prev, [key]: value }));
+  const handleFilterChange = useCallback((group: string, value: string) => {
+    setSelectedFilters((prev) => {
+      const current = prev[group] ?? [];
+      const next = current.includes(value)
+        ? current.filter((v) => v !== value)
+        : [...current, value];
+      return { ...prev, [group]: next };
+    });
   }, []);
 
-  const handleFilterReset = useCallback(() => setActiveFilters({}), []);
+  const clearAllFilters = useCallback(() => setSelectedFilters({}), []);
 
-  const handleCardClick = useCallback(
-    (id: string) => navigate(`/marketplaces/solution-specs/${id}`),
-    [navigate]
-  );
+  // Clicking a spec card navigates to its detail page (which has full overview + request flow)
+  const handleCardClick = useCallback((id: string) => {
+    navigate(`/marketplaces/solution-specs/${id}`);
+  }, [navigate]);
 
-  const openNewRequest = () => {
-    setFormData({ requestType: "", solutionName: "", businessNeed: "", requirements: "", timeline: "" });
-    setFormErrors({});
-    setShowFormDialog(true);
-  };
+  const activeFilterCount = Object.values(selectedFilters).reduce((sum, arr) => sum + arr.length, 0);
 
-  const handleSubmitRequest = () => {
-    const errors: Record<string, string> = {};
-    if (!formData.requestType)          errors.requestType  = "Required";
-    if (!formData.solutionName.trim())  errors.solutionName = "Required";
-    if (!formData.businessNeed.trim())  errors.businessNeed = "Required";
-    if (!formData.requirements.trim())  errors.requirements = "Required";
-    if (!formData.timeline)             errors.timeline     = "Required";
-    if (Object.keys(errors).length > 0) { setFormErrors(errors); return; }
-
-    const blueprintRequest = addBlueprintTORequest({
-      itemId: `custom-${Date.now()}`,
-      itemTitle: formData.solutionName,
-      marketplace: "solution-specs",
-      requesterName: "Amina TO",
-      requesterRole: "Portfolio Manager",
-      message: JSON.stringify({
-        requestType: formData.requestType,
-        timeline: formData.timeline,
-        businessNeed: formData.businessNeed,
-        requirements: formData.requirements,
-      }),
-    });
-
-    if (blueprintRequest) {
-      const stage3Request = createStage3Request({
-        type: "solution-specs",
-        title: `Solution Spec Build: ${formData.solutionName}`,
-        description: formData.businessNeed,
-        requester: { name: "Amina TO", email: "amina.to@dtmp.local", department: "Transformation Office", organization: "DTMP" },
-        priority: "medium",
-        estimatedHours: 16,
-        tags: ["solution-specs", formData.requestType.replace("-", " ")],
-        relatedAssets: [`solution-spec-request:${blueprintRequest.id}`],
-        notes: [
-          `Request Type: ${formData.requestType}`,
-          `Timeline: ${formData.timeline}`,
-          `Business Need: ${formData.businessNeed}`,
-          `Requirements: ${formData.requirements}`,
-        ],
-      });
-      linkBlueprintTORequestToStage3(blueprintRequest.id, stage3Request.id);
-    }
-
-    setShowFormDialog(false);
-    navigate("/stage2/specs/overview", {
-      state: { fromRequest: true, serviceName: formData.solutionName, requestType: formData.requestType },
-    });
-  };
-
+  // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-background">
       <Header />
 
-      {/* Breadcrumb */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <nav className="flex items-center text-sm text-muted-foreground">
+      {/* ── KC-style Hero (Design phase / purple) ───────────────────────────── */}
+      <section className="bg-gradient-to-b from-purple-50 to-white py-8 lg:py-12">
+        <div className="max-w-7xl mx-auto px-4">
+          <nav className="flex items-center text-sm text-muted-foreground mb-4">
             <Link to="/" className="hover:text-foreground transition-colors">Home</Link>
             <ChevronRight className="w-4 h-4 mx-2" />
             <Link to="/marketplaces" className="hover:text-foreground transition-colors">Marketplaces</Link>
             <ChevronRight className="w-4 h-4 mx-2" />
             <span className="font-medium text-foreground">Solution Specs</span>
           </nav>
-          <button
-            onClick={openNewRequest}
-            className="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-            New Request
-          </button>
-        </div>
-      </div>
 
-      <MarketplaceHeader
-        title="Solution Specs"
-        description="Explore blueprint-led solution specifications organized by solution type. Find comprehensive architecture designs, diagrams, and component specifications for your digital transformation initiatives."
-        searchValue={searchQuery}
-        onSearchChange={setSearchQuery}
-        itemCount={filteredSpecs.length}
-        searchPlaceholder="Search solution specs..."
+          <span className="inline-block bg-phase-design-bg text-phase-design px-3 py-1 rounded-full text-xs font-semibold uppercase mb-3">
+            Design
+          </span>
+
+          <h1 className="text-3xl lg:text-4xl font-bold text-primary-navy mb-3">
+            DTMP Solution Specs
+          </h1>
+          <p className="text-base lg:text-lg text-muted-foreground max-w-3xl mb-4">
+            Browse and request solution blueprints, reference architectures, and implementation
+            specifications across five solution types. Each spec includes architecture diagrams,
+            component breakdowns, and delivery guidance for your digital transformation initiatives.
+          </p>
+
+          <div className="flex flex-wrap gap-6 text-sm text-muted-foreground">
+            <span className="flex items-center gap-2">
+              <Layout className="w-4 h-4" />
+              {heroStats.total} Solution Specifications
+            </span>
+            <span className="flex items-center gap-2">
+              <GitBranch className="w-4 h-4" />
+              {heroStats.totalDiagrams} Architecture Diagrams
+            </span>
+            <span className="flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              5 Solution Types
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Solution Type Service Cards ──────────────────────────────────────── */}
+      <section className="bg-white border-b border-gray-200 py-8">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="mb-5">
+            <h2 className="text-lg font-semibold text-gray-900">Browse by Solution Type</h2>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Select a type to explore its specifications and make a request
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            {(Object.keys(solutionTypeDetails) as SolutionType[]).map((type) => {
+              const detail = solutionTypeDetails[type];
+              const Icon = detail.icon;
+              const count = typeCounts[type];
+              return (
+                <button
+                  key={type}
+                  onClick={() => navigate(`/marketplaces/solution-specs/type/${type}`)}
+                  className="group text-left rounded-xl border-2 border-gray-200 bg-white p-4 transition-all duration-200 hover:shadow-md hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2"
+                  aria-label={`Explore ${detail.fullName}`}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center bg-gray-100 group-hover:${detail.colorClasses.bg} transition-colors`}>
+                      <Icon className="w-5 h-5 text-gray-500" />
+                    </div>
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                      {type}
+                    </span>
+                  </div>
+
+                  <p className="text-sm font-semibold text-gray-900 mb-1 leading-tight">
+                    {detail.fullName}
+                  </p>
+                  <p className="text-xs text-gray-500 leading-relaxed mb-3 line-clamp-3">
+                    {detail.description}
+                  </p>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-400">{count} spec{count !== 1 ? "s" : ""}</span>
+                    <span className="text-xs font-medium text-gray-400 group-hover:text-orange-600 flex items-center gap-1 transition-colors">
+                      Explore
+                      <ArrowRight className="w-3 h-3" />
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Search Bar ──────────────────────────────────────────────────────── */}
+      <SearchBar
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder="Search solution specs by title, description, or technology tag..."
       />
 
+      {/* ── Type Tabs ───────────────────────────────────────────────────────── */}
       <TypeTabs activeType={activeType} onTypeChange={handleTypeChange} typeCounts={typeCounts} />
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex flex-col lg:flex-row gap-8">
-          <FilterPanel
-            filters={solutionSpecsFilters}
-            activeFilters={activeFilters}
-            onFilterChange={handleFilterChange}
-            onReset={handleFilterReset}
-          />
+      {/* ── Filter Panel + Cards ─────────────────────────────────────────────── */}
+      <div className="max-w-7xl mx-auto flex">
+        <FilterPanel
+          filters={solutionSpecsFiltersKC}
+          selectedFilters={selectedFilters}
+          onFilterChange={handleFilterChange}
+          onClearAll={clearAllFilters}
+          isOpen={filterOpen}
+          onToggle={() => setFilterOpen(!filterOpen)}
+        />
 
-          <div className="flex-1">
+        <main className="flex-1 min-w-0">
+          {/* Result count toolbar */}
+          <div className="bg-gray-50 border-b border-gray-200 px-4 lg:px-8 py-3 flex items-center">
+            <p className="text-sm text-muted-foreground">
+              Showing{" "}
+              <span className="font-semibold text-foreground">{filteredSpecs.length}</span>{" "}
+              solution spec{filteredSpecs.length !== 1 ? "s" : ""}
+              {activeFilterCount > 0 && (
+                <span className="ml-1 text-orange-600">
+                  ({activeFilterCount} filter{activeFilterCount !== 1 ? "s" : ""} active)
+                </span>
+              )}
+            </p>
+          </div>
+
+          {/* Cards grid */}
+          <div className="px-4 lg:px-8 py-6">
             {filteredSpecs.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6" role="list" aria-label="Solution specifications">
+              <div
+                className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"
+                role="list"
+                aria-label="Solution specifications"
+              >
                 {filteredSpecs.map((spec) => (
                   <SolutionSpecCard key={spec.id} spec={spec} onClick={handleCardClick} />
                 ))}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-16 px-4 text-center" role="status" aria-live="polite">
+              <div
+                className="flex flex-col items-center justify-center py-16 px-4 text-center"
+                role="status"
+                aria-live="polite"
+              >
                 <FileX className="w-16 h-16 text-gray-300 mb-4" aria-hidden="true" />
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">No solution specs found</h3>
-                <p className="text-gray-600 max-w-md">Try adjusting your search query or filters to find what you're looking for.</p>
+                <p className="text-gray-600 max-w-md">
+                  Try adjusting your search query or filters to find what you're looking for.
+                </p>
               </div>
             )}
           </div>
-        </div>
-      </main>
+        </main>
+      </div>
 
       <Footer />
 
-      {/* ── Request Form Dialog ── */}
-      <Dialog open={showFormDialog} onOpenChange={setShowFormDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-gray-900">New Solution Spec Request</DialogTitle>
-            <p className="text-sm text-gray-500 mt-1">Submit a custom solution specification build request</p>
-          </DialogHeader>
-
-          <div className="space-y-6 mt-2">
-
-            {/* Request Type */}
-            <div>
-              <Label className="text-sm font-semibold text-gray-900 mb-3 block">
-                Request Type <span className="text-red-500">*</span>
-              </Label>
-              <RadioGroup
-                value={formData.requestType}
-                onValueChange={(v) => { setFormData({ ...formData, requestType: v as RequestType }); setFormErrors({ ...formErrors, requestType: "" }); }}
-                className="space-y-2"
-              >
-                {REQUEST_TYPES.map((type) => (
-                  <div
-                    key={type.value}
-                    onClick={() => { setFormData({ ...formData, requestType: type.value }); setFormErrors({ ...formErrors, requestType: "" }); }}
-                    className={`flex items-center gap-3 rounded-lg border-2 px-4 py-3 cursor-pointer transition-all ${
-                      formData.requestType === type.value ? "border-orange-500 bg-orange-50" : "border-gray-200 hover:border-orange-300 hover:bg-gray-50"
-                    }`}
-                  >
-                    <RadioGroupItem value={type.value} id={`pg-rt-${type.value}`} className="flex-shrink-0" />
-                    <div>
-                      <Label htmlFor={`pg-rt-${type.value}`} className="text-sm font-semibold text-gray-900 cursor-pointer block">{type.label}</Label>
-                      <p className="text-xs text-gray-500 mt-0.5">{type.description}</p>
-                    </div>
-                  </div>
-                ))}
-              </RadioGroup>
-              {formErrors.requestType && <p className="text-xs text-red-600 mt-1">{formErrors.requestType}</p>}
-            </div>
-
-            {/* Solution Name */}
-            <div>
-              <Label htmlFor="pg-solutionName" className="text-sm font-semibold text-gray-900 mb-2 block">
-                Solution Name <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="pg-solutionName"
-                value={formData.solutionName}
-                onChange={(e) => { setFormData({ ...formData, solutionName: e.target.value }); setFormErrors({ ...formErrors, solutionName: "" }); }}
-                placeholder="Enter a name for this solution request"
-                className="w-full"
-              />
-              {formErrors.solutionName && <p className="text-xs text-red-600 mt-1">{formErrors.solutionName}</p>}
-            </div>
-
-            {/* Business Need */}
-            <div>
-              <Label htmlFor="pg-businessNeed" className="text-sm font-semibold text-gray-900 mb-1 block">
-                Business Need <span className="text-red-500">*</span>
-              </Label>
-              <p className="text-xs text-gray-500 mb-2">Describe the business problem or opportunity this solution should address.</p>
-              <Textarea
-                id="pg-businessNeed"
-                value={formData.businessNeed}
-                onChange={(e) => { setFormData({ ...formData, businessNeed: e.target.value }); setFormErrors({ ...formErrors, businessNeed: "" }); }}
-                placeholder="e.g. We need to unify our customer data across 5 regional systems to enable real-time personalisation..."
-                rows={4}
-                className="w-full resize-none"
-              />
-              <p className="text-xs text-gray-400 mt-1">{formData.businessNeed.length} characters</p>
-              {formErrors.businessNeed && <p className="text-xs text-red-600">{formErrors.businessNeed}</p>}
-            </div>
-
-            {/* Requirements */}
-            <div>
-              <Label htmlFor="pg-requirements" className="text-sm font-semibold text-gray-900 mb-1 block">
-                Requirements <span className="text-red-500">*</span>
-              </Label>
-              <p className="text-xs text-gray-500 mb-2">List the functional and non-functional requirements for this solution.</p>
-              <Textarea
-                id="pg-requirements"
-                value={formData.requirements}
-                onChange={(e) => { setFormData({ ...formData, requirements: e.target.value }); setFormErrors({ ...formErrors, requirements: "" }); }}
-                placeholder={`e.g.\n• Must integrate with SAP and Salesforce\n• Real-time data synchronisation\n• Role-based access control`}
-                rows={4}
-                className="w-full resize-none"
-              />
-              <p className="text-xs text-gray-400 mt-1">{formData.requirements.length} characters</p>
-              {formErrors.requirements && <p className="text-xs text-red-600">{formErrors.requirements}</p>}
-            </div>
-
-            {/* Timeline */}
-            <div>
-              <Label className="text-sm font-semibold text-gray-900 mb-3 block">
-                Expected Timeline <span className="text-red-500">*</span>
-              </Label>
-              <div className="grid grid-cols-2 gap-2">
-                {TIMELINE_OPTIONS.map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => { setFormData({ ...formData, timeline: option }); setFormErrors({ ...formErrors, timeline: "" }); }}
-                    className={`text-left px-4 py-3 rounded-lg border-2 text-sm font-medium transition-all ${
-                      formData.timeline === option
-                        ? "border-orange-500 bg-orange-50 text-orange-700"
-                        : "border-gray-200 text-gray-700 hover:border-orange-300 hover:bg-gray-50"
-                    }`}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-              {formErrors.timeline && <p className="text-xs text-red-600 mt-1">{formErrors.timeline}</p>}
-            </div>
-
-            {/* Submit */}
-            <Button onClick={handleSubmitRequest} className="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold py-3">
-              <Check className="w-4 h-4 mr-2" />
-              Submit Request
-            </Button>
-
-          </div>
-        </DialogContent>
-      </Dialog>
+      <MobileFilterButton onClick={() => setFilterOpen(true)} />
     </div>
   );
 }

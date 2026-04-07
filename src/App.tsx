@@ -18,6 +18,7 @@ import TemplatesPage from "./pages/TemplatesPage";
 import TemplatesDetailPage from "./pages/TemplatesDetailPage";
 import { SolutionSpecsPage } from "./pages/SolutionSpecsPage";
 import { SolutionSpecDetailPage } from "./pages/SolutionSpecDetailPage";
+import { SolutionTypeOverviewPage } from "./pages/SolutionTypeOverviewPage";
 import SolutionSpecRequestForm from "./pages/SolutionSpecRequestForm";
 import { SolutionBuildPage } from "./pages/SolutionBuildPage";
 import { SolutionBuildDetailPage } from "./pages/SolutionBuildDetailPage";
@@ -186,6 +187,7 @@ const App = () => (
             {/* Solution Specs marketplace */}
             <Route path="/marketplaces/solution-specs" element={<SolutionSpecsPage />} />
             <Route path="/marketplaces/solution-specs/request" element={<SolutionSpecRequestForm />} />
+            <Route path="/marketplaces/solution-specs/type/:solutionType" element={<SolutionTypeOverviewPage />} />
             <Route path="/marketplaces/solution-specs/:id" element={<SolutionSpecDetailPage />} />
 
             {/* Solution Build marketplace */}

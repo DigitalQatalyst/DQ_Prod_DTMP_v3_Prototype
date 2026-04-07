@@ -37,8 +37,48 @@ export const solutionSpecsFilters: FilterConfig[] = [
     label: 'Has Diagrams',
     type: 'checkbox',
     options: [{ value: 'true', label: 'Yes' }]
+  },
+  {
+    key: 'complexity',
+    label: 'Complexity',
+    type: 'checkbox',
+    options: [
+      { value: 'simple', label: 'Simple (≤ 10 components)' },
+      { value: 'moderate', label: 'Moderate (11–20 components)' },
+      { value: 'complex', label: 'Complex (21–35 components)' },
+      { value: 'expert', label: 'Expert (36+ components)' }
+    ]
+  },
+  {
+    key: 'technologyStack',
+    label: 'Technology Stack',
+    type: 'checkbox',
+    options: [
+      { value: 'Cloud-Native', label: 'Cloud Native' },
+      { value: 'Multi-Cloud', label: 'Multi-Cloud' },
+      { value: 'Hybrid', label: 'Hybrid' },
+      { value: 'Kubernetes', label: 'Kubernetes' },
+      { value: 'Microservices', label: 'Microservices' },
+      { value: 'API Gateway', label: 'API Gateway' },
+      { value: 'Kafka', label: 'Kafka / Event Streaming' },
+      { value: 'Data Lake', label: 'Data Lake' },
+      { value: 'MLOps', label: 'AI / ML (MLOps)' },
+      { value: 'Microsoft 365', label: 'Microsoft 365' }
+    ]
   }
 ];
+
+export const solutionSpecsFiltersKC: Record<string, string[]> = {
+  scope: ['Enterprise', 'Departmental', 'Project'],
+  maturityLevel: ['Conceptual', 'Proven', 'Reference'],
+  hasDiagrams: ['Yes'],
+  complexity: ['Simple', 'Moderate', 'Complex', 'Expert'],
+  technologyStack: [
+    'Cloud-Native', 'Multi-Cloud', 'Hybrid', 'Kubernetes',
+    'Microservices', 'API Gateway', 'Kafka', 'Data Lake',
+    'MLOps', 'Microsoft 365',
+  ],
+};
 
 export const solutionBuildFilters: FilterConfig[] = [
   {
