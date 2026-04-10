@@ -130,7 +130,7 @@ const App = () => (
             <Route path="/stage2/templates/revisions" element={<Stage2AppPage />} />
 
             {/* Stage 2 — Digital Intelligence */}
-            <Route path="/stage2/intelligence" element={<Navigate to="/stage2/intelligence/requests" replace />} />
+            <Route path="/stage2/intelligence" element={<Navigate to="/stage2/intelligence/overview" replace />} />
             <Route path="/stage2/intelligence/:intelligenceTab" element={<Stage2AppPage />} />
             <Route path="/stage2/intelligence/:intelligenceTab/:intelligenceItemId" element={<Stage2AppPage />} />
 

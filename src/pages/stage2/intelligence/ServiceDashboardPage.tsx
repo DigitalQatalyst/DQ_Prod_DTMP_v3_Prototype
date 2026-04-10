@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Star, RefreshCw, Mail, FileSpreadsheet, FileText, Edit, Database, Lock, CheckCircle, CalendarRange, Send, User, Briefcase, MessageSquare, X, LucideIcon, BellRing, Share2, ShieldCheck, Zap, Gauge, ArrowUpDown, Globe, Users } from 'lucide-react';
 import { LoginModal } from '@/components/learningCenter/LoginModal';
 import { Button } from '@/components/ui/button';
@@ -13,17 +14,9 @@ import {
 } from '@/components/ui/select';
 import { DashboardWidget } from '@/components/digitalIntelligence/stage2';
 import { intelligenceServices, sampleDashboardData } from '@/data/digitalIntelligence/stage2';
-import { isUserAuthenticated } from '@/data/sessionAuth';
-import { getSessionRole } from '@/data/sessionRole';
-import type { DIServiceTab } from '@/data/digitalIntelligence/requestState';
-import {
-  submitDIDashboardActionRequest,
-  type DIDashboardAction,
-} from '@/data/digitalIntelligence/stage2/submitDashboardActionRequest';
 
 interface ServiceDashboardPageProps {
   serviceId: string;
-  serviceTab?: DIServiceTab;
 }
 
 interface PendingLoginContext {
@@ -32,16 +25,7 @@ interface PendingLoginContext {
   requestDescription: string;
 }
 
-type ActionType =
-  | 'schedule-report'
-  | 'export-excel'
-  | 'export-pdf'
-  | 'request-update'
-  | 'request-datasource'
-  | 'set-alert'
-  | 'share-dashboard'
-  | 'request-audit'
-  | 'request-api';
+type ActionType = 'schedule-report' | 'export-excel' | 'export-pdf' | 'request-update' | 'request-datasource' | 'set-alert' | 'share-dashboard' | 'request-audit' | 'request-api';
 
 interface ActionField {
   key: string;
@@ -87,20 +71,20 @@ const actionMeta: Record<ActionType, { title: string; icon: LucideIcon; descript
     successMessage: '', fields: [],
   },
   'request-update': {
-    title: 'Request Remediation',
+    title: 'Request Dashboard Update',
     icon: Edit,
-    description: 'Request a fix, adjustment, or remediation on this dashboard',
-    successMessage: 'Your remediation request has been submitted to the analytics team. You will be notified when the changes are live.',
+    description: 'Suggest improvements or new visualizations',
+    successMessage: 'Your dashboard update request has been submitted to the analytics team. You will be notified when the changes are live.',
     fields: [
       { key: 'improvement', label: 'What Should We Improve?', icon: Edit, type: 'textarea', placeholder: 'e.g. Add a trend line for monthly revenue, split the bar chart by region...', required: true },
       priorityField,
     ],
   },
   'request-datasource': {
-    title: 'Edit Data Source',
+    title: 'Request Data Source',
     icon: Database,
-    description: 'Request a new source or change the current source configuration',
-    successMessage: 'Your data source change request has been submitted. The integration team will review feasibility and reach out within 48 hours.',
+    description: 'Request a new data integration',
+    successMessage: 'Your data source request has been submitted. The integration team will review feasibility and reach out within 48 hours.',
     fields: [
       { key: 'sourceName', label: 'Data Source Name', icon: Database, type: 'text', placeholder: 'e.g. Salesforce, SAP, Snowflake...', required: true },
       { key: 'connectionType', label: 'Connection Type', icon: Globe, type: 'select', required: true, options: [
@@ -177,23 +161,9 @@ const actionMeta: Record<ActionType, { title: string; icon: LucideIcon; descript
   },
 };
 
-const getRequesterRoleLabel = (): string => {
-  const sessionRole = getSessionRole();
-
-  switch (sessionRole) {
-    case 'to-admin':
-      return 'TO Admin';
-    case 'to-ops':
-      return 'TO Ops';
-    default:
-      return 'Business User';
-  }
-};
-
-export default function ServiceDashboardPage({
-  serviceId,
-  serviceTab = 'systems-portfolio',
-}: ServiceDashboardPageProps) {
+export default function ServiceDashboardPage({ serviceId }: ServiceDashboardPageProps) {
+  const navigate = useNavigate();
+  
   const service = intelligenceServices.find(s => s.id === serviceId);
   const [selectedDataSource, setSelectedDataSource] = useState(service?.defaultDataSource || '');
   const [isFavorite, setIsFavorite] = useState(false);
@@ -212,45 +182,10 @@ export default function ServiceDashboardPage({
     formData: {},
     requestDescription: "",
   });
-  const [requestFeedback, setRequestFeedback] = useState<string | null>(null);
-
-  if (!service) {
-    return (
-      <div className="p-6">
-        <Card className="p-12 text-center">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Service not found</h3>
-          <p className="text-gray-600">The requested intelligence service could not be found.</p>
-        </Card>
-      </div>
-    );
-  }
 
   const directActions: ActionType[] = ['export-excel', 'export-pdf'];
 
-  const submitDashboardAction = (
-    action: DIDashboardAction,
-    formData: Record<string, string>,
-    requestDescription: string,
-    actorEmail?: string,
-  ) => {
-    submitDIDashboardActionRequest({
-      action,
-      formData,
-      serviceId: service.id,
-      serviceName: service.title,
-      serviceTab,
-      actorEmail,
-      requesterName: formData.name || 'Current User',
-      requesterRole: getRequesterRoleLabel(),
-      requestDescription,
-    });
-
-    setCompletedActions(prev => new Set(prev).add(action as ActionType));
-    setRequestFeedback(actionMeta[action as ActionType].successMessage || 'Request submitted successfully.');
-  };
-
   const handleActionClick = (action: ActionType) => {
-    setRequestFeedback(null);
     if (directActions.includes(action)) {
       setCompletedActions(prev => new Set(prev).add(action));
       return;
@@ -276,18 +211,6 @@ export default function ServiceDashboardPage({
       submittedFormData.message?.trim() ||
       "";
 
-    if (!submittedAction) return;
-
-    if (isUserAuthenticated()) {
-      setActiveAction(null);
-      submitDashboardAction(
-        submittedAction as DIDashboardAction,
-        submittedFormData,
-        requestDescription,
-      );
-      return;
-    }
-
     setPendingLoginContext({
       action: submittedAction,
       formData: submittedFormData,
@@ -310,26 +233,16 @@ export default function ServiceDashboardPage({
     setActiveAction(null);
   };
 
-  const handleLoginSuccess = (email?: string) => {
-    if (!pendingLoginContext.action) {
-      setShowLoginModal(false);
-      return;
-    }
-
-    submitDashboardAction(
-      pendingLoginContext.action as DIDashboardAction,
-      pendingLoginContext.formData,
-      pendingLoginContext.requestDescription,
-      email,
+  if (!service) {
+    return (
+      <div className="p-6">
+        <Card className="p-12 text-center">
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Service not found</h3>
+          <p className="text-gray-600">The requested intelligence service could not be found.</p>
+        </Card>
+      </div>
     );
-
-    setPendingLoginContext({
-      action: null,
-      formData: {},
-      requestDescription: '',
-    });
-    setShowLoginModal(false);
-  };
+  }
 
   const dashboardData = sampleDashboardData[serviceId || ''];
 
@@ -601,12 +514,7 @@ export default function ServiceDashboardPage({
       {/* Actions Menu */}
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-1">Actions</h3>
-        <p className="text-sm text-gray-500 mb-4">Submit follow-up requests directly from this dashboard.</p>
-        {requestFeedback && (
-          <Card className="mb-4 border-green-200 bg-green-50 px-4 py-3">
-            <p className="text-sm text-green-700">{requestFeedback}</p>
-          </Card>
-        )}
+        <p className="text-sm text-gray-500 mb-4">Fill a short form and sign in to access a service.</p>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {(
             [
@@ -716,7 +624,7 @@ export default function ServiceDashboardPage({
         onClose={handleLoginClose}
         context={{
           marketplace: 'digital-intelligence',
-          tab: serviceTab,
+          tab: 'intelligence',
           cardId: service.id,
           serviceName: service.title,
           action: pendingLoginContext.action || '',
@@ -724,7 +632,6 @@ export default function ServiceDashboardPage({
           dashboardName: service.title,
           requestDescription: pendingLoginContext.requestDescription,
         }}
-        onLoginSuccess={handleLoginSuccess}
       />
 
       {/* Key Insights */}

@@ -1,13 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { FolderKanban, Server, SlidersHorizontal, TrendingUp } from "lucide-react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { SlidersHorizontal, Server, TrendingUp, FolderKanban } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
-import {
-  IntelligenceCard,
-  IntelligenceDashboardView,
-  MarketplaceHeader,
-} from "@/components/digitalIntelligence";
+import { IntelligenceCard, MarketplaceHeader } from "@/components/digitalIntelligence";
 import { LoginModal } from "@/components/learningCenter";
 import { SearchBar } from "@/components/learningCenter/SearchBar";
 import {
@@ -25,8 +21,10 @@ import {
   type DigitalMaturityService,
   type ProjectsPortfolioService,
 } from "@/data/digitalIntelligence";
-import { isUserAuthenticated } from "@/data/sessionAuth";
-import type { DIServiceTab } from "@/data/digitalIntelligence/requestState";
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 type TabValue = "systems-portfolio" | "digital-maturity" | "projects-portfolio";
 
@@ -40,16 +38,17 @@ interface TabConfig {
 
 interface LoginContext {
   marketplace: string;
-  tab: DIServiceTab;
+  tab: string;
   cardId: string;
   serviceName: string;
   action: string;
 }
 
-type ServiceType =
-  | SystemsPortfolioService
-  | DigitalMaturityService
-  | ProjectsPortfolioService;
+type ServiceType = SystemsPortfolioService | DigitalMaturityService | ProjectsPortfolioService;
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
 
 const DEBOUNCE_DELAY = 300;
 
@@ -83,43 +82,25 @@ const SEARCH_PLACEHOLDERS: Record<TabValue, string> = {
   "projects-portfolio": "Search project analytics or predictions...",
 };
 
-const SERVICES_BY_TAB: Record<TabValue, ServiceType[]> = {
-  "systems-portfolio": systemsPortfolio,
-  "digital-maturity": digitalMaturity,
-  "projects-portfolio": projectsPortfolio,
-};
-
-const FILTERS_BY_TAB = {
-  "systems-portfolio": systemsPortfolioFilters,
-  "digital-maturity": digitalMaturityFilters,
-  "projects-portfolio": projectsPortfolioFilters,
-};
-
-const isValidTab = (value: string | null | undefined): value is TabValue =>
-  value === "systems-portfolio" ||
-  value === "digital-maturity" ||
-  value === "projects-portfolio";
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 
 export default function DigitalIntelligencePage() {
   const navigate = useNavigate();
-  const { tab: routeTab, cardId: routeCardId } = useParams<{
-    tab?: string;
-    cardId?: string;
-  }>();
   const [searchParams, setSearchParams] = useSearchParams();
-  const requestedTab = searchParams.get("tab");
-  const validRouteTab = isValidTab(routeTab) ? routeTab : null;
-  const initialTab: TabValue = validRouteTab || (isValidTab(requestedTab) ? requestedTab : "systems-portfolio");
+  const requestedTab = searchParams.get("tab") as TabValue | null;
+  const initialTab: TabValue =
+    requestedTab && ["systems-portfolio", "digital-maturity", "projects-portfolio"].includes(requestedTab)
+      ? requestedTab
+      : "systems-portfolio";
 
+  // --- State ---------------------------------------------------------------
   const [activeTab, setActiveTab] = useState<TabValue>(initialTab);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedFilters, setSelectedFilters] = useState<Record<string, string[]>>({});
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
-  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(
-    validRouteTab && routeCardId ? routeCardId : null
-  );
-  const [hasPromptedDashboardLogin, setHasPromptedDashboardLogin] = useState(false);
   const [loginModal, setLoginModal] = useState<{
     open: boolean;
     context: LoginContext;
@@ -134,105 +115,62 @@ export default function DigitalIntelligencePage() {
     },
   });
 
+  // --- Debounced search ----------------------------------------------------
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const dashboardSectionRef = useRef<HTMLElement | null>(null);
-  const authenticated = isUserAuthenticated();
-  const currentData = SERVICES_BY_TAB[activeTab];
-  const currentFilters = FILTERS_BY_TAB[activeTab];
 
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       setDebouncedSearch(searchQuery);
     }, DEBOUNCE_DELAY);
-
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, [searchQuery]);
 
-  useEffect(() => {
-    if (validRouteTab && activeTab !== validRouteTab) {
-      setActiveTab(validRouteTab);
-      return;
+  // --- Derived data based on active tab ------------------------------------
+  const currentData: ServiceType[] = useMemo(() => {
+    switch (activeTab) {
+      case "systems-portfolio":
+        return systemsPortfolio;
+      case "digital-maturity":
+        return digitalMaturity;
+      case "projects-portfolio":
+        return projectsPortfolio;
+      default:
+        return systemsPortfolio;
     }
+  }, [activeTab]);
 
-    if (!validRouteTab && isValidTab(requestedTab) && activeTab !== requestedTab) {
-      setActiveTab(requestedTab);
+  const currentFilters = useMemo(() => {
+    switch (activeTab) {
+      case "systems-portfolio":
+        return systemsPortfolioFilters;
+      case "digital-maturity":
+        return digitalMaturityFilters;
+      case "projects-portfolio":
+        return projectsPortfolioFilters;
+      default:
+        return systemsPortfolioFilters;
     }
-  }, [activeTab, requestedTab, validRouteTab]);
+  }, [activeTab]);
 
-  useEffect(() => {
-    if (!validRouteTab || !routeCardId) return;
-    setSelectedServiceId(routeCardId);
-  }, [routeCardId, validRouteTab]);
-
-  useEffect(() => {
-    setHasPromptedDashboardLogin(false);
-  }, [routeCardId, validRouteTab]);
-
-  useEffect(() => {
-    if (!validRouteTab || !routeCardId || authenticated || hasPromptedDashboardLogin) {
-      return;
-    }
-
-    const routeService =
-      SERVICES_BY_TAB[validRouteTab].find((service) => service.id === routeCardId) || null;
-
-    setLoginModal({
-      open: true,
-      context: {
-        marketplace: "digital-intelligence",
-        tab: validRouteTab,
-        cardId: routeCardId,
-        serviceName: routeService?.title || "Digital Intelligence Dashboard",
-        action: "View Analytics",
-      },
-    });
-    setHasPromptedDashboardLogin(true);
-  }, [authenticated, hasPromptedDashboardLogin, routeCardId, validRouteTab]);
-
-  const selectedService = useMemo(() => {
-    if (!authenticated || !selectedServiceId) return null;
-    return currentData.find((service) => service.id === selectedServiceId) || null;
-  }, [authenticated, currentData, selectedServiceId]);
-
-  useEffect(() => {
-    if (!selectedService) return;
-
-    const frame = window.requestAnimationFrame(() => {
-      dashboardSectionRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    });
-
-    return () => window.cancelAnimationFrame(frame);
-  }, [selectedService]);
-
+  // --- Active filter count -------------------------------------------------
   const activeFilterCount = useMemo(
     () => Object.values(selectedFilters).reduce((sum, arr) => sum + arr.length, 0),
     [selectedFilters]
   );
 
-  const handleTabChange = useCallback(
-    (tab: TabValue) => {
-      setActiveTab(tab);
-      setSelectedServiceId(null);
-      setSelectedFilters({});
-      setSearchQuery("");
-      setDebouncedSearch("");
+  // --- Tab switch handler (resets filters + search) ------------------------
+  const handleTabChange = useCallback((tab: TabValue) => {
+    setActiveTab(tab);
+    setSearchParams({ tab });
+    setSelectedFilters({});
+    setSearchQuery("");
+    setDebouncedSearch("");
+  }, [setSearchParams]);
 
-      if (validRouteTab && routeCardId) {
-        navigate(`/marketplaces/digital-intelligence?tab=${tab}`, { replace: true });
-        return;
-      }
-
-      setSearchParams({ tab });
-    },
-    [navigate, routeCardId, setSearchParams, validRouteTab]
-  );
-
+  // --- Filter handlers -----------------------------------------------------
   const handleFilterChange = useCallback((group: string, value: string) => {
     setSelectedFilters((prev) => {
       const current = prev[group] || [];
@@ -243,12 +181,24 @@ export default function DigitalIntelligencePage() {
     });
   }, []);
 
+  const handleFilterSelect = useCallback((group: string, value: string | null) => {
+    setSelectedFilters((prev) => {
+      if (!value) {
+        const updated = { ...prev };
+        delete updated[group];
+        return updated;
+      }
+      return { ...prev, [group]: [value] };
+    });
+  }, []);
+
   const handleClearFilters = useCallback(() => {
     setSelectedFilters({});
     setSearchQuery("");
     setDebouncedSearch("");
   }, []);
 
+  // --- Filter logic (memoised) ---------------------------------------------
   const applyFilters = useCallback(
     (results: ServiceType[], filters: Record<string, string[]>) => {
       let filtered = results;
@@ -259,31 +209,21 @@ export default function DigitalIntelligencePage() {
         filtered = filtered.filter((service) => {
           switch (group) {
             case "analyticsType":
-              return values.includes(
-                (service as SystemsPortfolioService | ProjectsPortfolioService).analyticsType
-              );
+              return values.includes((service as SystemsPortfolioService | ProjectsPortfolioService).analyticsType);
             case "systemScope":
               return values.includes((service as SystemsPortfolioService).systemScope);
             case "dataSource":
-              return values.includes(
-                (service as SystemsPortfolioService | ProjectsPortfolioService).dataSource || ""
-              );
+              return values.includes((service as SystemsPortfolioService | ProjectsPortfolioService).dataSource || "");
             case "aiCapability":
-              return values.some((value) =>
-                value === "None"
+              return values.some((v) =>
+                v === "None"
                   ? service.aiCapabilities.length === 0
-                  : service.aiCapabilities.some((capability) =>
-                      capability.toLowerCase().includes(value.toLowerCase())
-                    )
+                  : service.aiCapabilities.some((cap) => cap.toLowerCase().includes(v.toLowerCase()))
               );
             case "updateFrequency":
-              return values.includes(
-                (service as SystemsPortfolioService | ProjectsPortfolioService).updateFrequency || ""
-              );
+              return values.includes((service as SystemsPortfolioService | ProjectsPortfolioService).updateFrequency || "");
             case "visualizationType":
-              return values.includes(
-                (service as SystemsPortfolioService | ProjectsPortfolioService).visualizationType || ""
-              );
+              return values.includes((service as SystemsPortfolioService | ProjectsPortfolioService).visualizationType || "");
             case "complexity":
               return values.includes(service.complexity);
             case "assessmentType":
@@ -310,93 +250,47 @@ export default function DigitalIntelligencePage() {
   );
 
   const filteredServices = useMemo(() => {
-    let results = currentData;
+    let results: ServiceType[] = currentData;
 
+    // Text search (debounced)
     if (debouncedSearch.trim()) {
-      const query = debouncedSearch.toLowerCase();
+      const q = debouncedSearch.toLowerCase();
       results = results.filter(
         (service) =>
-          service.title.toLowerCase().includes(query) ||
-          service.description.toLowerCase().includes(query) ||
-          service.aiCapabilities.some((capability) =>
-            capability.toLowerCase().includes(query)
-          ) ||
-          service.keyInsights.some((insight) => insight.toLowerCase().includes(query))
+          service.title.toLowerCase().includes(q) ||
+          service.description.toLowerCase().includes(q) ||
+          service.aiCapabilities.some((c) => c.toLowerCase().includes(q)) ||
+          service.keyInsights.some((i) => i.toLowerCase().includes(q))
       );
     }
 
-    return applyFilters(results, selectedFilters);
-  }, [applyFilters, currentData, debouncedSearch, selectedFilters]);
+    // Checkbox filters
+    results = applyFilters(results, selectedFilters);
 
+    return results;
+  }, [currentData, debouncedSearch, selectedFilters, applyFilters]);
+
+  // --- Card click -> navigate to detail page -------------------------------
   const handleServiceClick = useCallback(
     (serviceId: string) => {
-      if (authenticated) {
-        setSelectedServiceId(serviceId);
-
-        if (validRouteTab && routeCardId) {
-          navigate(`/marketplaces/digital-intelligence/${activeTab}/${serviceId}/dashboard`);
-        }
-
-        return;
-      }
-
       navigate(`/marketplaces/digital-intelligence/${activeTab}/${serviceId}`);
     },
-    [activeTab, authenticated, navigate, routeCardId, validRouteTab]
+    [navigate, activeTab]
   );
 
   const closeLoginModal = useCallback(() => {
     setLoginModal((prev) => ({ ...prev, open: false }));
   }, []);
 
+  // --- Render --------------------------------------------------------------
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Header />
       <MarketplaceHeader />
 
       <main className="flex-1" id="main-content">
-        {authenticated && selectedService && (
-          <section ref={dashboardSectionRef} className="max-w-7xl mx-auto px-4 py-8">
-            <div className="mb-6 flex flex-col gap-4 rounded-2xl border border-orange-200 bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-wide text-orange-600">
-                  Authenticated Dashboard View
-                </p>
-                <h2 className="mt-1 text-2xl font-bold text-gray-900">
-                  {selectedService.title}
-                </h2>
-                <p className="mt-1 text-sm text-gray-600">
-                  Stage 1 now hosts the live dashboard. Stage 2 is reserved for Digital Intelligence request tracking.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                <button
-                  onClick={() =>
-                    navigate(
-                      `/marketplaces/digital-intelligence/${activeTab}/${selectedService.id}`
-                    )
-                  }
-                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:border-gray-400 hover:bg-gray-50"
-                >
-                  View Service Details
-                </button>
-                <button
-                  onClick={() => navigate("/stage2/intelligence/requests")}
-                  className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-orange-700"
-                >
-                  Open My DI Requests
-                </button>
-              </div>
-            </div>
-
-            <IntelligenceDashboardView
-              service={selectedService}
-              tab={activeTab as DIServiceTab}
-            />
-          </section>
-        )}
-
         <div className="max-w-7xl mx-auto px-4 py-12">
+          {/* ── Tabs ── */}
           <div
             className="flex border-b border-gray-200 mb-6 overflow-x-auto"
             role="tablist"
@@ -412,14 +306,14 @@ export default function DigitalIntelligencePage() {
                   aria-selected={isActive}
                   aria-controls={`panel-${tab.value}`}
                   onClick={() => handleTabChange(tab.value)}
-                  className={`px-4 md:px-6 py-4 text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-inset whitespace-nowrap ${
-                    isActive
+                  className={`px-4 md:px-6 py-4 text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-inset whitespace-nowrap ${isActive
                       ? "border-b-2 border-purple-600 text-purple-600"
                       : "text-gray-500 hover:text-gray-700"
-                  }`}
+                    }`}
                 >
                   <span className="flex items-center gap-2">
                     {tab.icon}
+                    {/* Full label on desktop, short on mobile */}
                     <span className="hidden sm:inline">{tab.label}</span>
                     <span className="sm:hidden">{tab.shortLabel}</span>
                     <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full text-xs font-semibold">
@@ -431,11 +325,13 @@ export default function DigitalIntelligencePage() {
             })}
           </div>
 
+          {/* ── Tab Panel ── */}
           <div
             role="tabpanel"
             id={`panel-${activeTab}`}
             aria-labelledby={`tab-${activeTab}`}
           >
+            {/* Search */}
             <div className="mb-6">
               <SearchBar
                 value={searchQuery}
@@ -445,6 +341,7 @@ export default function DigitalIntelligencePage() {
             </div>
 
             <div className="flex gap-6">
+              {/* ── Filter Panel (sidebar / drawer) ── */}
               <FilterPanel
                 filters={currentFilters}
                 selectedFilters={selectedFilters}
@@ -454,7 +351,9 @@ export default function DigitalIntelligencePage() {
                 onToggle={() => setMobileFilterOpen(!mobileFilterOpen)}
               />
 
+              {/* ── Main Content ── */}
               <div className="flex-1">
+                {/* Result count */}
                 <div className="mb-4">
                   <p
                     className="text-sm text-gray-600"
@@ -472,6 +371,7 @@ export default function DigitalIntelligencePage() {
                   </p>
                 </div>
 
+                {/* Cards grid */}
                 {filteredServices.length > 0 ? (
                   <div
                     className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5"
@@ -483,15 +383,9 @@ export default function DigitalIntelligencePage() {
                         key={service.id}
                         service={{
                           ...service,
-                          dataSource:
-                            (service as SystemsPortfolioService).dataSource ||
-                            (service as ProjectsPortfolioService).dataSource,
-                          updateFrequency:
-                            (service as SystemsPortfolioService).updateFrequency ||
-                            (service as ProjectsPortfolioService).updateFrequency,
-                          visualizationType:
-                            (service as SystemsPortfolioService).visualizationType ||
-                            (service as ProjectsPortfolioService).visualizationType,
+                          dataSource: (service as SystemsPortfolioService).dataSource || (service as ProjectsPortfolioService).dataSource,
+                          updateFrequency: (service as SystemsPortfolioService).updateFrequency || (service as ProjectsPortfolioService).updateFrequency,
+                          visualizationType: (service as SystemsPortfolioService).visualizationType || (service as ProjectsPortfolioService).visualizationType,
                           outputFormat: (service as DigitalMaturityService).outputFormat,
                         }}
                         onClick={() => handleServiceClick(service.id)}
@@ -499,6 +393,7 @@ export default function DigitalIntelligencePage() {
                     ))}
                   </div>
                 ) : (
+                  /* ── Empty State ── */
                   <div
                     className="bg-white border-2 border-gray-200 rounded-xl p-12 text-center"
                     role="status"
@@ -515,7 +410,8 @@ export default function DigitalIntelligencePage() {
                         No services match your criteria
                       </h3>
                       <p className="text-gray-600 mb-6">
-                        Try adjusting your filters or search query to find what you&apos;re looking for.
+                        Try adjusting your filters or search query to find what
+                        you're looking for.
                       </p>
                       <button
                         onClick={handleClearFilters}
@@ -533,13 +429,14 @@ export default function DigitalIntelligencePage() {
         </div>
       </main>
 
+      {/* Mobile floating filter button */}
       <MobileFilterButton onClick={() => setMobileFilterOpen(true)} />
 
+      {/* Login Modal */}
       <LoginModal
         isOpen={loginModal.open}
         onClose={closeLoginModal}
         context={loginModal.context}
-        onLoginSuccess={() => setLoginModal((prev) => ({ ...prev, open: false }))}
       />
 
       <Footer />

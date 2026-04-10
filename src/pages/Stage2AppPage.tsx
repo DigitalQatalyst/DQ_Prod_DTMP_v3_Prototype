@@ -128,7 +128,7 @@ import ProjectsPage from "./lifecycle/ProjectsPage";
 import ApplicationsPage from "./lifecycle/ApplicationsPage";
 import { type BuildRequest, deliveryTeams } from "@/data/solutionBuild";
 import { Progress } from "@/components/ui/progress";
-import IntelligenceRequestTrackerPage from "@/pages/stage2/intelligence/IntelligenceRequestTrackerPage";
+import IntelligenceWorkspacePage from "@/pages/stage2/intelligence/IntelligenceWorkspacePage";
 import { type ServiceRequest, type SupportTicket } from "@/data/supportData";
 import { technicalSupport, expertConsultancy } from "@/data/supportServices";
 import { getSupportServiceDetail } from "@/data/supportServices/detailsSupport";
@@ -138,6 +138,8 @@ import { createStage3Request } from "@/data/stage3";
 import { useSupportWorkspace } from "@/hooks/useSupportWorkspace";
 import { SupportWorkspaceSidebar } from "@/components/stage2/support/SupportWorkspaceSidebar";
 import { SupportWorkspacePanels } from "@/components/stage2/support/SupportWorkspacePanels";
+import { intelligenceServices } from "@/data/digitalIntelligence/stage2/intelligenceServices";
+import DigitalIntelligenceDashboardPage from "@/pages/DigitalIntelligenceDashboardPage";
 import TemplatesOverview from "@/pages/stage2/templates/TemplatesOverview";
 import TemplatesMyRequestsPage from "@/pages/stage2/templates/MyRequestsPage";
 import TemplatesMyDocumentsPage from "@/pages/stage2/templates/MyDocumentsPage";
@@ -476,7 +478,7 @@ export default function Stage2AppPage() {
       return cardId;
     }
     if (marketplace === "digital-intelligence") {
-      return "di-request-tracker";
+      return "di-overview";
     }
     if (marketplace === "support-services") {
       const requestedSupportSubService = normalizeSupportSubService(state.tab);
@@ -657,7 +659,7 @@ export default function Stage2AppPage() {
     }
 
     if (marketplace === "digital-intelligence" && !cardId) {
-      setActiveSubService("di-request-tracker");
+      setActiveSubService("di-overview");
       return;
     }
 
@@ -825,7 +827,23 @@ export default function Stage2AppPage() {
 
   useEffect(() => {
     if (!isIntelligenceRoute) return;
-    setActiveSubService("di-request-tracker");
+    if (routeIntelligenceTab === "services" && routeIntelligenceItemId) {
+      setActiveSubService(routeIntelligenceItemId);
+      return;
+    }
+    if (routeIntelligenceTab === "overview") {
+      setActiveSubService("di-overview");
+      return;
+    }
+    if (routeIntelligenceTab === "requests") {
+      setActiveSubService("di-my-requests");
+      return;
+    }
+    if (routeIntelligenceTab === "services" && !routeIntelligenceItemId) {
+      setActiveSubService("di-overview");
+      return;
+    }
+    setActiveSubService("di-overview");
   }, [isIntelligenceRoute, routeIntelligenceTab, routeIntelligenceItemId]);
 
   useEffect(() => {
@@ -1329,9 +1347,18 @@ export default function Stage2AppPage() {
   // Digital Intelligence Stage 2 workspace menu
   const intelligenceSubServices = [
     {
-      id: "di-request-tracker",
-      name: "Request Tracker",
-      description: "My access, datasource, and remediation requests",
+      id: "di-overview",
+      name: "Overview",
+      description: "Summary of all your requests",
+      icon: BarChart3,
+      category: "workspace",
+      accuracy: " ",
+      updateFrequency: " ",
+    },
+    {
+      id: "di-my-requests",
+      name: "My Requests",
+      description: "Track status, SLAs & handlers",
       icon: FileText,
       category: "workspace",
       accuracy: " ",
@@ -1410,11 +1437,11 @@ export default function Stage2AppPage() {
       });
     }
     if (service === "Digital Intelligence") {
-      navigate("/stage2/intelligence/requests", {
+      navigate("/stage2/intelligence/overview", {
         replace: true,
         state: { ...state, marketplace: "digital-intelligence" },
       });
-      setActiveSubService("di-request-tracker");
+      setActiveSubService("di-overview");
     }
     if (service !== "Support Services") {
       setSupportSelectedService(null);
@@ -1434,14 +1461,33 @@ export default function Stage2AppPage() {
       });
     }
     if (activeService === "Digital Intelligence") {
-      navigate(`/stage2/intelligence/requests`, {
+      if (subServiceId === "di-overview") {
+        navigate(`/stage2/intelligence/overview`, {
+          replace: true,
+          state: {
+            ...state,
+            marketplace: "digital-intelligence",
+          },
+        });
+        return;
+      }
+      if (subServiceId === "di-my-requests") {
+        navigate(`/stage2/intelligence/requests`, {
+          replace: true,
+          state: {
+            ...state,
+            marketplace: "digital-intelligence",
+          },
+        });
+        return;
+      }
+      navigate(`/stage2/intelligence/services/${subServiceId}`, {
         replace: true,
         state: {
           ...state,
           marketplace: "digital-intelligence",
         },
       });
-      setActiveSubService("di-request-tracker");
     }
   };
 
@@ -2065,7 +2111,7 @@ export default function Stage2AppPage() {
               ) : activeService === "Digital Intelligence" ? (
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-sm font-medium text-gray-900 mb-3">Requests</h3>
+                    <h3 className="text-sm font-medium text-gray-900 mb-3">Dashboard</h3>
                     <div className="space-y-2">
                       {intelligenceSubServices.map((service) => {
                         const Icon = service.icon;
@@ -2316,7 +2362,7 @@ export default function Stage2AppPage() {
               />
             )
           ) : activeService === "Digital Intelligence" ? (
-            <IntelligenceRequestTrackerPage />
+            <IntelligenceWorkspacePage activeSubService={activeSubService} />
           ) : activeService === "Support Services" && activeSubService ? (
             <div className="h-full">
               {renderSupportWorkspace()}
@@ -2334,17 +2380,17 @@ export default function Stage2AppPage() {
                   <p className="text-gray-500 mb-4">
                     {activeService === "Overview" ?
                       "Welcome to the DTMP Service Hub" :
-                        activeService === "Learning Center" ?
-                          (viewMode === "admin"
-                            ? "Select a course from the sidebar to monitor course analytics and progress"
-                            : "Select a course from the sidebar to view details and continue learning") :
+                      activeService === "Learning Center" ?
+                        (viewMode === "admin"
+                          ? "Select a course from the sidebar to monitor course analytics and progress"
+                          : "Select a course from the sidebar to view details and continue learning") :
                         activeService === "Lifecycle Management" ?
                           "Select a lifecycle service from the sidebar to get started" :
-                        activeService === "Digital Intelligence" ?
-                          "Select the request tracker to review Stage 1 Digital Intelligence submissions" :
-                          activeService === "Support Services" ?
-                            "Select a support service from the sidebar to get started" :
-                            `${activeService} tools and interfaces would be displayed here`
+                          activeService === "Digital Intelligence" ?
+                            "Select an intelligence service from the sidebar to view AI-powered dashboards" :
+                            activeService === "Support Services" ?
+                              "Select a support service from the sidebar to get started" :
+                              `${activeService} tools and interfaces would be displayed here`
                     }
                   </p>
                   {activeService === "Portfolio Management" && (
@@ -2366,7 +2412,7 @@ export default function Stage2AppPage() {
                   )}
                   {activeService === "Digital Intelligence" && (
                     <p className="text-sm text-gray-400">
-                      Open the request tracker to review access, datasource, and remediation requests
+                      Select an intelligence service from the sidebar to get started
                     </p>
                   )}
                   {activeService === "Support Services" && (
