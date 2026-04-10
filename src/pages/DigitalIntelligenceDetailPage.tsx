@@ -40,6 +40,7 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Badge } from "@/components/ui/badge";
 import { IntelligenceCard } from "@/components/digitalIntelligence";
+import { LoginModal } from "@/components/learningCenter";
 import {
   systemsPortfolio,
   digitalMaturity,
@@ -48,6 +49,7 @@ import {
   type DigitalMaturityService,
   type ProjectsPortfolioService,
 } from "@/data/digitalIntelligence";
+import { isUserAuthenticated } from "@/data/sessionAuth";
 import { createDIStage3Intake } from "@/data/stage3/intake";
 import type { DIServiceTab } from "@/data/digitalIntelligence/requestState";
 
@@ -73,6 +75,7 @@ export default function DigitalIntelligenceDetailPage() {
   const { tab, cardId } = useParams<{ tab: string; cardId: string }>();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<ContentTab>("about");
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   let service: ServiceType | undefined;
   let tabDisplayName = "";
@@ -138,16 +141,11 @@ export default function DigitalIntelligenceDetailPage() {
   };
 
   const handleAccessClick = () => {
-    // Create the Stage 3 intake record for the analytics access request
-    createDIStage3Intake({
-      serviceId: service!.id,
-      serviceTitle: service!.title,
-      tab: (tab as DIServiceTab) || "systems-portfolio",
-      requesterName: "Current User",
-      requesterEmail: "user@dtmp.local",
-      requesterRole: "Platform User",
-      message: `Analytics access request for: ${service!.title}`,
-    });
+    if (!isUserAuthenticated()) {
+      setShowLoginModal(true);
+      return;
+    }
+
     navigate(`/marketplaces/digital-intelligence/${tab}/${service!.id}/dashboard`);
   };
 
@@ -764,6 +762,32 @@ export default function DigitalIntelligenceDetailPage() {
       </main>
 
       <Footer />
+
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        context={{
+          marketplace: "digital-intelligence",
+          tab: (tab as DIServiceTab) || "systems-portfolio",
+          cardId: service.id,
+          serviceName: service.title,
+          action: "View Analytics",
+          dashboardName: service.title,
+        }}
+        onLoginSuccess={(email) => {
+          createDIStage3Intake({
+            serviceId: service.id,
+            serviceTitle: service.title,
+            tab: (tab as DIServiceTab) || "systems-portfolio",
+            requesterName: email?.split("@")[0] || "Platform User",
+            requesterEmail: email || "unknown@dtmp.local",
+            requesterRole: "Business User",
+            message: `Analytics access request for: ${service.title}`,
+          });
+          setShowLoginModal(false);
+          navigate(`/marketplaces/digital-intelligence/${tab}/${service.id}/dashboard`);
+        }}
+      />
     </div>
   );
 }
