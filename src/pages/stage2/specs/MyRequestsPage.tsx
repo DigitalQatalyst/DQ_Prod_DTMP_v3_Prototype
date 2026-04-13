@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ExternalLink, ArrowRight, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { allRequests, statusConfig, SpecRequest } from './SolutionSpecsOverview';
+import { getLiveSpecRequests, statusConfig, SpecRequest } from './SolutionSpecsOverview';
 
 type StatusFilter = SpecRequest['status'] | 'all';
 
@@ -19,6 +19,11 @@ export default function MyRequestsPage() {
   const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState<StatusFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [allRequests, setAllRequests] = useState<SpecRequest[]>(() => getLiveSpecRequests());
+
+  useEffect(() => {
+    setAllRequests(getLiveSpecRequests());
+  }, []);
 
   const filtered = allRequests.filter((req) => {
     const matchesStatus = activeFilter === 'all' || req.status === activeFilter;
@@ -105,7 +110,8 @@ export default function MyRequestsPage() {
               return (
                 <div
                   key={req.id}
-                  className="grid grid-cols-12 gap-2 px-5 py-4 items-center hover:bg-gray-50 transition-colors"
+                  onClick={() => navigate(`/stage2/specs/my-requests/${req.id}`)}
+                  className="grid grid-cols-12 gap-2 px-5 py-4 items-center hover:bg-gray-50 transition-colors cursor-pointer"
                 >
                   <div className="col-span-1">
                     <span className="text-xs font-mono text-gray-400">{req.id}</span>
@@ -142,7 +148,10 @@ export default function MyRequestsPage() {
                   <div className="col-span-1 flex justify-end">
                     {req.specId ? (
                       <button
-                        onClick={() => navigate(`/marketplaces/solution-specs/${req.specId}`)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/marketplaces/solution-specs/${req.specId}`);
+                        }}
                         className="p-1.5 rounded-md text-gray-400 hover:text-orange-600 hover:bg-orange-50 transition-colors"
                         title="View linked spec"
                       >
