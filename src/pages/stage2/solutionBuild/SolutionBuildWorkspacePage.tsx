@@ -17,11 +17,12 @@ import {
   Activity,
   Users,
   X,
+  TrendingUp,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { buildRequests, deliveryTeams, type BuildRequest } from "@/data/solutionBuild";
+import { buildRequests, deliveryTeams, type BuildRequest, escalateBuildRequestPriority } from "@/data/solutionBuild";
 import { BuildWorkspaceSidebar, type BuildWorkspaceTab } from "@/components/stage2/build/BuildWorkspacePanels";
 import { BuildPhaseTimeline } from "@/components/stage2/build/BuildPhaseTimeline";
 
@@ -194,6 +195,48 @@ export default function SolutionBuildWorkspacePage() {
     setUatSignOffMode("idle");
     setUatConcernText("");
     alert("Your concern has been submitted to the delivery team.");
+  };
+
+  const handleEscalatePriority = () => {
+    if (!selectedBuildRequest) return;
+
+    const priorityOrder = { low: 0, medium: 1, high: 2, critical: 3 };
+    const currentLevel = priorityOrder[selectedBuildRequest.priority];
+    
+    if (currentLevel >= 3) {
+      alert("This request is already at critical priority.");
+      return;
+    }
+
+    const nextPriority = Object.keys(priorityOrder).find(
+      (key) => priorityOrder[key as keyof typeof priorityOrder] === currentLevel + 1
+    ) as "low" | "medium" | "high" | "critical";
+
+    const reason = prompt(
+      `Escalate priority from ${selectedBuildRequest.priority} to ${nextPriority}?\n\nPlease provide a reason for escalation:`
+    );
+
+    if (!reason || !reason.trim()) return;
+
+    const updated = escalateBuildRequestPriority(
+      selectedBuildRequest.id,
+      nextPriority,
+      reason.trim(),
+      "Current User"
+    );
+
+    if (updated) {
+      // Update local state
+      const updatedRequests = allBuildRequests.map((req) =>
+        req.id === updated.id ? updated : req
+      );
+      setAllBuildRequests(updatedRequests);
+      setSelectedBuildRequest(updated);
+
+      alert(`✅ Priority escalated to ${nextPriority}!\n\nThe delivery team has been notified.`);
+    } else {
+      alert("Unable to escalate priority. Please try again.");
+    }
   };
 
   // Helpers
@@ -455,7 +498,18 @@ export default function SolutionBuildWorkspacePage() {
                     <p className="text-lg font-semibold capitalize">{selectedBuildRequest.type}</p>
                   </div>
                   <div className="bg-white rounded-lg border p-4">
-                    <p className="text-sm text-gray-500 mb-1">Priority</p>
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-sm text-gray-500">Priority</p>
+                      {selectedBuildRequest.priority !== "critical" && (
+                        <button
+                          onClick={handleEscalatePriority}
+                          className="p-1 hover:bg-gray-100 rounded transition-colors group"
+                          title="Escalate Priority"
+                        >
+                          <TrendingUp className="w-4 h-4 text-gray-400 group-hover:text-orange-600" />
+                        </button>
+                      )}
+                    </div>
                     <p
                       className={`text-lg font-semibold capitalize ${getPriorityColor(
                         selectedBuildRequest.priority

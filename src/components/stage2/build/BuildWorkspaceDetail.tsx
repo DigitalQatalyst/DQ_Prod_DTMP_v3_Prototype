@@ -15,10 +15,11 @@ import {
   Activity,
   Users,
   X,
+  TrendingUp,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
-import { type BuildRequest, deliveryTeams } from "@/data/solutionBuild";
+import { type BuildRequest, deliveryTeams, escalateBuildRequestPriority } from "@/data/solutionBuild";
 import { BuildPhaseTimeline } from "./BuildPhaseTimeline";
 
 interface BuildWorkspaceDetailProps {
@@ -57,6 +58,66 @@ export function BuildWorkspaceDetail({ selectedRequest }: BuildWorkspaceDetailPr
     setUatSignOffMode("idle");
     setUatConcernText("");
     // In a real app, this would update the request via API
+  };
+
+  const handleEscalatePriority = () => {
+    if (!selectedRequest) return;
+
+    const priorityOrder = { low: 0, medium: 1, high: 2, critical: 3 };
+    const currentLevel = priorityOrder[selectedRequest.priority];
+    
+    console.log('Current request:', selectedRequest);
+    console.log('Current priority:', selectedRequest.priority, 'Level:', currentLevel);
+    
+    if (currentLevel >= 3) {
+      alert("This request is already at critical priority.");
+      return;
+    }
+
+    const nextPriority = Object.keys(priorityOrder).find(
+      (key) => priorityOrder[key as keyof typeof priorityOrder] === currentLevel + 1
+    ) as "low" | "medium" | "high" | "critical";
+
+    console.log('Next priority:', nextPriority);
+
+    const reason = prompt(
+      `Escalate priority from ${selectedRequest.priority} to ${nextPriority}?\n\nPlease provide a reason for escalation:`
+    );
+
+    if (!reason || !reason.trim()) return;
+
+    // Ensure request exists in localStorage first
+    const stored = JSON.parse(localStorage.getItem('dtmp.solutionBuild.buildRequests') || '[]');
+    const existsInStorage = stored.some((r: BuildRequest) => r.id === selectedRequest.id);
+    
+    if (!existsInStorage) {
+      // Add to localStorage if it doesn't exist
+      stored.push(selectedRequest);
+      localStorage.setItem('dtmp.solutionBuild.buildRequests', JSON.stringify(stored));
+      console.log('Added request to localStorage');
+    }
+
+    console.log('Calling escalateBuildRequestPriority with:', {
+      id: selectedRequest.id,
+      newPriority: nextPriority,
+      reason: reason.trim()
+    });
+
+    const updated = escalateBuildRequestPriority(
+      selectedRequest.id,
+      nextPriority,
+      reason.trim(),
+      "Current User"
+    );
+
+    console.log('Result:', updated);
+
+    if (updated) {
+      alert(`✅ Priority escalated to ${nextPriority}!\n\nThe delivery team has been notified. Refresh the page to see the update.`);
+      window.location.reload();
+    } else {
+      alert("Unable to escalate priority. Please try again.");
+    }
   };
 
   const getStatusColor = (status: BuildRequest["status"]) => {
@@ -170,7 +231,18 @@ export function BuildWorkspaceDetail({ selectedRequest }: BuildWorkspaceDetailPr
               <p className="text-lg font-semibold capitalize">{selectedRequest.type}</p>
             </div>
             <div className="bg-white rounded-lg border p-4">
-              <p className="text-sm text-gray-500 mb-1">Priority</p>
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-sm text-gray-500">Priority</p>
+                {selectedRequest.priority !== "critical" && (
+                  <button
+                    onClick={handleEscalatePriority}
+                    className="p-1 hover:bg-gray-100 rounded transition-colors group"
+                    title="Escalate Priority"
+                  >
+                    <TrendingUp className="w-4 h-4 text-gray-400 group-hover:text-orange-600" />
+                  </button>
+                )}
+              </div>
               <p className={`text-lg font-semibold capitalize ${getPriorityColor(selectedRequest.priority)}`}>
                 {selectedRequest.priority}
               </p>
