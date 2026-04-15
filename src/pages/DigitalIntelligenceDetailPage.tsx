@@ -235,12 +235,7 @@ export default function DigitalIntelligenceDetailPage() {
           Business Value
         </h2>
         <ul className="space-y-3">
-          {[
-            "Reduce decision-making time with actionable insights",
-            "Identify risks and opportunities before they materialize",
-            "Optimize resource allocation and costs",
-            "Enable continuous improvement through data-driven insights",
-          ].map((item, index) => (
+          {(service.businessValue || []).map((item, index) => (
             <li key={index} className="flex items-start gap-3">
               <CheckCircle2 className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
               <span className="text-gray-700">{item}</span>

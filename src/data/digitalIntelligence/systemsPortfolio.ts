@@ -13,6 +13,7 @@
    complexity: "Low" | "Medium" | "High";
    accuracy: string;
    keyInsights: string[];
+  businessValue: string[];
  }
  
  export const systemsPortfolio: SystemsPortfolioService[] = [
@@ -30,7 +31,13 @@
      visualizationType: "Dashboard",
      complexity: "Medium",
      accuracy: "95% Accuracy",
-     keyInsights: ["System uptime trends", "Performance bottlenecks", "Health score by domain"]
+     keyInsights: ["System uptime trends", "Performance bottlenecks", "Health score by domain"],
+    businessValue: [
+      "Reduce system downtime with predictive failure alerts before incidents escalate",
+      "Prioritise infrastructure investment using data-backed health scores across the entire estate",
+      "Demonstrate platform reliability to executive stakeholders with verifiable uptime metrics",
+      "Decrease incident response time by surfacing root-cause signals before user impact is felt"
+    ]
    },
    {
      id: "predictive-maintenance",
@@ -46,7 +53,12 @@
      visualizationType: "Alert",
      complexity: "High",
      accuracy: "88% Accuracy",
-     keyInsights: ["Failure probability", "Optimal maintenance windows", "Cost impact"]
+     keyInsights: ["Failure probability", "Optimal maintenance windows", "Cost impact"],
+    businessValue: [
+      "Enable data-driven decision making for predictive maintenance intelligence",
+      "Identify key risks and opportunities early to optimize outcomes",
+      "Maximize return on investment through actionable insights"
+    ]
    },
    {
      id: "performance-trending",
@@ -62,7 +74,12 @@
      visualizationType: "Trend Chart",
      complexity: "Medium",
      accuracy: "92% Accuracy",
-     keyInsights: ["Performance degradation patterns", "Capacity forecasts", "Peak usage prediction"]
+     keyInsights: ["Performance degradation patterns", "Capacity forecasts", "Peak usage prediction"],
+    businessValue: [
+      "Enable data-driven decision making for performance trend analysis",
+      "Identify key risks and opportunities early to optimize outcomes",
+      "Maximize return on investment through actionable insights"
+    ]
    },
    {
      id: "lifecycle-optimization",
@@ -78,7 +95,12 @@
      visualizationType: "Dashboard",
      complexity: "High",
      accuracy: "90% Accuracy",
-     keyInsights: ["Optimal refresh timing", "EOL risk analysis", "TCO impact"]
+     keyInsights: ["Optimal refresh timing", "EOL risk analysis", "TCO impact"],
+    businessValue: [
+      "Enable data-driven decision making for system lifecycle optimization",
+      "Identify key risks and opportunities early to optimize outcomes",
+      "Maximize return on investment through actionable insights"
+    ]
    },
    {
     id: "cost-analytics",
@@ -94,7 +116,12 @@
     visualizationType: "Dashboard",
     complexity: "Medium",
     accuracy: "91% Accuracy",
-     keyInsights: ["Cost per system", "Optimization opportunities", "Waste identification"]
+     keyInsights: ["Cost per system", "Optimization opportunities", "Waste identification"],
+    businessValue: [
+      "Enable data-driven decision making for system cost analytics & optimization",
+      "Identify key risks and opportunities early to optimize outcomes",
+      "Maximize return on investment through actionable insights"
+    ]
    },
    {
      id: "security-intelligence",
@@ -110,7 +137,12 @@
      visualizationType: "Dashboard",
      complexity: "High",
      accuracy: "94% Accuracy",
-     keyInsights: ["Threat landscape", "Vulnerability trends", "Risk exposure"]
+     keyInsights: ["Threat landscape", "Vulnerability trends", "Risk exposure"],
+    businessValue: [
+      "Enable data-driven decision making for security & vulnerability intelligence",
+      "Identify key risks and opportunities early to optimize outcomes",
+      "Maximize return on investment through actionable insights"
+    ]
    },
    {
     id: "availability-tracking",
@@ -126,7 +158,12 @@
     visualizationType: "Dashboard",
     complexity: "Medium",
     accuracy: "97% Accuracy",
-     keyInsights: ["Uptime percentage", "SLA compliance", "Downtime patterns"]
+     keyInsights: ["Uptime percentage", "SLA compliance", "Downtime patterns"],
+    businessValue: [
+      "Enable data-driven decision making for system availability tracking",
+      "Identify key risks and opportunities early to optimize outcomes",
+      "Maximize return on investment through actionable insights"
+    ]
    },
    {
      id: "dependency-intelligence",
@@ -142,7 +179,12 @@
      visualizationType: "Heatmap",
      complexity: "High",
      accuracy: "87% Accuracy",
-     keyInsights: ["Dependency maps", "Failure impact radius", "Critical systems"]
+     keyInsights: ["Dependency maps", "Failure impact radius", "Critical systems"],
+    businessValue: [
+      "Enable data-driven decision making for system dependency intelligence",
+      "Identify key risks and opportunities early to optimize outcomes",
+      "Maximize return on investment through actionable insights"
+    ]
    },
    {
      id: "capacity-forecasting",
@@ -158,7 +200,12 @@
      visualizationType: "Forecast Chart",
      complexity: "High",
      accuracy: "91% Accuracy",
-     keyInsights: ["Capacity thresholds", "Growth projections", "Scaling recommendations"]
+     keyInsights: ["Capacity thresholds", "Growth projections", "Scaling recommendations"],
+    businessValue: [
+      "Enable data-driven decision making for capacity forecasting analytics",
+      "Identify key risks and opportunities early to optimize outcomes",
+      "Maximize return on investment through actionable insights"
+    ]
    },
    {
     id: "usage-analytics",
@@ -174,7 +221,12 @@
     visualizationType: "Dashboard",
     complexity: "Medium",
     accuracy: "96% Accuracy",
-     keyInsights: ["User adoption rates", "Feature usage", "Access patterns"]
+     keyInsights: ["User adoption rates", "Feature usage", "Access patterns"],
+    businessValue: [
+      "Enable data-driven decision making for system usage analytics",
+      "Identify key risks and opportunities early to optimize outcomes",
+      "Maximize return on investment through actionable insights"
+    ]
    },
    {
      id: "incident-intelligence",
@@ -190,7 +242,12 @@
      visualizationType: "Dashboard",
      complexity: "High",
      accuracy: "89% Accuracy",
-     keyInsights: ["Incident patterns", "Root causes", "Prevention strategies"]
+     keyInsights: ["Incident patterns", "Root causes", "Prevention strategies"],
+    businessValue: [
+      "Enable data-driven decision making for incident pattern intelligence",
+      "Identify key risks and opportunities early to optimize outcomes",
+      "Maximize return on investment through actionable insights"
+    ]
    },
    {
      id: "integration-health",
@@ -206,6 +263,11 @@
      visualizationType: "Dashboard",
      complexity: "Medium",
      accuracy: "93% Accuracy",
-     keyInsights: ["Integration uptime", "API latency trends", "Error rate patterns"]
+     keyInsights: ["Integration uptime", "API latency trends", "Error rate patterns"],
+    businessValue: [
+      "Enable data-driven decision making for integration health monitoring",
+      "Identify key risks and opportunities early to optimize outcomes",
+      "Maximize return on investment through actionable insights"
+    ]
    }
  ];

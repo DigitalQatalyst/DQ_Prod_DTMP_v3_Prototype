@@ -13,6 +13,7 @@
    complexity: "Low" | "Medium" | "High";
    accuracy: string;
    keyInsights: string[];
+  businessValue: string[];
  }
  
  export const projectsPortfolio: ProjectsPortfolioService[] = [
@@ -30,7 +31,13 @@
      visualizationType: "Predictive Dashboard",
      complexity: "High",
      accuracy: "86% Accuracy",
-     keyInsights: ["Success probability", "Risk factors", "Intervention recommendations"]
+     keyInsights: ["Success probability", "Risk factors", "Intervention recommendations"],
+    businessValue: [
+      "Gain real-time visibility into which projects are at risk of delay, overrun, or scope creep",
+      "Reduce portfolio-level surprises with predictive milestone tracking and trend analysis",
+      "Ensure resource allocation is aligned to the highest-priority strategic initiatives",
+      "Improve PMO reporting accuracy by eliminating manual data consolidation across projects"
+    ]
    },
    {
      id: "delivery-velocity-analytics",
@@ -46,7 +53,12 @@
      visualizationType: "Trend Analysis",
      complexity: "Medium",
      accuracy: "91% Accuracy",
-     keyInsights: ["Velocity trends", "Sprint predictions", "Throughput forecasts"]
+     keyInsights: ["Velocity trends", "Sprint predictions", "Throughput forecasts"],
+    businessValue: [
+      "Enable data-driven decision making for delivery velocity analytics",
+      "Identify key risks and opportunities early to optimize outcomes",
+      "Maximize return on investment through actionable insights"
+    ]
    },
    {
      id: "resource-optimization-ai",
@@ -62,7 +74,12 @@
      visualizationType: "Heatmap",
      complexity: "High",
      accuracy: "89% Accuracy",
-     keyInsights: ["Optimal allocation", "Utilization gaps", "Skill matching"]
+     keyInsights: ["Optimal allocation", "Utilization gaps", "Skill matching"],
+    businessValue: [
+      "Enable data-driven decision making for ai resource optimization",
+      "Identify key risks and opportunities early to optimize outcomes",
+      "Maximize return on investment through actionable insights"
+    ]
    },
    {
      id: "risk-prediction-engine",
@@ -78,7 +95,12 @@
      visualizationType: "Predictive Dashboard",
      complexity: "High",
      accuracy: "84% Accuracy",
-     keyInsights: ["Risk probability", "Impact severity", "Mitigation strategies"]
+     keyInsights: ["Risk probability", "Impact severity", "Mitigation strategies"],
+    businessValue: [
+      "Enable data-driven decision making for project risk prediction engine",
+      "Identify key risks and opportunities early to optimize outcomes",
+      "Maximize return on investment through actionable insights"
+    ]
    },
    {
      id: "timeline-forecasting",
@@ -94,7 +116,12 @@
      visualizationType: "Forecast Chart",
      complexity: "High",
      accuracy: "88% Accuracy",
-     keyInsights: ["Completion probability", "Delay risks", "Acceleration options"]
+     keyInsights: ["Completion probability", "Delay risks", "Acceleration options"],
+    businessValue: [
+      "Enable data-driven decision making for project timeline forecasting",
+      "Identify key risks and opportunities early to optimize outcomes",
+      "Maximize return on investment through actionable insights"
+    ]
    },
    {
      id: "budget-variance-prediction",
@@ -110,7 +137,12 @@
      visualizationType: "Trend Analysis",
      complexity: "Medium",
      accuracy: "90% Accuracy",
-     keyInsights: ["Budget forecast", "Variance drivers", "Cost control actions"]
+     keyInsights: ["Budget forecast", "Variance drivers", "Cost control actions"],
+    businessValue: [
+      "Enable data-driven decision making for budget variance prediction",
+      "Identify key risks and opportunities early to optimize outcomes",
+      "Maximize return on investment through actionable insights"
+    ]
    },
    {
      id: "quality-prediction-model",
@@ -126,7 +158,12 @@
      visualizationType: "Predictive Dashboard",
      complexity: "High",
      accuracy: "87% Accuracy",
-     keyInsights: ["Quality score", "Defect forecast", "Testing adequacy"]
+     keyInsights: ["Quality score", "Defect forecast", "Testing adequacy"],
+    businessValue: [
+      "Enable data-driven decision making for project quality prediction",
+      "Identify key risks and opportunities early to optimize outcomes",
+      "Maximize return on investment through actionable insights"
+    ]
    },
    {
      id: "stakeholder-sentiment-analysis",
@@ -142,7 +179,12 @@
      visualizationType: "Dashboard",
      complexity: "Medium",
      accuracy: "82% Accuracy",
-     keyInsights: ["Sentiment trends", "Engagement levels", "Concern areas"]
+     keyInsights: ["Sentiment trends", "Engagement levels", "Concern areas"],
+    businessValue: [
+      "Enable data-driven decision making for stakeholder sentiment analysis",
+      "Identify key risks and opportunities early to optimize outcomes",
+      "Maximize return on investment through actionable insights"
+    ]
    },
    {
      id: "dependency-impact-intelligence",
@@ -158,7 +200,12 @@
      visualizationType: "Heatmap",
      complexity: "High",
      accuracy: "85% Accuracy",
-     keyInsights: ["Dependency chains", "Impact radius", "Critical path risks"]
+     keyInsights: ["Dependency chains", "Impact radius", "Critical path risks"],
+    businessValue: [
+      "Enable data-driven decision making for dependency impact intelligence",
+      "Identify key risks and opportunities early to optimize outcomes",
+      "Maximize return on investment through actionable insights"
+    ]
    },
    {
     id: "lessons-learned-intelligence",
@@ -174,6 +221,11 @@
     visualizationType: "Dashboard",
     complexity: "Medium",
     accuracy: "84% Accuracy",
-     keyInsights: ["Relevant lessons", "Success patterns", "Failure prevention"]
+     keyInsights: ["Relevant lessons", "Success patterns", "Failure prevention"],
+    businessValue: [
+      "Enable data-driven decision making for lessons learned intelligence",
+      "Identify key risks and opportunities early to optimize outcomes",
+      "Maximize return on investment through actionable insights"
+    ]
    }
  ];
