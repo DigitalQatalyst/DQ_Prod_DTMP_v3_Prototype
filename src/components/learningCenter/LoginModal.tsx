@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { enrolledCourses } from "@/data/learning";
 import { mapRuntimeCourseToStage2CourseId } from "@/data/learningCenter/trackProgress";
-import { setUserAuthenticated } from "@/data/sessionAuth";
+import { setUserAuthenticated, setSessionUser } from "@/data/sessionAuth";
 import { setSessionRole, isTOStage3Role, type SessionRole } from "@/data/sessionRole";
 
 const resolveRoleFromEmail = (email: string): SessionRole => {
@@ -59,6 +59,13 @@ export function LoginModal({
     const role = resolveRoleFromEmail(actorEmail);
     setUserAuthenticated(true);
     setSessionRole(role);
+    
+    // Store user session data
+    setSessionUser({
+      email: actorEmail,
+      name: actorEmail.split("@")[0],
+      role,
+    });
 
     if (onLoginSuccess) {
       onLoginSuccess(email);
@@ -207,19 +214,23 @@ export function LoginModal({
 
         {/* Description */}
         <p className="text-base text-muted-foreground text-center mb-8">
-          {context.marketplace === "solution-build"
-            ? `Log in to request deployment of "${context.serviceName}".`
-            : context.marketplace === "solution-specs" && context.action === "Make Request"
-              ? `Log in to submit your request for "${context.serviceName}".`
+          {context.marketplace === "learning-center"
+            ? "Please log in to continue with your enrollment."
+            : context.marketplace === "knowledge-center"
+              ? "Log in to save this item to your Knowledge Centre workspace."
               : context.marketplace === "solution-specs"
-                ? "Log in to access this solution specification."
-                : context.marketplace === "digital-intelligence"
-                  ? `Log in to submit your request for "${context.dashboardName || context.serviceName || "Digital Intelligence"}".`
-                  : context.marketplace === "knowledge-center"
-                    ? "Log in to save this item to your Knowledge Centre workspace."
-                    : (context.marketplace === "document-studio" || context.marketplace === "templates") && context.serviceName
-                      ? `Log in to request an AI-generated document for "${context.serviceName}".`
-                      : "Please log in to continue with your enrollment"}
+                ? `Log in to request the specification package for "${context.serviceName}".`
+                : context.marketplace === "solution-build"
+                  ? `Log in to request deployment of "${context.serviceName}".`
+                  : context.marketplace === "digital-intelligence"
+                    ? `Log in to request access to "${context.dashboardName || context.serviceName}".`
+                    : context.marketplace === "support-services"
+                      ? `Log in to submit a support request for "${context.serviceName}".`
+                      : context.marketplace === "portfolio-management"
+                        ? "Log in to track and manage this portfolio request."
+                        : context.marketplace === "document-studio" || context.marketplace === "templates"
+                          ? `Log in to request an AI-generated document for "${context.serviceName}".`
+                          : "Log in to access this service."}
         </p>
 
         {/* Form */}
@@ -267,11 +278,7 @@ export function LoginModal({
           Don't have an account?{" "}
           <button 
             type="button"
-            onClick={() => {
-              console.log('Sign up clicked - navigating to registration');
-              // TODO: Implement registration flow or navigate to registration page
-              // navigate('/register');
-            }}
+            onClick={() => alert("Self-registration is managed by your organisation. Contact your DTMP administrator to request access.")}
             className="text-orange-600 hover:text-orange-700 font-medium"
           >
             Sign up

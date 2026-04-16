@@ -871,7 +871,7 @@ export default function Stage2AppPage() {
   const learningSubServices = scopedLearningCourses.map(course => ({
     id: course.id,
     name: course.courseName,
-    description: `${course.instructor} â€¢ ${course.duration} â€¢ ${course.progress}% complete`,
+    description: `${course.instructor} \u2022 ${course.duration} \u2022 ${course.progress}% complete`,
     icon: BookOpen,
     category: course.difficulty,
     status: course.status,
@@ -1697,7 +1697,7 @@ export default function Stage2AppPage() {
               className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg ${isActiveService("Learning Center")}`}
               title="Learning Center"
             >
-              <Headphones className="w-4 h-4 flex-shrink-0" />
+              <BookOpen className="w-4 h-4 flex-shrink-0" />
               {!leftSidebarCollapsed && "Learning Center"}
             </button>
 

@@ -598,7 +598,11 @@ export default function LearningCenterPage() {
               <TabsContent value="reviews" className="mt-0">
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                   {pagedReviews.map((review) => (
-                    <ReviewCard key={review.id} review={review} />
+                    <ReviewCard 
+                      key={review.id} 
+                      review={review}
+                      onClick={() => navigate(`/marketplaces/learning-center/reviews/${review.id}`)}
+                    />
                   ))}
                 </div>
                 {sortedReviews.length === 0 && (

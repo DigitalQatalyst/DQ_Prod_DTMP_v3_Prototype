@@ -13,6 +13,8 @@ import {
   Users,
   FileText,
   Image,
+  Settings,
+  ArrowLeft,
 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -26,6 +28,7 @@ import { courses, Course } from "@/data/learningCenter/courses";
 import { learningTracks, LearningTrack } from "@/data/learningCenter/learningTracks";
 import { getOrderedTrackCourses, getTrackPrimaryCourseId } from "@/data/learningCenter/trackRuntime";
 import { reviews, Review } from "@/data/learningCenter/reviews";
+import { isUserAuthenticated, getSessionUser } from "@/data/sessionAuth";
 
 type DetailTab = "about" | "eligibility" | "process" | "documents" | "provider";
 
@@ -146,6 +149,18 @@ export default function LearningCenterDetailPage() {
             <ChevronRight className="w-4 h-4 mx-2" />
             <span className="font-medium text-foreground line-clamp-1">{title}</span>
           </nav>
+          
+          {/* Back Button */}
+          <div className="mt-3 mb-2">
+            <button
+              type="button"
+              onClick={() => navigate(`/marketplaces/learning-center?tab=${tab}`)}
+              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to {tab === "courses" ? "Courses" : tab === "learning-tracks" ? "Learning Tracks" : "Reviews"}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -455,7 +470,20 @@ export default function LearningCenterDetailPage() {
                                 {doc.type} • {doc.size}
                               </p>
                             </div>
-                            <Button variant="ghost" size="icon" className="text-orange-600 hover:text-orange-700">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="text-orange-600 hover:text-orange-700"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if ((doc as any).url) {
+                                  window.open((doc as any).url, "_blank", "noopener,noreferrer");
+                                } else {
+                                  alert("This material will be available after enrollment is confirmed.");
+                                }
+                              }}
+                              aria-label={`Download ${doc.name}`}
+                            >
                               <Download className="w-5 h-5" />
                             </Button>
                           </div>
@@ -635,6 +663,25 @@ export default function LearningCenterDetailPage() {
                 >
                   Enroll Now
                 </Button>
+                
+                {/* Manage Course Button for Course Owners */}
+                {isCourse && course && isUserAuthenticated() && getSessionUser()?.name === course.instructor && (
+                  <Button
+                    variant="outline"
+                    className="w-full mt-3 flex items-center justify-center gap-2 border-orange-300 text-orange-700 hover:bg-orange-50"
+                    onClick={() => navigate(`/stage2/learning-center/course/${course.id}/admin`, {
+                      state: {
+                        marketplace: "learning-center",
+                        learningRole: "admin",
+                        cardId: course.id,
+                        serviceName: course.title,
+                      }
+                    })}
+                  >
+                    <Settings className="w-4 h-4" />
+                    Manage this Course
+                  </Button>
+                )}
               </div>
             </aside>
           </div>
