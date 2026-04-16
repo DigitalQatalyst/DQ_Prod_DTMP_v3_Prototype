@@ -501,25 +501,14 @@ export default function DigitalIntelligenceDetailPage() {
         <div className="bg-gradient-to-r from-[#0B1437] to-[#1a2555] text-white">
           <div className="max-w-7xl mx-auto px-4 pt-6 pb-10">
             {/* Breadcrumb */}
-            <nav
-              aria-label="Breadcrumb"
-              className="flex items-center gap-2 text-sm text-gray-300 mb-6 flex-wrap"
-            >
-              <button onClick={() => navigate("/")} className="hover:text-white transition-colors">
-                Home
-              </button>
-              <ChevronRight size={14} aria-hidden="true" className="text-gray-500" />
-              <button onClick={() => navigate("/marketplaces")} className="hover:text-white transition-colors">
-                Marketplaces
-              </button>
-              <ChevronRight size={14} aria-hidden="true" className="text-gray-500" />
-              <button onClick={() => navigate("/marketplaces/digital-intelligence")} className="hover:text-white transition-colors">
-                Digital Intelligence
-              </button>
-              <ChevronRight size={14} aria-hidden="true" className="text-gray-500" />
-              <span className="text-white font-medium" aria-current="page">
-                {service.title}
-              </span>
+            <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-sm text-gray-300 mb-6 flex-wrap">
+              <Link to="/" className="hover:text-white transition-colors">Home</Link>
+              <ChevronRight size={14} className="text-gray-500" />
+              <Link to="/marketplaces" className="hover:text-white transition-colors">Marketplaces</Link>
+              <ChevronRight size={14} className="text-gray-500" />
+              <Link to="/marketplaces/digital-intelligence" className="hover:text-white transition-colors">Digital Intelligence</Link>
+              <ChevronRight size={14} className="text-gray-500" />
+              <span className="text-white font-medium">{service.title}</span>
             </nav>
 
             {/* Back Button */}
