@@ -213,7 +213,9 @@ export function LoginModal({
               ? `Log in to submit your request for "${context.serviceName}".`
               : context.marketplace === "solution-specs"
                 ? "Log in to access this solution specification."
-                : context.marketplace === "digital-intelligence"
+                : context.marketplace === "digital-intelligence" && context.action === "View Analytics"
+                  ? `Log in to request access to "${context.dashboardName || context.serviceName}".`
+                  : context.marketplace === "digital-intelligence"
                   ? `Log in to submit your request for "${context.dashboardName || context.serviceName || "Digital Intelligence"}".`
                   : context.marketplace === "knowledge-center"
                     ? "Log in to save this item to your Knowledge Centre workspace."
