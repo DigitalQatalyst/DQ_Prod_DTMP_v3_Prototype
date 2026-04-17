@@ -40,6 +40,27 @@ export const trackEnrollments: TrackEnrollment[] = [
     capstoneCompleted: false,
   },
   {
+    id: "te-004",
+    userId: "user-john-doe",
+    trackId: "agile-practitioner",
+    status: "completed",
+    progress: 100,
+    startedAt: "2025-10-15",
+    completedAt: "2026-01-10",
+    lastAccessed: "2026-01-15",
+    linkedCourseIds: [
+      "agile-transformation-leadership",
+      "agile-transformation",
+      "scrum-master-cert",
+    ],
+    completedCourseIds: [
+      "agile-transformation-leadership",
+      "agile-transformation",
+      "scrum-master-cert",
+    ],
+    capstoneCompleted: true,
+  },
+  {
     id: "te-003",
     userId: "user-amina-to",
     trackId: "portfolio-manager",

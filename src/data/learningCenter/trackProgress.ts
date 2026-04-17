@@ -10,6 +10,9 @@ const stage2CourseIdByRuntimeCourseId: Record<string, string> = {
   "enterprise-arch": "enterprise-architecture-patterns",
   "cloud-architecture": "cloud-migration-strategies",
   "portfolio-mgmt-cert": "data-driven-decision-making",
+  "agile-transformation-leadership": "agile-transformation-leadership",
+  "agile-transformation": "agile-transformation-methods",
+  "scrum-master-cert": "scrum-master-certification",
 };
 
 export const mapRuntimeCourseToStage2CourseId = (courseId: string) =>

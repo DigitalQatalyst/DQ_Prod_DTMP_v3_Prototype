@@ -141,6 +141,41 @@ const learningTracksBase: LearningTrackBase[] = [
     inclusions: ["5 curated courses", "Portfolio templates", "Certification exam", "Alumni network"]
   },
   {
+    id: "agile-practitioner",
+    title: "Agile Practitioner Pathway",
+    description: "Master agile methodologies and practices for transformation",
+    courses: 3,
+    duration: "6 weeks",
+    role: "Project Manager",
+    focusArea: "Delivery",
+    certification: true,
+    prerequisites: "None",
+    introduction: "The Agile Practitioner Pathway provides comprehensive training in agile methodologies tailored for digital transformation contexts. Learn to lead agile teams and scale agile practices across the enterprise.",
+    highlights: [
+      "Complete agile methodology training",
+      "Scrum Master certification preparation",
+      "Hands-on agile exercises",
+      "Professional certification"
+    ],
+    learningOutcomes: [
+      "Lead agile transformation initiatives",
+      "Facilitate scrum ceremonies effectively",
+      "Scale agile across the organization",
+      "Coach teams in agile practices"
+    ],
+    courseList: [
+      { id: "agile-transformation-leadership", title: "Agile Transformation Leadership", duration: "10 hours" },
+      { id: "agile-transformation", title: "Agile Transformation Methods", duration: "11 hours" },
+      { id: "scrum-master-cert", title: "Scrum Master Certification", duration: "8 hours" }
+    ],
+    targetAudience: "Project managers, team leads, and professionals transitioning to agile roles.",
+    recommendedRoles: ["Project Managers", "Scrum Masters", "Agile Coaches", "Team Leads"],
+    requirements: ["Commitment to complete all 3 courses", "Access to an agile team for practice", "Time allocation of 8-10 hours per week"],
+    timeline: "Recommended completion in 6 weeks with structured progression through courses. Certification exam available after completing all courses.",
+    assessmentInfo: "Complete all 3 courses and pass the certification exam to earn the Agile Practitioner Certification.",
+    inclusions: ["3 curated courses", "Certification exam", "Agile toolkit", "Community access", "Digital badge"]
+  },
+  {
     id: "digital-product-owner",
     title: "Digital Product Owner Track",
     description: "Product ownership in digital transformation context",

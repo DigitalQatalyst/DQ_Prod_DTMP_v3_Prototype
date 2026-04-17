@@ -170,7 +170,47 @@ export const buildUserProgressionData = (
 ): UserCourseData => {
   const cloned = deepClone(template);
   const totalModules = Math.max(1, Math.min(10, source.stats.totalModules || cloned.totalModules || 6));
-  const modules = cloned.modules.slice(0, totalModules);
+  
+  // Ensure we have enough modules in the template
+  let modules = cloned.modules.slice(0, totalModules);
+  
+  // If template doesn't have enough modules, generate additional ones
+  while (modules.length < totalModules) {
+    const moduleNumber = modules.length + 1;
+    modules.push({
+      id: `mod-${moduleNumber}`,
+      number: moduleNumber,
+      title: `Module ${moduleNumber}`,
+      description: `Course module ${moduleNumber}`,
+      duration: "2 hours",
+      status: "locked" as const,
+      progress: 0,
+      lessons: [
+        {
+          id: `l-${moduleNumber}-1`,
+          title: `Lesson 1`,
+          type: "video",
+          duration: "20 min",
+          status: "locked" as const,
+        },
+        {
+          id: `l-${moduleNumber}-2`,
+          title: `Lesson 2`,
+          type: "reading",
+          duration: "15 min",
+          status: "locked" as const,
+        },
+        {
+          id: `l-${moduleNumber}-3`,
+          title: `Module ${moduleNumber} Assessment`,
+          type: "quiz",
+          duration: "10 questions",
+          status: "locked" as const,
+        },
+      ],
+    });
+  }
+  
   const baseProgress = clamp(source.progress, 0, 100);
   const completedModulesTarget =
     baseProgress >= 100 ? totalModules : Math.floor((baseProgress / 100) * totalModules);
@@ -193,6 +233,7 @@ export const buildUserProgressionData = (
         lessons: module.lessons.map((lesson) => ({
           ...lesson,
           status: "completed" as const,
+          completedDate: lesson.completedDate || "Completed",
         })),
       };
     }
@@ -275,14 +316,14 @@ export const buildUserProgressionData = (
   cloned.modules = progressionModules;
   cloned.quizResults = quizResults;
   cloned.totalTimeSpent = source.stats.timeInvested;
-  cloned.estimatedTimeRemaining =
-    remainingModules > 0 ? `${Math.max(1, remainingModules * 2)}h 00m` : "0h 00m";
+  cloned.estimatedTimeRemaining = "0h 00m";
   cloned.stats = {
     ...cloned.stats,
     totalModules,
     completedModules,
     progress: totalProgress,
     timeLeft: remainingModules > 0 ? `${remainingModules} week${remainingModules > 1 ? "s" : ""}` : "Completed",
+    dueDate: baseProgress === 100 && source.status === 'completed' ? "Completed" : cloned.stats.dueDate,
   };
   cloned.certificateRequirements = cloned.certificateRequirements.map((requirement, index) => {
     if (index === 0) {
@@ -299,8 +340,14 @@ export const buildUserProgressionData = (
         detail: `${passedCount}/${totalModules} passed`,
       };
     }
+    // For completed courses, mark remaining requirements as met
+    if (baseProgress === 100 && source.status === 'completed') {
+      return { ...requirement, met: true };
+    }
     return requirement;
   });
+
+  syncCourseCertificateState(cloned);
 
   return cloned;
 };

@@ -8,6 +8,7 @@ import { enrolledCourses } from "@/data/learning";
 import { mapRuntimeCourseToStage2CourseId } from "@/data/learningCenter/trackProgress";
 import { setUserAuthenticated, setSessionUser } from "@/data/sessionAuth";
 import { setSessionRole, isTOStage3Role, type SessionRole } from "@/data/sessionRole";
+import { createStage3Request } from "@/data/stage3";
 
 const resolveRoleFromEmail = (email: string): SessionRole => {
   const lower = email.toLowerCase().trim();
@@ -102,6 +103,26 @@ export function LoginModal({
         (enrolledCourses.some((course) => course.id === context.cardId)
           ? context.cardId
           : fallbackCourseId);
+
+      createStage3Request({
+        type: "learning-center",
+        title: `Learning Enrollment: ${context.serviceName}`,
+        description: `Course enrollment request for "${context.serviceName}". User: ${actorEmail}. Enrollment date: ${new Date().toLocaleDateString()}.`,
+        requester: {
+          name: actorEmail.split("@")[0],
+          email: actorEmail,
+          department: "Learning & Development",
+          organization: "DTMP",
+        },
+        priority: "low",
+        estimatedHours: 1,
+        tags: ["learning-center", "enrollment", mappedCourseId],
+        notes: [
+          `Enrollment initiated from Stage 1 Learning Centre.`,
+          `Course ID: ${mappedCourseId}`,
+          `Course Name: ${context.serviceName}`,
+        ],
+      });
 
       navigate(`/stage2/learning-center/course/${mappedCourseId}/user`, {
         state: {
