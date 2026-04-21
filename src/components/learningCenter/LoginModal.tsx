@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { enrolledCourses } from "@/data/learning";
 import { mapRuntimeCourseToStage2CourseId } from "@/data/learningCenter/trackProgress";
-import { setUserAuthenticated, setSessionUser } from "@/data/sessionAuth";
+import { setUserAuthenticated, setSessionUser, isLearningCenterAdmin } from "@/data/sessionAuth";
 import { setSessionRole, isTOStage3Role, type SessionRole } from "@/data/sessionRole";
 import { createStage3Request } from "@/data/stage3";
 
@@ -124,12 +124,17 @@ export function LoginModal({
         ],
       });
 
-      navigate(`/stage2/learning-center/course/${mappedCourseId}/user`, {
+      // Determine if user should go to admin or learner view
+      const isAdmin = isLearningCenterAdmin();
+      const viewMode = isAdmin ? "admin" : "user";
+      const learningRole = isAdmin ? "admin" : "learner";
+
+      navigate(`/stage2/learning-center/course/${mappedCourseId}/${viewMode}`, {
         state: {
           ...context,
           cardId: mappedCourseId,
           actorEmail,
-          learningRole: "learner",
+          learningRole,
         },
       });
       return;
@@ -299,7 +304,10 @@ export function LoginModal({
           Don't have an account?{" "}
           <button 
             type="button"
-            onClick={() => alert("Self-registration is managed by your organisation. Contact your DTMP administrator to request access.")}
+            onClick={() => {
+              alert("Self-registration is managed by your organisation. Contact your DTMP administrator to request access.");
+              onClose();
+            }}
             className="text-orange-600 hover:text-orange-700 font-medium"
           >
             Sign up
@@ -317,6 +325,9 @@ export function LoginModal({
             </p>
             <p>
               <span className="font-medium text-gray-700">TO Admin:</span> admin@to.dtmp.com
+            </p>
+            <p>
+              <span className="font-medium text-gray-700">Course Instructor/Admin:</span> instructor@... or admin@...
             </p>
             <p>
               <span className="font-medium text-gray-700">Business User:</span> any other email

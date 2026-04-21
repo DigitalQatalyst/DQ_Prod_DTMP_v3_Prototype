@@ -28,7 +28,7 @@ import { courses, Course } from "@/data/learningCenter/courses";
 import { learningTracks, LearningTrack } from "@/data/learningCenter/learningTracks";
 import { getOrderedTrackCourses, getTrackPrimaryCourseId } from "@/data/learningCenter/trackRuntime";
 import { reviews, Review } from "@/data/learningCenter/reviews";
-import { isUserAuthenticated, getSessionUser } from "@/data/sessionAuth";
+import { isUserAuthenticated, getSessionUser, isLearningCenterAdmin } from "@/data/sessionAuth";
 
 type DetailTab = "about" | "eligibility" | "process" | "documents" | "provider";
 
@@ -664,8 +664,8 @@ export default function LearningCenterDetailPage() {
                   Enroll Now
                 </Button>
                 
-                {/* Manage Course Button for Course Owners */}
-                {isCourse && course && isUserAuthenticated() && getSessionUser()?.name === course.instructor && (
+                {/* Manage Course Button for Course Instructors/Admins */}
+                {isCourse && course && isUserAuthenticated() && isLearningCenterAdmin() && (
                   <Button
                     variant="outline"
                     className="w-full mt-3 flex items-center justify-center gap-2 border-orange-300 text-orange-700 hover:bg-orange-50"

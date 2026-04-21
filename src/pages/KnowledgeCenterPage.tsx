@@ -897,7 +897,7 @@ export default function KnowledgeCenterPage() {
       <Header />
 
       {/* Marketplace Header */}
-      <section className="bg-gradient-to-b from-blue-50 to-white py-8 lg:py-12">
+      <section className="bg-gradient-to-b from-emerald-50 to-white py-8 lg:py-12">
         <div className="max-w-7xl mx-auto px-4">
           {/* Breadcrumb */}
           <nav className="flex items-center text-sm text-muted-foreground mb-4">
@@ -913,7 +913,7 @@ export default function KnowledgeCenterPage() {
           </nav>
 
           {/* Phase Badge */}
-          <span className="inline-block bg-phase-discern-bg text-phase-discern px-3 py-1 rounded-full text-xs font-semibold uppercase mb-3">
+          <span className="inline-block bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-xs font-semibold uppercase mb-3">
             Discern
           </span>
 
