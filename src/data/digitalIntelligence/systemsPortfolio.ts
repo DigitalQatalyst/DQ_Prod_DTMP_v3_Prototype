@@ -1,3 +1,5 @@
+import { systemAssets, getSystemAssetStats, type SystemAsset } from "@/data/shared/assets";
+
  export interface SystemsPortfolioService {
    id: string;
    title: string;
@@ -15,6 +17,9 @@
    keyInsights: string[];
   businessValue: string[];
  }
+ 
+ // Re-export shared system assets for Digital Intelligence use
+ export { systemAssets, getSystemAssetStats, type SystemAsset };
  
  export const systemsPortfolio: SystemsPortfolioService[] = [
    {
