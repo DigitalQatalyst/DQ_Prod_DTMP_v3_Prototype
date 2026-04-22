@@ -463,7 +463,7 @@ export default function LCInitiativeDetailPanel({ initiative, onClose, onSeeInsi
                 className="text-xs border-blue-200 text-blue-700 hover:bg-blue-50"
                 onClick={() => {
                   onClose();
-                  navigate("/marketplaces/portfolio-management", {
+                  navigate("/marketplaces/asset-capability", {
                     state: { tab: "ot-asset-portfolio", highlightCardId: initiative.portfolioCardId },
                   });
                 }}

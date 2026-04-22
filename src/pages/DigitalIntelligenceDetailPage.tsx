@@ -117,11 +117,11 @@
                The intelligence service you are looking for does not exist or may have been moved.
              </p>
              <Link
-               to="/marketplaces/digital-intelligence"
+               to="/marketplaces/intelligence"
                className="inline-flex items-center gap-2 bg-purple-600 text-white hover:bg-purple-700 px-6 py-3 rounded-lg text-sm font-semibold transition-colors"
              >
                <ArrowLeft size={18} />
-               Back to Digital Intelligence
+               Back to Transformation Intelligence
              </Link>
            </div>
          </main>
@@ -135,7 +135,7 @@
    const IconComponent = iconMap[service.icon] || Activity;
  
    const handleBackClick = () => {
-     navigate(`/marketplaces/digital-intelligence?tab=${tab}`);
+     navigate(`/marketplaces/intelligence?tab=${tab}`);
    };
  
    const handleAccessClick = () => {
@@ -521,10 +521,10 @@
              </button>
              <ChevronRight size={16} aria-hidden="true" />
              <button
-               onClick={() => navigate("/marketplaces/digital-intelligence")}
+               onClick={() => navigate("/marketplaces/intelligence")}
                className="hover:text-purple-600 transition-colors"
              >
-               Digital Intelligence
+               Transformation Intelligence
              </button>
              <ChevronRight size={16} aria-hidden="true" />
              <span className="text-gray-900 font-medium" aria-current="page">

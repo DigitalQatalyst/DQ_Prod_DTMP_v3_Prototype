@@ -67,13 +67,6 @@ import {
   type DigitalProductCard,
   type ExternalAPICard,
 } from "@/data/portfolioManagement";
-import {
-  getSessionPMRole,
-  setSessionPMRole,
-  clearSessionPMRole,
-  type PMRole,
-  PM_ROLES,
-} from "@/data/shared/portfolioRole";
 
 // ── Icon map per asset type ───────────────────────────────────────────────
 
@@ -311,109 +304,6 @@ function SaveViewPopover({
 
 // ── Portfolio Health Bar ──────────────────────────────────────────────────
 
-function PortfolioHealthBar({
-  onShowNeedsAttention,
-  onShowNoInitiative,
-  needsAttentionActive,
-  noInitiativeActive,
-}: {
-  onShowNeedsAttention: () => void;
-  onShowNoInitiative: () => void;
-  needsAttentionActive: boolean;
-  noInitiativeActive: boolean;
-}) {
-  const allCards: { status: string }[] = [
-    ...allITCards.map((c) => ({ status: (c as AppCard).status || "On Track" })),
-    ...allOTCards.map((c) => ({ status: c.status })),
-    ...dataDigitalCards.map((c) => ({ status: c.status })),
-    ...projectCards.map((c) => ({ status: c.ragStatus === "Red" ? "Critical" : c.ragStatus === "Amber" ? "At Risk" : "On Track" })),
-    ...initiativeCards.map((c) => ({ status: c.status === "At Risk" ? "At Risk" : "On Track" })),
-    ...rationalisationCards.map((c) => ({ status: "On Track" })),
-    ...governanceCards.map((c) => ({ status: c.trend === "Declining" ? "At Risk" : "On Track" })),
-  ];
-
-  const totalAssets = allCards.length;
-  const needsAttentionCount = allCards.filter((c) => c.status === "At Risk" || c.status === "Critical").length;
-  const noInitiativeCount = [
-    ...allITCards.filter((c) => (c as AppCard).status === "No Initiative"),
-    ...allOTCards.filter((c) => c.status === "No Initiative"),
-    ...dataDigitalCards.filter((c) => c.status === "No Initiative"),
-  ].length;
-
-  const avgCompliance = Math.round(
-    governanceCards.reduce((sum, c) => sum + c.architectureCompliance, 0) / Math.max(governanceCards.length, 1)
-  );
-
-  const totalRationalisationSavings = rationalisationCards.reduce((sum, c) => sum + c.savingPotentialNum, 0);
-  const savingsLabel = totalRationalisationSavings >= 1000000
-    ? `AED ${(totalRationalisationSavings / 1000000).toFixed(1)}M`
-    : `AED ${Math.round(totalRationalisationSavings / 1000)}K`;
-
-  const tiles = [
-    {
-      label: "Assets Governed",
-      value: totalAssets.toString(),
-      icon: <LayoutGrid className="w-5 h-5 text-blue-600" />,
-      color: "text-blue-700",
-      onClick: undefined,
-      active: false,
-    },
-    {
-      label: "Requiring Attention",
-      value: needsAttentionCount.toString(),
-      icon: <AlertTriangle className={`w-5 h-5 ${needsAttentionCount > 10 ? "text-red-500" : "text-amber-500"}`} />,
-      color: needsAttentionCount > 10 ? "text-red-700" : "text-amber-700",
-      onClick: onShowNeedsAttention,
-      active: needsAttentionActive,
-    },
-    {
-      label: "No Initiative",
-      value: noInitiativeCount.toString(),
-      icon: <AlertCircle className={`w-5 h-5 ${noInitiativeCount > 0 ? "text-orange-500" : "text-gray-400"}`} />,
-      color: noInitiativeCount > 0 ? "text-orange-700" : "text-gray-600",
-      onClick: onShowNoInitiative,
-      active: noInitiativeActive,
-    },
-    {
-      label: "Avg. EA Compliance",
-      value: `${avgCompliance}%`,
-      icon: <Shield className="w-5 h-5 text-teal-600" />,
-      color: avgCompliance >= 80 ? "text-teal-700" : "text-amber-700",
-      onClick: undefined,
-      active: false,
-    },
-    {
-      label: "Rationalisation Savings",
-      value: savingsLabel,
-      icon: <TrendingUp className="w-5 h-5 text-violet-600" />,
-      color: "text-violet-700",
-      onClick: undefined,
-      active: false,
-    },
-  ];
-
-  return (
-    <div className="bg-white border border-gray-100 rounded-xl shadow-sm px-4 py-3 mb-4">
-      <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
-        {tiles.map((tile) => (
-          <button
-            key={tile.label}
-            onClick={tile.onClick}
-            disabled={!tile.onClick}
-            className={`flex flex-col items-center text-center p-2 rounded-lg transition-all ${
-              tile.active ? "bg-orange-50 ring-1 ring-orange-300" : tile.onClick ? "hover:bg-gray-50 cursor-pointer" : "cursor-default"
-            }`}
-          >
-            <div className="mb-1">{tile.icon}</div>
-            <p className={`text-xl font-bold ${tile.color}`}>{tile.value}</p>
-            <p className="text-xs text-gray-500 leading-tight">{tile.label}</p>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ── Unified Card Skeleton ─────────────────────────────────────────────────
 
 function PMCard({
@@ -437,56 +327,42 @@ function PMCard({
   return (
     <div
       onClick={onNavigate}
-      className={`bg-white rounded-xl border flex flex-col cursor-pointer transition-all duration-300 hover:shadow-xl hover:border-orange-300 hover:-translate-y-1 ${
-        highlighted ? "ring-2 ring-blue-300 border-blue-400 shadow-lg" : isNoInit ? "border-l-4 border-orange-500 border-t border-r border-b border-gray-200" : "border-gray-200"
+      className={`bg-white rounded-xl border-l-4 border flex flex-col cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 ${
+        highlighted
+          ? "border-l-blue-400 border-blue-200 ring-2 ring-blue-100 shadow-lg"
+          : isNoInit
+          ? "border-l-orange-400 border-gray-200 shadow-sm hover:border-gray-300"
+          : meta.riskFlag
+          ? "border-l-amber-400 border-gray-200 shadow-sm hover:border-gray-300"
+          : "border-l-transparent border-gray-200 hover:border-gray-300"
       }`}
     >
-      {/* Gradient header */}
-      <div className={`relative bg-gradient-to-br ${divGradient} rounded-t-xl h-28 flex items-center justify-center overflow-hidden`}>
+      {/* Gradient header — proportional */}
+      <div className={`relative bg-gradient-to-br ${divGradient} rounded-t-xl aspect-video flex items-center justify-center overflow-hidden`}>
+        <div className="absolute inset-0 bg-white/10" />
         {getCardIcon(tab, assetType)}
-        {/* Asset Type badge top-left */}
-        {assetType && (
-          <span className="absolute top-2 left-2 text-xs bg-white/20 text-white px-2 py-0.5 rounded-full font-medium backdrop-blur-sm">
-            {assetType}
-          </span>
-        )}
-        {/* Status badge top-right */}
+        {/* Status badge top-right only */}
         <span className={`absolute top-2 right-2 text-xs px-2 py-0.5 rounded-full border font-medium ${statusBadge.color}`}>
           {statusBadge.label}
         </span>
-        {/* No Initiative alert icon bottom-left */}
-        {isNoInit && (
-          <AlertCircle className="absolute bottom-2 left-3 w-5 h-5 text-white/70" />
-        )}
       </div>
 
       {/* Card body */}
       <div className="p-4 flex-1 flex flex-col gap-2">
-        {/* Division label */}
-        <p className="text-xs text-gray-400">{meta.division}</p>
+        {/* Division + asset type */}
+        <p className="text-xs text-gray-400">
+          {meta.division}{assetType ? ` · ${assetType}` : ""}
+        </p>
         {/* Card name */}
         <p className="text-sm font-semibold text-gray-900 line-clamp-2 leading-snug">{meta.name}</p>
         {/* Tab-specific metrics */}
         <CardMetrics card={card} tab={tab} />
-        {/* No-init or risk banner */}
-        {isNoInit && (
-          <div className="bg-orange-50 border border-orange-200 text-orange-800 rounded px-3 py-2 text-xs flex gap-1.5 items-start">
-            <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-orange-500" />
-            <span>No active initiative. EA Office action required.</span>
-          </div>
-        )}
-        {!isNoInit && meta.riskFlag && (
-          <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded px-3 py-2 text-xs flex gap-1.5 items-start">
-            <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-amber-500" />
-            <span className="line-clamp-2">{meta.riskFlag}</span>
-          </div>
-        )}
-        {/* Linked tags */}
-        <CardTags card={card} tab={tab} />
       </div>
 
       {/* Footer */}
-      <CardFooter card={card} tab={tab} />
+      <div className="border-t border-gray-100">
+        <CardFooter card={card} tab={tab} />
+      </div>
     </div>
   );
 }
@@ -717,37 +593,6 @@ function CardMetrics({ card, tab }: { card: AnyCardType; tab: PMTab }) {
   return null;
 }
 
-function CardTags({ card, tab }: { card: AnyCardType; tab: PMTab }) {
-  const tags: string[] = [];
-  if (tab === "it-asset-portfolio") {
-    const ini = (card as AppCard).initiativeTag;
-    const proj = (card as AppCard).projectTag;
-    if (proj) tags.push(proj);
-    if (ini) tags.push(ini);
-  } else if (tab === "ot-asset-portfolio") {
-    const ini = "initiativeTag" in card ? (card as OADCard).initiativeTag : undefined;
-    const proj = "projectTag" in card ? (card as OADCard).projectTag : undefined;
-    if (proj) tags.push(proj);
-    if (ini) tags.push(ini);
-  } else if (tab === "data-digital-portfolio") {
-    const ini = (card as DataDigitalCard).initiativeTag;
-    if (ini) tags.push(ini);
-  } else if (tab === "project-portfolio") {
-    tags.push((card as ProjectCard).parentInitiative);
-  } else if (tab === "technology-rationalisation") {
-    const ini = (card as RationalisationCard).initiativeTag;
-    if (ini) tags.push(ini);
-  }
-  if (!tags.length) return null;
-  return (
-    <div className="flex flex-wrap gap-1 mt-1">
-      {tags.map((t) => (
-        <span key={t} className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full border border-blue-100">{t}</span>
-      ))}
-    </div>
-  );
-}
-
 function CardFooter({ card, tab }: { card: AnyCardType; tab: PMTab }) {
   let left = "";
   let right = "";
@@ -890,7 +735,7 @@ function AttentionView({
                 key={(card as { id: string }).id}
                 card={card}
                 tab={group.tab}
-                onNavigate={() => navigate(`/marketplaces/portfolio-management/${group.tab}/${(card as { id: string }).id}`)}
+                onNavigate={() => navigate(`/marketplaces/asset-capability/${group.tab}/${(card as { id: string }).id}`)}
               />
             ))}
           </div>
@@ -943,7 +788,7 @@ function GlobalSearchView({ query, navigate }: { query: string; navigate: (path:
                 key={(card as { id: string }).id}
                 card={card}
                 tab={group.tab}
-                onNavigate={() => navigate(`/marketplaces/portfolio-management/${group.tab}/${(card as { id: string }).id}`)}
+                onNavigate={() => navigate(`/marketplaces/asset-capability/${group.tab}/${(card as { id: string }).id}`)}
               />
             ))}
           </div>
@@ -975,7 +820,6 @@ export default function PortfolioManagementPage() {
   const [showSaveView, setShowSaveView] = useState(false);
   const [reportCard, setReportCard] = useState<{ card: AnyCardType; title: string; tab: PMTab } | null>(null);
   const [reportSubmitted, setReportSubmitted] = useState(false);
-  const [sessionRole, setSessionRole] = useState<PMRole | null>(() => getSessionPMRole());
 
   // Restore filters / tab from router state (Saved Views)
   useEffect(() => {
@@ -1072,20 +916,12 @@ export default function PortfolioManagementPage() {
   const tabCfg = PM_TAB_CONFIG[activeTab];
   const assetEstabTabs: PMTab[] = ["it-asset-portfolio", "ot-asset-portfolio", "data-digital-portfolio"];
   const govTabs: PMTab[] = ["project-portfolio", "transformation-initiatives", "technology-rationalisation", "governance-health"];
+  const currentGroup = assetEstabTabs.includes(activeTab) ? "asset-estate" : "governance-intelligence";
+  const visibleTabs = currentGroup === "asset-estate" ? assetEstabTabs : govTabs;
 
   const hasActiveFilter = divisionFilter !== "All Divisions" || statusFilter !== "All" || hasInitiativeFilter !== "All";
   const isGlobalSearch = searchQuery.trim().length > 2;
   const isSpecialView = needsAttentionMode || noInitiativeMode;
-
-  const handleChangeRole = () => {
-    clearSessionPMRole();
-    setSessionRole(null);
-  };
-
-  const handleRoleSelect = (role: PMRole) => {
-    setSessionPMRole(role);
-    setSessionRole(role);
-  };
 
   const handleReportSubmit = (_type: string) => {
     setReportCard(null);
@@ -1094,141 +930,208 @@ export default function PortfolioManagementPage() {
     navigate("/stage2/portfolio-management", { state: { cardId: "my-requests" } });
   };
 
+  const resetBrowseState = () => {
+    setStatusFilter("All");
+    setNeedsAttentionMode(false);
+    setNoInitiativeMode(false);
+    setSearchQuery("");
+  };
+
+  const handleGroupChange = (group: "asset-estate" | "governance-intelligence") => {
+    if (group === currentGroup) return;
+    setActiveTab(group === "asset-estate" ? assetEstabTabs[0] : govTabs[0]);
+    resetBrowseState();
+  };
+
+  const handleTabChange = (tabKey: PMTab) => {
+    setActiveTab(tabKey);
+    resetBrowseState();
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header />
 
       {/* Hero */}
       <div className="bg-gradient-to-br from-orange-50 to-white border-b border-orange-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-          <div className="flex items-start justify-between flex-wrap gap-4">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <span className="text-xs font-semibold bg-orange-100 text-orange-700 px-3 py-1 rounded-full uppercase tracking-wide">DRIVE Phase</span>
-                <span className="text-xs text-gray-400">Portfolio Management</span>
-              </div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Portfolio Management</h1>
-              <p className="text-gray-600 max-w-2xl text-sm leading-relaxed">
-                A single, continuously updated view of DEWA's entire digital estate — applications, infrastructure, operational assets, data platforms, and AI models — under one governance lens. Three dimensions of DEWA's estate. One control tower.
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-6">
+
+          {/* Programme breadcrumb anchor */}
+          <div className="flex items-center gap-2 mb-5 flex-wrap">
+            <span className="inline-flex items-center gap-1.5 bg-green-700 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
+              Digital DEWA 2035
+            </span>
+            <span className="text-gray-300 text-sm">›</span>
+            <span className="text-xs font-semibold bg-orange-100 text-orange-700 px-3 py-1 rounded-full uppercase tracking-wide">
+              DRIVE Phase
+            </span>
+            <span className="text-gray-300 text-sm">›</span>
+            <span className="text-xs text-gray-500">Portfolio Management</span>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+            {/* Left: Title + description */}
+            <div className="lg:col-span-2 space-y-3">
+              <h1 className="text-3xl font-bold text-gray-900">DEWA Digital Estate Portfolio</h1>
+              <p className="text-gray-600 text-sm leading-relaxed max-w-2xl">
+                The governance intelligence layer of Digital DEWA 2035. A continuously updated view of DEWA's entire digital estate — IT systems, operational technology, and data &amp; AI platforms — under one EA-governed control tower.
+              </p>
+              <p className="text-gray-500 text-sm leading-relaxed max-w-2xl">
+                Portfolio <span className="font-medium text-gray-600">diagnoses</span> the estate. Lifecycle Management <span className="font-medium text-gray-600">prescribes and governs</span> the response — through strategic initiatives, delivery projects, and Transformation Office oversight.
               </p>
             </div>
-            <div className="flex flex-col items-end gap-3">
-              <div className="flex gap-6">
-                {[
-                  { label: "Portfolio Views", value: "8" },
-                  { label: "EA Office Governed", value: "✓" },
-                ].map((s) => (
-                  <div key={s.label} className="text-center">
-                    <p className="text-2xl font-bold text-orange-600">{s.value}</p>
-                    <p className="text-xs text-gray-500">{s.label}</p>
-                  </div>
-                ))}
+
+            {/* Right: 2035 Programme Pulse card */}
+            <div className="lg:col-span-1">
+              <div className="bg-white border border-orange-100 rounded-xl p-4 shadow-sm">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">2035 Programme Pulse</p>
+                <div className="grid grid-cols-2 gap-y-3 gap-x-2">
+                  {[
+                    { value: "54+", label: "Managed Assets", color: "text-orange-600" },
+                    { value: "5",   label: "Active Initiatives", color: "text-green-700" },
+                    { value: "8",   label: "Divisions", color: "text-blue-600" },
+                    { value: "EA ✓", label: "Office Governed", color: "text-purple-600" },
+                  ].map((s) => (
+                    <div key={s.label} className="text-center">
+                      <p className={`text-xl font-bold ${s.color}`}>{s.value}</p>
+                      <p className="text-xs text-gray-500 leading-tight">{s.label}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
-              {/* Viewing as indicator */}
-              <div className="text-xs text-gray-500 flex items-center gap-1.5">
-                {sessionRole ? (
-                  <>
-                    <span className="font-medium text-gray-700">Viewing as: {sessionRole}</span>
-                    <span>·</span>
-                    <button onClick={handleChangeRole} className="text-orange-600 hover:text-orange-800 underline">Change</button>
-                  </>
-                ) : (
-                  <span className="text-gray-400 italic">No role selected — set on detail page</span>
-                )}
-              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 2035 Strategic Initiatives strip */}
+        <div className="border-t border-orange-100 bg-orange-50/60">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5">
+            <div className="flex items-center gap-3 overflow-x-auto scrollbar-none">
+              <span className="text-xs font-semibold text-gray-400 whitespace-nowrap flex-shrink-0 uppercase tracking-wide">
+                Active Initiatives
+              </span>
+              {[
+                { name: "Smart Grid Modernisation",          rag: "Green" },
+                { name: "Customer Experience Transformation", rag: "Amber" },
+                { name: "DEWA Enterprise Data Strategy",     rag: "Green" },
+                { name: "Digital DEWA Programme",            rag: "Green" },
+                { name: "OT Cybersecurity Enhancement",      rag: "Amber" },
+              ].map((init) => (
+                <span
+                  key={init.name}
+                  className="inline-flex items-center gap-1.5 text-xs bg-white border border-gray-200 text-gray-700 px-2.5 py-1 rounded-full whitespace-nowrap flex-shrink-0"
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${init.rag === "Green" ? "bg-green-500" : "bg-amber-400"}`} />
+                  {init.name}
+                </span>
+              ))}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Tab bar with two-tier grouping */}
+      <div className="bg-white border-b border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="relative">
+            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search across Portfolio Management..."
+              className="w-full pl-9 pr-10 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white"
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Tab bar with grouped navigation */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Section labels */}
-          <div className="flex items-end pt-2 gap-0">
-            <div className="flex items-end gap-0">
-              <span className="text-xs font-semibold tracking-widest uppercase text-gray-400 pb-1 pr-2 whitespace-nowrap">Asset Estate</span>
-              {assetEstabTabs.map((tabKey) => {
-                const cfg = PM_TAB_CONFIG[tabKey];
-                return (
-                  <button
-                    key={tabKey}
-                    onClick={() => { setActiveTab(tabKey); setStatusFilter("All"); setNeedsAttentionMode(false); setNoInitiativeMode(false); setSearchQuery(""); }}
-                    className={`flex-shrink-0 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                      activeTab === tabKey
-                        ? `${cfg.tabColor} text-gray-900`
-                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                    }`}
-                  >
-                    {cfg.shortLabel}
-                  </button>
-                );
-              })}
-            </div>
-            {/* Vertical separator */}
-            <div className="border-r border-gray-300 h-6 mx-2 self-center" />
-            <div className="flex items-end gap-0">
-              <span className="text-xs font-semibold tracking-widest uppercase text-gray-400 pb-1 pr-2 whitespace-nowrap">Governance Intelligence</span>
-              {govTabs.map((tabKey) => {
-                const cfg = PM_TAB_CONFIG[tabKey];
-                return (
-                  <button
-                    key={tabKey}
-                    onClick={() => { setActiveTab(tabKey); setStatusFilter("All"); setNeedsAttentionMode(false); setNoInitiativeMode(false); setSearchQuery(""); }}
-                    className={`flex-shrink-0 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                      activeTab === tabKey
-                        ? `${cfg.tabColor} text-gray-900`
-                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                    }`}
-                  >
-                    {cfg.shortLabel}
-                  </button>
-                );
-              })}
-            </div>
+          <div className="grid grid-cols-2 gap-0 border-b border-gray-100 pt-2">
+            {[
+              { key: "asset-estate" as const,          label: "Asset Estate",           tabs: assetEstabTabs },
+              { key: "governance-intelligence" as const, label: "Governance Intelligence", tabs: govTabs },
+            ].map((group) => {
+              const isActive = currentGroup === group.key;
+              return (
+                <button
+                  key={group.key}
+                  onClick={() => handleGroupChange(group.key)}
+                  className={`rounded-t-xl px-4 pt-2 pb-2 text-left transition-colors ${
+                    isActive
+                      ? "bg-gray-50"
+                      : "hover:bg-gray-50/60"
+                  }`}
+                >
+                  <span className={`block text-sm font-semibold ${isActive ? "text-gray-900" : "text-gray-500"}`}>
+                    {group.label}
+                  </span>
+                  {!isActive && (
+                    <span className="flex flex-wrap gap-1 mt-1">
+                      {group.tabs.map((tabKey) => (
+                        <span
+                          key={tabKey}
+                          className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded"
+                        >
+                          {PM_TAB_CONFIG[tabKey].shortLabel}
+                        </span>
+                      ))}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          <div
+            className="grid items-end gap-0"
+            style={{ gridTemplateColumns: `repeat(${visibleTabs.length}, minmax(0, 1fr))` }}
+          >
+            {visibleTabs.map((tabKey) => {
+              const cfg = PM_TAB_CONFIG[tabKey];
+              return (
+                <button
+                  key={tabKey}
+                  onClick={() => handleTabChange(tabKey)}
+                  className={`px-4 py-3 text-center text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                    activeTab === tabKey
+                      ? `${cfg.tabColor} text-gray-900`
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                >
+                  {cfg.shortLabel}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
 
       <div className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
-        {/* Portfolio Health Bar */}
-        <PortfolioHealthBar
-          onShowNeedsAttention={() => { setNeedsAttentionMode((v) => !v); setNoInitiativeMode(false); }}
-          onShowNoInitiative={() => { setNoInitiativeMode((v) => !v); setNeedsAttentionMode(false); }}
-          needsAttentionActive={needsAttentionMode}
-          noInitiativeActive={noInitiativeMode}
-        />
+        <div className="mb-6">
+          <div className="mb-4">
+            <p className="text-sm text-gray-500">{tabCfg.description}</p>
+          </div>
 
-        {/* Global Search */}
-        <div className="relative mb-4">
-          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search across all 8 portfolio views..."
-            className="w-full pl-9 pr-10 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white"
-          />
-          {searchQuery && (
-            <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-              <X className="w-4 h-4" />
-            </button>
+          {isSpecialView && (
+            <div className="mt-4 flex items-center gap-3 bg-orange-50 border border-orange-200 rounded-xl px-4 py-2.5 text-sm text-orange-800">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <span>{noInitiativeMode ? "Showing assets with no active initiative." : "Showing assets that require attention."}</span>
+              <button
+                onClick={() => { setNeedsAttentionMode(false); setNoInitiativeMode(false); }}
+                className="ml-auto text-xs font-medium underline hover:no-underline"
+              >
+                Exit view
+              </button>
+            </div>
           )}
         </div>
-
-        {/* Special view exit banner */}
-        {isSpecialView && (
-          <div className="mb-4 flex items-center gap-3 bg-orange-50 border border-orange-200 rounded-xl px-4 py-2.5 text-sm text-orange-800">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
-            <span>{noInitiativeMode ? "Showing all assets with No Active Initiative across all tabs." : "Showing all assets requiring attention (At Risk, Critical, No Initiative) across all tabs."}</span>
-            <button
-              onClick={() => { setNeedsAttentionMode(false); setNoInitiativeMode(false); }}
-              className="ml-auto text-xs font-medium underline hover:no-underline"
-            >
-              Exit view
-            </button>
-          </div>
-        )}
 
         {/* Content area */}
         {isGlobalSearch ? (
@@ -1236,83 +1139,74 @@ export default function PortfolioManagementPage() {
         ) : isSpecialView ? (
           <AttentionView noInitiativeOnly={noInitiativeMode} navigate={navigate} />
         ) : (
-          <div className="flex gap-6">
+          <div className="flex items-start gap-6">
             {/* Sidebar */}
             <aside className="w-56 flex-shrink-0 hidden lg:block">
-              <div className="bg-white border border-gray-200 rounded-xl p-4 sticky top-20 relative">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Filters</p>
+              <div className="sticky top-20 space-y-4 rounded-2xl border border-gray-200 bg-white p-5">
+                <p className="text-sm font-semibold text-gray-900">Filters</p>
 
-                <div className="mb-4">
-                  <p className="text-xs font-medium text-gray-700 mb-1.5">Division</p>
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium text-gray-700">Division</p>
                   <select
                     value={divisionFilter}
                     onChange={(e) => setDivisionFilter(e.target.value)}
-                    className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white"
+                    className="w-full rounded-lg border border-gray-200 bg-white px-2 py-2 text-xs"
                   >
                     {divisions.map((d) => <option key={d}>{d}</option>)}
                   </select>
                 </div>
 
-                <div className="mb-4">
-                  <p className="text-xs font-medium text-gray-700 mb-1.5">
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium text-gray-700">
                     {activeTab === "project-portfolio" ? "RAG Status" : activeTab === "governance-health" ? "Trend" : "Status"}
                   </p>
-                  <div className="space-y-1">
-                    {tabStatusOptions[activeTab].map((s) => (
-                      <button
-                        key={s}
-                        onClick={() => setStatusFilter(s)}
-                        className={`w-full text-left text-xs px-2 py-1.5 rounded-lg transition-colors ${statusFilter === s ? "bg-orange-100 text-orange-700 font-medium" : "text-gray-600 hover:bg-gray-50"}`}
-                      >
-                        {s}
-                      </button>
-                    ))}
-                  </div>
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="w-full rounded-lg border border-gray-200 bg-white px-2 py-2 text-xs"
+                  >
+                    {tabStatusOptions[activeTab].map((s) => <option key={s}>{s}</option>)}
+                  </select>
                 </div>
 
                 {["it-asset-portfolio", "ot-asset-portfolio", "data-digital-portfolio", "technology-rationalisation"].includes(activeTab) && (
-                  <div className="mb-4">
-                    <p className="text-xs font-medium text-gray-700 mb-1.5">Has Active Initiative</p>
-                    <div className="space-y-1">
-                      {["All", "Yes", "No"].map((v) => (
-                        <button
-                          key={v}
-                          onClick={() => setHasInitiativeFilter(v)}
-                          className={`w-full text-left text-xs px-2 py-1.5 rounded-lg transition-colors ${hasInitiativeFilter === v ? "bg-orange-100 text-orange-700 font-medium" : "text-gray-600 hover:bg-gray-50"}`}
-                        >
-                          {v}
-                        </button>
-                      ))}
-                    </div>
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-medium text-gray-700">Has Active Initiative</p>
+                    <select
+                      value={hasInitiativeFilter}
+                      onChange={(e) => setHasInitiativeFilter(e.target.value)}
+                      className="w-full rounded-lg border border-gray-200 bg-white px-2 py-2 text-xs"
+                    >
+                      {["All", "Yes", "No"].map((v) => <option key={v}>{v}</option>)}
+                    </select>
                   </div>
                 )}
 
                 {hasActiveFilter && (
-                  <button
-                    onClick={() => { setDivisionFilter("All Divisions"); setStatusFilter("All"); setHasInitiativeFilter("All"); }}
-                    className="text-xs text-orange-600 hover:text-orange-800 font-medium mb-3 block"
-                  >
-                    Clear filters
-                  </button>
-                )}
-
-                {/* Save view */}
-                {hasActiveFilter && (
-                  <div className="relative mt-1">
+                  <div className="space-y-2 border-t border-gray-100 pt-4">
                     <button
-                      onClick={() => setShowSaveView((v) => !v)}
-                      className="w-full text-left text-xs px-2 py-1.5 rounded-lg border border-dashed border-gray-300 text-gray-500 hover:bg-gray-50 flex items-center gap-1.5"
+                      onClick={() => { setDivisionFilter("All Divisions"); setStatusFilter("All"); setHasInitiativeFilter("All"); }}
+                      className="text-xs font-medium text-orange-600 hover:text-orange-800"
                     >
-                      <Bookmark className="w-3.5 h-3.5" />
-                      Save this view
+                      Clear filters
                     </button>
-                    {showSaveView && (
-                      <SaveViewPopover
-                        tab={activeTab}
-                        filters={{ division: divisionFilter, status: statusFilter, hasInitiative: hasInitiativeFilter }}
-                        onClose={() => setShowSaveView(false)}
-                      />
-                    )}
+
+                    <div className="relative">
+                      <button
+                        onClick={() => setShowSaveView((v) => !v)}
+                        className="w-full rounded-lg border border-dashed border-gray-300 px-2 py-1.5 text-left text-xs text-gray-500 hover:bg-gray-50 flex items-center gap-1.5"
+                      >
+                        <Bookmark className="w-3.5 h-3.5" />
+                        Save this view
+                      </button>
+                      {showSaveView && (
+                        <SaveViewPopover
+                          tab={activeTab}
+                          filters={{ division: divisionFilter, status: statusFilter, hasInitiative: hasInitiativeFilter }}
+                          onClose={() => setShowSaveView(false)}
+                        />
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -1320,15 +1214,18 @@ export default function PortfolioManagementPage() {
 
             {/* Main content */}
             <div className="flex-1 min-w-0">
-              {/* Tab description */}
-              <div className="mb-4">
-                <div className="flex items-center justify-between mb-1">
-                  <h2 className="text-base font-semibold text-gray-900">{tabCfg.label}</h2>
-                  <span className="text-xs text-gray-500 whitespace-nowrap">
+              <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+                <div className="flex items-center gap-3 text-sm text-gray-600">
+                  <span className="font-medium text-gray-900">
                     {filteredCards.length} result{filteredCards.length !== 1 ? "s" : ""}
                   </span>
+                  {hasActiveFilter && (
+                    <span className="hidden md:inline text-gray-500">Filtered view</span>
+                  )}
                 </div>
-                <p className="text-sm text-gray-500">{tabCfg.description}</p>
+                <span className="text-xs text-gray-500 hidden sm:inline">
+                  Browse the current portfolio section
+                </span>
               </div>
 
               {/* Card grid */}
@@ -1338,14 +1235,14 @@ export default function PortfolioManagementPage() {
                   <p className="text-sm">No results match your filters.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                   {filteredCards.map((card) => (
                     <PMCard
                       key={(card as { id: string }).id}
                       card={card}
                       tab={activeTab}
                       highlighted={(card as { id: string }).id === highlightCardId}
-                      onNavigate={() => navigate(`/marketplaces/portfolio-management/${activeTab}/${(card as { id: string }).id}`)}
+                      onNavigate={() => navigate(`/marketplaces/asset-capability/${activeTab}/${(card as { id: string }).id}`)}
                     />
                   ))}
                 </div>

@@ -22,11 +22,11 @@ export function Contributors() {
         </div>
         <div className="text-center">
           <Link
-            to="/marketplaces/knowledge-center/strategy-docs/dewa-dtmp-organisation-roles?view=artefact"
+            to="/onboarding"
             className="inline-flex items-center gap-2 px-8 py-3 rounded-xl font-semibold text-sm text-white"
             style={{ background: "linear-gradient(135deg, #1e3a5f 0%, #0369A1 100%)" }}
           >
-            Find Your Role in DTMP <ArrowRight size={16} />
+            Find your place in DTMP <ArrowRight size={16} />
           </Link>
         </div>
       </div>

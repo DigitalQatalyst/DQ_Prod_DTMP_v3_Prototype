@@ -3,10 +3,11 @@ import { ArrowRight } from "lucide-react";
 import { ValueCard } from "@/components/cards/ValueCard";
 import { valueProps } from "@/data/valueProps";
 import { SectionPill } from "@/components/landing/shared";
+import { landingColors, landingGradients } from "@/components/landing/theme";
 
 export function TOValue() {
   return (
-    <section className="py-20" style={{ background: "#EEF2FF" }}>
+    <section className="py-20" style={{ background: landingColors.surface }}>
       <div className="max-w-6xl mx-auto px-6 lg:px-8">
         <SectionPill label="Enterprise Value" />
         <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 text-center mb-3">
@@ -21,11 +22,17 @@ export function TOValue() {
             <ValueCard key={value.id} value={value} />
           ))}
         </div>
-        <div className="text-center">
+        <div className="text-center flex flex-col sm:flex-row items-center justify-center gap-4">
+          <Link
+            to="/transformation-office"
+            className="inline-flex items-center gap-2 px-8 py-3 rounded-xl font-semibold text-sm text-slate-700 border border-slate-300 hover:border-slate-400 transition-colors"
+          >
+            About the Transformation Office <ArrowRight size={16} />
+          </Link>
           <Link
             to="/stage3/dashboard"
             className="inline-flex items-center gap-2 px-8 py-3 rounded-xl font-semibold text-sm text-white"
-            style={{ background: "linear-gradient(135deg, #6d28d9 0%, #0369A1 100%)" }}
+            style={{ background: landingGradients.primary }}
           >
             Enter the Corporate EA Office <ArrowRight size={16} />
           </Link>

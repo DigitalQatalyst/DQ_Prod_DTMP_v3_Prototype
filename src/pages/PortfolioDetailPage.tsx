@@ -65,9 +65,6 @@ import {
   type ExternalAPICard,
 } from "@/data/portfolioManagement";
 import {
-  getSessionPMRole,
-  setSessionPMRole,
-  PM_ROLES,
   type PMRole,
 } from "@/data/shared/portfolioRole";
 
@@ -378,37 +375,13 @@ function QuickStats({ card, tab }: { card: AnyCard; tab: string }) {
   );
 }
 
-// ── Role Banner ───────────────────────────────────────────────────────────
-
-function RoleBanner({ onSelect }: { onSelect: (r: PMRole) => void }) {
-  return (
-    <div className="bg-blue-50 border border-blue-200 rounded-xl px-5 py-4 mb-6 flex flex-col gap-3">
-      <div className="flex items-center gap-2 text-blue-800">
-        <User className="w-4 h-4" />
-        <span className="text-sm font-semibold">Select your role to see content tailored to your perspective</span>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {PM_ROLES.map((role) => (
-          <button
-            key={role}
-            onClick={() => onSelect(role)}
-            className="text-xs px-3 py-1.5 rounded-lg border border-blue-300 bg-white text-blue-800 hover:bg-blue-100 font-medium transition-colors"
-          >
-            {role}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ── Main Detail Page ──────────────────────────────────────────────────────
 
 const PortfolioDetailPage = () => {
   const { tab, cardId } = useParams<{ tab: string; cardId: string }>();
   const navigate = useNavigate();
   const [activeDetailTab, setActiveDetailTab] = useState("overview");
-  const [role, setRole] = useState<PMRole | null>(() => getSessionPMRole());
+  const role: PMRole = "EA Office / Portfolio Manager";
 
   const pmTab = tab as PMTab | undefined;
   const card = tab && cardId ? resolveCard(tab, cardId) : null;
@@ -420,8 +393,8 @@ const PortfolioDetailPage = () => {
         <div className="max-w-7xl mx-auto px-4 py-20 text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Asset Not Found</h1>
           <p className="text-gray-500 mb-6">The requested portfolio asset could not be found.</p>
-          <Button onClick={() => navigate("/marketplaces/portfolio-management")}>
-            Back to Portfolio Management
+          <Button onClick={() => navigate("/marketplaces/asset-capability")}>
+            Back to Asset & Capability Portfolio
           </Button>
         </div>
         <Footer />
@@ -439,14 +412,7 @@ const PortfolioDetailPage = () => {
   const showInitiateCTA = needsInitiative(card, tab);
   const relationships = resolveRelationships(card, tab);
 
-  const isEA = role === "EA Office / Portfolio Manager";
-  const isDivHead = role === "Division Head / Senior Stakeholder";
-  const isStaff = role === "General DEWA Staff";
-
-  const handleRoleSelect = (r: PMRole) => {
-    setSessionPMRole(r);
-    setRole(r);
-  };
+  const isEA = true;
 
   const handleInitiateInLifecycle = () => {
     const prefill = {
@@ -457,7 +423,7 @@ const PortfolioDetailPage = () => {
       portfolioCardId: card.id,
       portfolioTab: tab,
     };
-    navigate("/marketplaces/lifecycle-management", {
+    navigate("/marketplaces/initiative-portfolio", {
       state: { openStartInitiative: true, fromPortfolio: true, prefill },
     });
   };
@@ -470,23 +436,26 @@ const PortfolioDetailPage = () => {
 
       {/* Breadcrumb */}
       <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 py-3">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between flex-wrap gap-2">
           <nav className="flex items-center text-sm text-gray-500 flex-wrap gap-1">
             <Link to="/" className="hover:text-gray-900 transition-colors">Home</Link>
             <ChevronRight className="w-3.5 h-3.5" />
             <Link to="/marketplaces" className="hover:text-gray-900 transition-colors">Marketplaces</Link>
             <ChevronRight className="w-3.5 h-3.5" />
-            <Link to="/marketplaces/portfolio-management" className="hover:text-gray-900 transition-colors">Portfolio Management</Link>
+            <Link to="/marketplaces/asset-capability" className="hover:text-gray-900 transition-colors">Asset & Capability Portfolio</Link>
             <ChevronRight className="w-3.5 h-3.5" />
             <span className="text-gray-400">{tabCfg.shortLabel}</span>
             <ChevronRight className="w-3.5 h-3.5" />
             <span className="text-gray-900 font-medium truncate max-w-xs">{name}</span>
           </nav>
+          <span className="inline-flex items-center gap-1.5 bg-green-700 text-white text-xs font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wide flex-shrink-0">
+            Digital DEWA 2035
+          </span>
         </div>
       </div>
 
       {/* Gradient page header */}
-      <div className={`relative bg-gradient-to-br ${divGradient} h-40 overflow-hidden`}>
+      <div className={`relative bg-gradient-to-br ${divGradient} h-32 overflow-hidden`}>
         <div className="absolute inset-0 flex items-center justify-center opacity-20">
           {getIcon(tab, assetType)}
         </div>
@@ -498,8 +467,8 @@ const PortfolioDetailPage = () => {
         <span className={`absolute top-4 right-6 text-xs px-3 py-1 rounded-full border font-medium ${STATUS_COLORS[status] || "bg-white/20 text-white border-white/30"}`}>
           {status}
         </span>
-        <div className="absolute bottom-4 left-6 right-6 flex items-end justify-between">
-          <h1 className="text-2xl font-bold text-white leading-tight max-w-2xl">{name}</h1>
+        <div className="absolute bottom-4 left-6 right-6 flex items-end justify-between gap-4">
+          <h1 className="text-2xl font-bold text-white leading-tight max-w-3xl">{name}</h1>
           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${DIVISION_COLORS[division] || "bg-white/20 text-white"}`}>
             {division}
           </span>
@@ -509,76 +478,102 @@ const PortfolioDetailPage = () => {
       {/* Back navigation */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
         <button
-          onClick={() => navigate(`/marketplaces/portfolio-management`, { state: { tab } })}
+          onClick={() => navigate(`/marketplaces/asset-capability`, { state: { tab } })}
           className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Portfolio Management
         </button>
 
-        {/* Quick stats */}
-        <div className="mb-6">
-          <QuickStats card={card} tab={tab} />
-        </div>
+        <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-4">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="space-y-2">
+              <p className="text-sm text-gray-600 max-w-3xl">
+                Portfolio context for <strong>{name}</strong>, with related governance signals and direct handoff into Lifecycle when intervention is required.
+              </p>
+              <p className="text-xs uppercase tracking-wide text-gray-400">Portfolio Manager view</p>
+            </div>
 
-        {/* Role banner if not set */}
-        {!role && <RoleBanner onSelect={handleRoleSelect} />}
-
-        {/* Role indicator if set */}
-        {role && (
-          <div className="mb-4 flex items-center gap-2 text-xs text-gray-500">
-            <User className="w-3.5 h-3.5" />
-            <span>Viewing as <strong>{role}</strong></span>
-            <span>·</span>
-            <button
-              onClick={() => { setRole(null); }}
-              className="text-orange-600 hover:text-orange-800 underline"
-            >
-              Change role
-            </button>
-          </div>
-        )}
-
-        {/* Risk flag */}
-        {riskFlag && (
-          <div className="mb-5 bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-semibold text-amber-900 mb-0.5">Risk Flag</p>
-              <p className="text-sm text-amber-800">{riskFlag}</p>
+            <div className="flex flex-wrap gap-2">
+              {showInitiateCTA && (
+                <Button className="bg-orange-600 hover:bg-orange-700 text-white" onClick={handleInitiateInLifecycle}>
+                  <Rocket className="w-4 h-4 mr-2" />
+                  Initiate in Lifecycle
+                </Button>
+              )}
+              <Button variant="outline">
+                <FileText className="w-4 h-4 mr-2" />
+                Request Report
+              </Button>
             </div>
           </div>
-        )}
+        </div>
 
         {/* Inner tab bar */}
         <Tabs value={activeDetailTab} onValueChange={setActiveDetailTab}>
-          <TabsList className="mb-6 flex gap-1 bg-gray-100 p-1 rounded-xl w-full overflow-x-auto">
-            <TabsTrigger value="overview" className="text-xs px-3 py-2 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Overview</TabsTrigger>
-            {isAssetTab && (
-              <>
-                <TabsTrigger value="technical" className="text-xs px-3 py-2 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Technical Detail</TabsTrigger>
-                <TabsTrigger value="linked" className="text-xs px-3 py-2 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Linked Assets</TabsTrigger>
-                <TabsTrigger value="governance" className="text-xs px-3 py-2 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Governance</TabsTrigger>
-                <TabsTrigger value="history" className="text-xs px-3 py-2 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">History</TabsTrigger>
-              </>
-            )}
-            {!isAssetTab && (
-              <>
-                <TabsTrigger value="metrics" className="text-xs px-3 py-2 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Metrics</TabsTrigger>
-                <TabsTrigger value="linked" className="text-xs px-3 py-2 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Related Portfolio Items</TabsTrigger>
-                <TabsTrigger value="actions" className="text-xs px-3 py-2 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Actions</TabsTrigger>
-              </>
-            )}
-          </TabsList>
+          <div className="border-b border-gray-200 mb-6 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+            <TabsList className="flex gap-0 bg-transparent p-0 h-auto">
+              <TabsTrigger
+                value="overview"
+                className="px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-900 border-b-2 border-transparent rounded-none bg-transparent shadow-none data-[state=active]:border-orange-600 data-[state=active]:text-gray-900 data-[state=active]:shadow-none data-[state=active]:bg-transparent transition-colors whitespace-nowrap"
+              >Overview</TabsTrigger>
+              {isAssetTab && (
+                <>
+                  <TabsTrigger
+                    value="insights"
+                    className="px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-900 border-b-2 border-transparent rounded-none bg-transparent shadow-none data-[state=active]:border-orange-600 data-[state=active]:text-gray-900 data-[state=active]:shadow-none data-[state=active]:bg-transparent transition-colors whitespace-nowrap"
+                  >Insights</TabsTrigger>
+                  <TabsTrigger
+                    value="linked"
+                    className="px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-900 border-b-2 border-transparent rounded-none bg-transparent shadow-none data-[state=active]:border-orange-600 data-[state=active]:text-gray-900 data-[state=active]:shadow-none data-[state=active]:bg-transparent transition-colors whitespace-nowrap"
+                  >Linked Assets</TabsTrigger>
+                  <TabsTrigger
+                    value="lifecycle"
+                    className="px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-900 border-b-2 border-transparent rounded-none bg-transparent shadow-none data-[state=active]:border-orange-600 data-[state=active]:text-gray-900 data-[state=active]:shadow-none data-[state=active]:bg-transparent transition-colors whitespace-nowrap"
+                  >Initiate in Lifecycle</TabsTrigger>
+                  <TabsTrigger
+                    value="actions"
+                    className="px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-900 border-b-2 border-transparent rounded-none bg-transparent shadow-none data-[state=active]:border-orange-600 data-[state=active]:text-gray-900 data-[state=active]:shadow-none data-[state=active]:bg-transparent transition-colors whitespace-nowrap"
+                  >Actions</TabsTrigger>
+                </>
+              )}
+              {!isAssetTab && (
+                <>
+                  <TabsTrigger
+                    value="metrics"
+                    className="px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-900 border-b-2 border-transparent rounded-none bg-transparent shadow-none data-[state=active]:border-orange-600 data-[state=active]:text-gray-900 data-[state=active]:shadow-none data-[state=active]:bg-transparent transition-colors whitespace-nowrap"
+                  >Metrics</TabsTrigger>
+                  <TabsTrigger
+                    value="linked"
+                    className="px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-900 border-b-2 border-transparent rounded-none bg-transparent shadow-none data-[state=active]:border-orange-600 data-[state=active]:text-gray-900 data-[state=active]:shadow-none data-[state=active]:bg-transparent transition-colors whitespace-nowrap"
+                  >Related Portfolio Items</TabsTrigger>
+                  <TabsTrigger
+                    value="actions"
+                    className="px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-900 border-b-2 border-transparent rounded-none bg-transparent shadow-none data-[state=active]:border-orange-600 data-[state=active]:text-gray-900 data-[state=active]:shadow-none data-[state=active]:bg-transparent transition-colors whitespace-nowrap"
+                  >Actions</TabsTrigger>
+                </>
+              )}
+            </TabsList>
+          </div>
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-5">
-            {!role ? (
-              <div className="bg-gray-50 rounded-xl p-8 text-center text-gray-400 text-sm">
-                Select your role above to see tailored content.
+            <div className="bg-white border border-gray-200 rounded-xl p-5">
+              <h3 className="text-sm font-semibold text-gray-900 mb-4">Portfolio Snapshot</h3>
+              <QuickStats card={card} tab={tab} />
+            </div>
+
+            {riskFlag && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3">
+                <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-amber-900 mb-0.5">Risk Flag</p>
+                  <p className="text-sm text-amber-800">{riskFlag}</p>
+                </div>
               </div>
-            ) : (
-              <>
+            )}
+
+            <>
                 {/* EA Office full view */}
                 {isEA && (
                   <div className="space-y-4">
@@ -608,31 +603,6 @@ const PortfolioDetailPage = () => {
                     </div>
                   </div>
                 )}
-                {/* Division Head summary */}
-                {isDivHead && (
-                  <div className="bg-white border border-gray-200 rounded-xl p-5">
-                    <h3 className="text-sm font-semibold text-gray-900 mb-3">Executive Summary</h3>
-                    <p className="text-sm text-gray-600">
-                      <strong>{name}</strong> is managed by the <strong>{division}</strong> division.
-                      Current status: <strong>{status}</strong>.
-                    </p>
-                    {tab === "it-asset-portfolio" && (card as AppCard).lifecycleRecommendation && (
-                      <div className="mt-3 bg-orange-50 border border-orange-100 rounded-lg p-3">
-                        <p className="text-xs font-semibold text-orange-900 mb-1">EA Recommendation</p>
-                        <p className="text-xs text-orange-700">{(card as AppCard).lifecycleRecommendation}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-                {/* General Staff view */}
-                {isStaff && (
-                  <div className="bg-white border border-gray-200 rounded-xl p-5">
-                    <p className="text-sm text-gray-700 mb-2"><strong>{name}</strong></p>
-                    <p className="text-sm text-gray-500">Division: <strong>{division}</strong></p>
-                    <p className="text-sm text-gray-500">Status: <strong>{status}</strong></p>
-                  </div>
-                )}
-
                 {/* Health breakdown for applications (EA only) */}
                 {isEA && tab === "it-asset-portfolio" && (card as AppCard).insightsBreakdown && (
                   <div className="bg-white border border-gray-200 rounded-xl p-5">
@@ -671,15 +641,14 @@ const PortfolioDetailPage = () => {
                     </div>
                   );
                 })()}
-              </>
-            )}
+            </>
           </TabsContent>
 
-          {/* Technical Detail Tab */}
+          {/* Insights Tab */}
           {isAssetTab && (
-            <TabsContent value="technical" className="space-y-5">
+            <TabsContent value="insights" className="space-y-5">
               <div className="bg-white border border-gray-200 rounded-xl p-5">
-                <h3 className="text-sm font-semibold text-gray-900 mb-4">Technical Detail</h3>
+                <h3 className="text-sm font-semibold text-gray-900 mb-4">Technical Metrics</h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-xs">
                   {tab === "it-asset-portfolio" && (() => {
                     const assetType = (card as AppCard).assetType;
@@ -766,6 +735,44 @@ const PortfolioDetailPage = () => {
                   })()}
                 </div>
               </div>
+
+              {/* EA Recommendations */}
+              {tab === "it-asset-portfolio" && ((card as AppCard).lifecycleRecommendation || (card as AppCard).eaAlignment) && (
+                <div className="space-y-3">
+                  {(card as AppCard).eaAlignment && (
+                    <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+                      <p className="text-xs font-semibold text-blue-900 uppercase tracking-wide mb-1.5">EA Alignment</p>
+                      <p className="text-sm text-blue-800">{(card as AppCard).eaAlignment}</p>
+                    </div>
+                  )}
+                  {(card as AppCard).lifecycleRecommendation && (
+                    <div className="bg-orange-50 border border-orange-100 rounded-xl p-4">
+                      <p className="text-xs font-semibold text-orange-900 uppercase tracking-wide mb-1.5">EA Lifecycle Recommendation</p>
+                      <p className="text-sm text-orange-800">{(card as AppCard).lifecycleRecommendation}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Digital DEWA 2035 alignment */}
+              <div className="bg-green-50 border border-green-100 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="bg-green-700 text-white text-xs font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">Digital DEWA 2035</span>
+                  <span className="text-xs text-green-700 font-medium">Programme Context</span>
+                </div>
+                <p className="text-sm text-green-800">
+                  {division === "Customer Services"
+                    ? "This asset contributes to the Customer Experience Transformation initiative under Digital DEWA 2035 — targeting CSAT improvement and Arabic-first digital service delivery."
+                    : division === "Transmission" || division === "Generation" || division === "Distribution"
+                    ? "This asset is in scope for the Smart Grid Modernisation Programme and OT Cybersecurity Enhancement initiative under Digital DEWA 2035."
+                    : division === "Digital DEWA & Moro Hub"
+                    ? "This asset is a core component of the Digital DEWA Programme — cloud-native platform modernisation and Moro Hub expansion under the 2035 roadmap."
+                    : division === "Water Services"
+                    ? "This asset supports DEWA's water infrastructure digitisation goals under the Digital DEWA 2035 operational excellence pillar."
+                    : "This asset falls under EA Office governance as part of the DEWA Enterprise Data Strategy and Digital DEWA 2035 estate rationalisation roadmap."
+                  }
+                </p>
+              </div>
             </TabsContent>
           )}
 
@@ -789,7 +796,7 @@ const PortfolioDetailPage = () => {
                         <div className="flex items-center gap-3">
                           <StatusBadge status={item.status} />
                           <button
-                            onClick={() => navigate(`/marketplaces/portfolio-management/${item.tab}/${item.id}`)}
+                            onClick={() => navigate(`/marketplaces/asset-capability/${item.tab}/${item.id}`)}
                             className="text-xs text-orange-600 hover:text-orange-800 flex items-center gap-1"
                           >
                             View detail <ExternalLink className="w-3 h-3" />
@@ -803,55 +810,143 @@ const PortfolioDetailPage = () => {
             )}
           </TabsContent>
 
-          {/* Governance Tab */}
-          {isAssetTab ? (
-            <TabsContent value="governance" className="space-y-5">
-              <div className="bg-white border border-gray-200 rounded-xl p-5">
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">Governance Status</h3>
-                {isEA ? (
-                  <div className="space-y-3 text-sm text-gray-700">
-                    <p>This asset is under active EA Office governance review.</p>
-                    {tab === "it-asset-portfolio" && (card as AppCard).eaAlignment && (
-                      <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
-                        <p className="text-xs font-semibold text-blue-900 mb-1">EA Alignment Statement</p>
-                        <p className="text-xs text-blue-700">{(card as AppCard).eaAlignment}</p>
-                      </div>
-                    )}
-                    <div className="bg-gray-50 rounded-lg p-3 text-xs">
-                      <p className="font-semibold text-gray-700 mb-1">Initiative Links</p>
-                      {relationships.length > 0
-                        ? relationships.flatMap((g) => g.items).map((i) => (
-                            <p key={i.id} className="text-gray-600">{i.name} ({i.tabLabel})</p>
-                          ))
-                        : <p className="text-gray-400">No active initiatives linked to this asset.</p>
-                      }
+          {/* Initiate in Lifecycle Tab (asset tabs only) */}
+          {isAssetTab && (
+            <TabsContent value="lifecycle" className="space-y-5">
+
+              {/* Why this asset needs intervention */}
+              {showInitiateCTA ? (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-semibold text-amber-900 mb-1">EA Office Action Required</p>
+                      <p className="text-sm text-amber-800">
+                        {riskFlag
+                          ? riskFlag
+                          : status === "Critical"
+                          ? `${name} is in a Critical state with no active governing initiative. Immediate EA escalation is required.`
+                          : status === "No Initiative"
+                          ? `${name} has no active initiative and is not covered under any Digital DEWA 2035 programme workstream.`
+                          : `${name} is At Risk. A governing initiative should be raised to protect delivery continuity.`
+                        }
+                      </p>
                     </div>
                   </div>
-                ) : (
-                  <p className="text-sm text-gray-500">Governance detail is available to EA Office users.</p>
-                )}
+                </div>
+              ) : (
+                <div className="bg-green-50 border border-green-100 rounded-xl p-5 flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-green-900 mb-1">Initiative Coverage Active</p>
+                    <p className="text-sm text-green-800">
+                      This asset is already governed under an active Digital DEWA 2035 initiative. Use the Linked Assets tab to navigate to the parent initiative.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Pre-fill preview card */}
+              <div className="bg-white border border-gray-200 rounded-xl p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-semibold text-gray-900">Proposed Initiative — Pre-filled Context</h3>
+                  <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">Draft</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-5">
+                  <div>
+                    <p className="text-xs text-gray-400 mb-0.5">Initiative Name</p>
+                    <p className="font-medium text-gray-900">Govern: {name}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400 mb-0.5">Owning Division</p>
+                    <p className="font-medium text-gray-900">{division}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400 mb-0.5">Scope</p>
+                    <p className="font-medium text-gray-900">{name}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400 mb-0.5">Asset Type</p>
+                    <p className="font-medium text-gray-900">{assetType || tabCfg.shortLabel}</p>
+                  </div>
+                  <div className="md:col-span-2">
+                    <p className="text-xs text-gray-400 mb-0.5">Objective</p>
+                    <p className="font-medium text-gray-900">
+                      {riskFlag || `No active initiative covers ${name}. EA Office action required to bring this asset under governed delivery.`}
+                    </p>
+                  </div>
+                </div>
+
+                {/* 2035 programme alignment */}
+                <div className="bg-green-50 border border-green-100 rounded-lg p-3 mb-5">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="bg-green-700 text-white text-xs font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">Digital DEWA 2035</span>
+                  </div>
+                  <p className="text-xs text-green-800">
+                    {division === "Customer Services"
+                      ? "Aligns to: Customer Experience Transformation · Rammas AI Enhancement"
+                      : division === "Transmission" || division === "Generation" || division === "Distribution"
+                      ? "Aligns to: Smart Grid Modernisation · OT Cybersecurity Enhancement"
+                      : division === "Digital DEWA & Moro Hub"
+                      ? "Aligns to: Digital DEWA Programme · Moro Hub Cloud Expansion"
+                      : "Aligns to: DEWA Enterprise Data Strategy · EA Office Governance Roadmap"
+                    }
+                  </p>
+                </div>
+
+                <Button
+                  className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+                  onClick={handleInitiateInLifecycle}
+                >
+                  <Rocket className="w-4 h-4 mr-2" />
+                  Launch in Lifecycle Management
+                </Button>
+                <p className="text-xs text-gray-400 text-center mt-2">
+                  You will be taken to Lifecycle Management with this context pre-filled.
+                </p>
               </div>
+
+              {/* Governance links */}
+              {relationships.length > 0 && (
+                <div className="bg-white border border-gray-200 rounded-xl p-5">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-3">Existing Governance Links</h3>
+                  <div className="space-y-2">
+                    {relationships.flatMap((g) => g.items).map((item) => (
+                      <div key={item.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{item.name}</p>
+                          <p className="text-xs text-gray-500">{item.tabLabel} · {item.division}</p>
+                        </div>
+                        <button
+                          onClick={() => navigate(`/marketplaces/asset-capability/${item.tab}/${item.id}`)}
+                          className="text-xs text-orange-600 hover:text-orange-800 flex items-center gap-1 flex-shrink-0"
+                        >
+                          View <ExternalLink className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </TabsContent>
-          ) : (
+          )}
+
+          {/* Actions Tab — for non-asset governance tabs (shown outside isAssetTab block) */}
+          {!isAssetTab && (
             <TabsContent value="actions" className="space-y-5">
               <div className="bg-white border border-gray-200 rounded-xl p-5">
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">Available Actions</h3>
-                {isEA ? (
-                  <div className="space-y-2">
-                    <Button className="w-full bg-orange-600 hover:bg-orange-700 text-white" onClick={handleInitiateInLifecycle}>
-                      <Rocket className="w-4 h-4 mr-2" /> Initiate in Lifecycle
-                    </Button>
-                    <Button variant="outline" className="w-full">
-                      <FileText className="w-4 h-4 mr-2" /> Request Report
-                    </Button>
-                  </div>
-                ) : isDivHead ? (
+                <h3 className="text-sm font-semibold text-gray-900 mb-4">Available Actions</h3>
+                <div className="space-y-2">
+                  <Button className="w-full bg-orange-600 hover:bg-orange-700 text-white" onClick={handleInitiateInLifecycle}>
+                    <Rocket className="w-4 h-4 mr-2" /> Initiate in Lifecycle
+                  </Button>
                   <Button variant="outline" className="w-full">
                     <FileText className="w-4 h-4 mr-2" /> Request Report
                   </Button>
-                ) : (
-                  <p className="text-sm text-gray-400">No actions available for your current role.</p>
-                )}
+                  <Button variant="outline" className="w-full">
+                    <User className="w-4 h-4 mr-2" /> Contact EA Office
+                  </Button>
+                </div>
               </div>
             </TabsContent>
           )}
@@ -866,17 +961,43 @@ const PortfolioDetailPage = () => {
             </TabsContent>
           )}
 
-          {/* History Tab */}
+          {/* Actions Tab (asset cards) */}
           {isAssetTab && (
-            <TabsContent value="history" className="space-y-4">
+            <TabsContent value="actions" className="space-y-5">
+
+              {/* Primary actions */}
+              <div className="bg-white border border-gray-200 rounded-xl p-5">
+                <h3 className="text-sm font-semibold text-gray-900 mb-4">Available Actions</h3>
+                <div className="space-y-2">
+                  {showInitiateCTA && (
+                    <Button className="w-full bg-orange-600 hover:bg-orange-700 text-white" onClick={handleInitiateInLifecycle}>
+                      <Rocket className="w-4 h-4 mr-2" /> Initiate in Lifecycle Management
+                    </Button>
+                  )}
+                  <Button variant="outline" className="w-full justify-start">
+                    <FileText className="w-4 h-4 mr-2" /> Request Assessment Report
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start">
+                    <Clock className="w-4 h-4 mr-2" /> Schedule EA Review
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start">
+                    <User className="w-4 h-4 mr-2" /> Contact Asset Owner
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start text-gray-400" disabled>
+                    <ExternalLink className="w-4 h-4 mr-2" /> Export to PDF — coming soon
+                  </Button>
+                </div>
+              </div>
+
+              {/* Asset history timeline */}
               <div className="bg-white border border-gray-200 rounded-xl p-5">
                 <h3 className="text-sm font-semibold text-gray-900 mb-4">Asset History</h3>
                 <div className="space-y-4">
                   {[
-                    { date: "March 2026", event: "Added to Portfolio Management registry", icon: <CheckCircle className="w-4 h-4 text-green-500" /> },
-                    { date: "February 2026", event: "EA Office governance review completed", icon: <Shield className="w-4 h-4 text-blue-500" /> },
-                    ...(getCardRiskFlag(card, tab) ? [{ date: "January 2026", event: "Risk flag raised: " + (getCardRiskFlag(card, tab) || "").slice(0, 60) + "...", icon: <AlertTriangle className="w-4 h-4 text-amber-500" /> }] : []),
-                    { date: "Q4 2025", event: "Portfolio status updated", icon: <Clock className="w-4 h-4 text-gray-400" /> },
+                    { date: "March 2026",   event: "Added to Portfolio Management registry under Digital DEWA 2035 estate audit", icon: <CheckCircle className="w-4 h-4 text-green-500" /> },
+                    { date: "February 2026", event: "EA Office governance review completed — status confirmed", icon: <Shield className="w-4 h-4 text-blue-500" /> },
+                    ...(getCardRiskFlag(card, tab) ? [{ date: "January 2026", event: "Risk flag raised: " + (getCardRiskFlag(card, tab) || "").slice(0, 80), icon: <AlertTriangle className="w-4 h-4 text-amber-500" /> }] : []),
+                    { date: "Q4 2025", event: "Portfolio status reviewed and updated by Corporate EA Office", icon: <Clock className="w-4 h-4 text-gray-400" /> },
                   ].map((item, i) => (
                     <div key={i} className="flex gap-3">
                       <div className="flex-shrink-0 mt-0.5">{item.icon}</div>
@@ -895,34 +1016,6 @@ const PortfolioDetailPage = () => {
 
       <Footer />
 
-      {/* Sticky bottom CTA */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-orange-200 shadow-lg h-16 flex items-center">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between w-full gap-4">
-          {showInitiateCTA ? (
-            <>
-              <p className="text-sm text-gray-700 hidden sm:block">
-                <strong>{name}</strong> requires governed intervention.
-                {status === "No Initiative" && " No active initiative exists."}
-              </p>
-              <div className="flex items-center gap-3 ml-auto">
-                {(isEA || !role) && (
-                  <Button
-                    onClick={handleInitiateInLifecycle}
-                    className="bg-orange-600 hover:bg-orange-700 text-white whitespace-nowrap"
-                  >
-                    <Rocket className="w-4 h-4 mr-2" />
-                    Initiate in Lifecycle →
-                  </Button>
-                )}
-              </div>
-            </>
-          ) : (
-            <p className="text-sm text-gray-500 w-full text-center">
-              Governance is healthy — no initiative required at this time.
-            </p>
-          )}
-        </div>
-      </div>
     </div>
   );
 };

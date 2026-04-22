@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { Activity, ArrowRight, Brain, ChevronRight, Cpu, Database, Eye, FileText, Globe, Layers, Leaf, Network, RefreshCw, Search, Server, Shield, SlidersHorizontal, TrendingUp, Users, X, Zap } from "lucide-react";
 import LCInitiativeDetailPanel from "./lifecycle/LCInitiativeDetailPanel";
 
@@ -62,6 +62,12 @@ import {
   type LCServiceType,
 } from "@/data/lifecycle/serviceRequestState";
 import { DEWA_ROLE_OPTIONS } from "@/data/shared/dewaRoles";
+import {
+  STRATEGIC_PRIORITIES,
+  STRATEGIC_PRIORITY_BY_SLUG,
+  isStrategicPrioritySlug,
+  type StrategicPrioritySlug,
+} from "@/data/strategicPriorities";
 
 type Stage1Tab = "initiatives" | "explore-start";
 
@@ -191,49 +197,103 @@ export default function LifecycleManagementPage() {
 
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [initiatives, setInitiatives] = useState<Initiative[]>(() => getInitiatives());
   const refreshInitiatives = () => setInitiatives(getInitiatives());
   const [searchQuery, setSearchQuery] = useState("");
 
   // ── Sidebar filters ─────────────────────────────────────────────────────────
-  const [filterStatuses, setFilterStatuses] = useState<Set<InitiativeStatus>>(new Set());
+  const [filterStatus, setFilterStatus] = useState<"all" | InitiativeStatus>("all");
   const [filterDivision, setFilterDivision] = useState<Division | "all">("all");
-  const [filterTypes, setFilterTypes] = useState<Set<InitiativeType>>(new Set());
+  const [filterType, setFilterType] = useState<"all" | InitiativeType>("all");
+  const [filterStrategicPriority, setFilterStrategicPriority] = useState<"all" | StrategicPrioritySlug>("all");
   const [filterOwner, setFilterOwner] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(true);
 
-  const toggleStatus = (s: InitiativeStatus) =>
-    setFilterStatuses((prev) => { const n = new Set(prev); n.has(s) ? n.delete(s) : n.add(s); return n; });
+  const updateDivisionFilter = (value: Division | "all") => {
+    setFilterDivision(value);
 
-  const toggleType = (t: InitiativeType) =>
-    setFilterTypes((prev) => { const n = new Set(prev); n.has(t) ? n.delete(t) : n.add(t); return n; });
-
-  const clearFilters = () => {
-    setFilterStatuses(new Set());
-    setFilterDivision("all");
-    setFilterTypes(new Set());
-    setFilterOwner("");
+    const next = new URLSearchParams(searchParams);
+    if (value === "all") {
+      next.delete("division");
+    } else {
+      next.set("division", value);
+    }
+    setSearchParams(next, { replace: true });
   };
 
+  const updatePriorityFilter = (value: "all" | StrategicPrioritySlug) => {
+    setFilterStrategicPriority(value);
+
+    const next = new URLSearchParams(searchParams);
+    if (value === "all") {
+      next.delete("priority");
+    } else {
+      next.set("priority", value);
+    }
+    setSearchParams(next, { replace: true });
+  };
+
+  const clearFilters = () => {
+    setFilterStatus("all");
+    setFilterDivision("all");
+    setFilterType("all");
+    setFilterStrategicPriority("all");
+    setFilterOwner("");
+    const next = new URLSearchParams(searchParams);
+    next.delete("priority");
+    next.delete("division");
+    setSearchParams(next, { replace: true });
+  };
+
+  useEffect(() => {
+    const divisionParam = searchParams.get("division");
+    const priorityParam = searchParams.get("priority");
+
+    if (divisionParam && DIVISION_OPTIONS.includes(divisionParam as Division)) {
+      setFilterDivision(divisionParam as Division);
+    } else {
+      setFilterDivision("all");
+    }
+
+    if (isStrategicPrioritySlug(priorityParam)) {
+      setFilterStrategicPriority(priorityParam);
+      return;
+    }
+    setFilterStrategicPriority("all");
+  }, [searchParams]);
+
   const activeFilterCount =
-    filterStatuses.size + filterTypes.size + (filterDivision !== "all" ? 1 : 0) + (filterOwner.trim() ? 1 : 0);
+    (filterStatus !== "all" ? 1 : 0) +
+    (filterType !== "all" ? 1 : 0) +
+    (filterDivision !== "all" ? 1 : 0) +
+    (filterStrategicPriority !== "all" ? 1 : 0) +
+    (filterOwner.trim() ? 1 : 0);
 
   const filteredInitiatives = useMemo(() => {
     const ownerQ = filterOwner.trim().toLowerCase();
     const query = searchQuery.trim().toLowerCase();
     return initiatives.filter((ini) => {
-      if (filterStatuses.size > 0 && !filterStatuses.has(ini.status)) return false;
+      if (filterStatus !== "all" && ini.status !== filterStatus) return false;
       if (filterDivision !== "all" && ini.division !== filterDivision) return false;
-      if (filterTypes.size > 0 && !filterTypes.has(ini.type as InitiativeType)) return false;
+      if (filterType !== "all" && ini.type !== filterType) return false;
+      if (filterStrategicPriority !== "all" && ini.strategicPriority !== filterStrategicPriority) return false;
       if (ownerQ && !ini.owner?.toLowerCase().includes(ownerQ)) return false;
       if (query) {
-        const haystack = [ini.name, ini.description, ini.type, ini.division, ini.owner].join(" ").toLowerCase();
+        const haystack = [
+          ini.name,
+          ini.description,
+          ini.type,
+          ini.division,
+          ini.owner,
+          ini.strategicPriority ? STRATEGIC_PRIORITY_BY_SLUG[ini.strategicPriority]?.title ?? "" : "",
+        ].join(" ").toLowerCase();
         if (!haystack.includes(query)) return false;
       }
       return true;
     });
-  }, [initiatives, filterStatuses, filterDivision, filterTypes, filterOwner, searchQuery]);
+  }, [initiatives, filterStatus, filterDivision, filterType, filterStrategicPriority, filterOwner, searchQuery]);
 
   // ── See Insights (role-gated) ───────────────────────────────────────────────
   const [drawerInitiative, setDrawerInitiative] = useState<Initiative | null>(null);
@@ -287,8 +347,8 @@ export default function LifecycleManagementPage() {
   };
 
   // ── Explore & Start ────────────────────────────────────────────────────────
-  const [frameworkCategories, setFrameworkCategories] = useState<Set<"Internal" | "External">>(new Set());
-  const [frameworkComplexities, setFrameworkComplexities] = useState<Set<"simple" | "moderate" | "complex">>(new Set());
+  const [frameworkCategory, setFrameworkCategory] = useState<"all" | "Internal" | "External">("all");
+  const [frameworkComplexity, setFrameworkComplexity] = useState<"all" | "simple" | "moderate" | "complex">("all");
   const [frameworkDuration, setFrameworkDuration] = useState("all");
   const [frameworkDivision, setFrameworkDivision] = useState("all");
   const [frameworkFiltersOpen, setFrameworkFiltersOpen] = useState(true);
@@ -298,8 +358,8 @@ export default function LifecycleManagementPage() {
   const visibleFrameworks = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     return initiativeFrameworks.filter((framework) => {
-      if (frameworkCategories.size > 0 && !frameworkCategories.has(framework.category)) return false;
-      if (frameworkComplexities.size > 0 && !frameworkComplexities.has(templateComplexity(framework.compatibleTemplates[0]))) return false;
+      if (frameworkCategory !== "all" && framework.category !== frameworkCategory) return false;
+      if (frameworkComplexity !== "all" && templateComplexity(framework.compatibleTemplates[0]) !== frameworkComplexity) return false;
       if (
         frameworkDivision !== "all" &&
         !framework.divisionRelevance.includes(frameworkDivision) &&
@@ -319,7 +379,7 @@ export default function LifecycleManagementPage() {
       }
       return true;
     });
-  }, [frameworkCategories, frameworkComplexities, frameworkDivision, frameworkDuration, searchQuery]);
+  }, [frameworkCategory, frameworkComplexity, frameworkDivision, frameworkDuration, searchQuery]);
 
   const [requestModalOpen, setRequestModalOpen] = useState(false);
   const [selectedFramework, setSelectedFramework] = useState<InitiativeFramework | null>(null);
@@ -549,11 +609,11 @@ export default function LifecycleManagementPage() {
                 <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                   <button
                     onClick={() => setFiltersOpen((p) => !p)}
-                    className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+                    className="w-full flex items-center justify-between px-5 py-4 text-sm font-semibold text-gray-900 hover:bg-gray-50 transition-colors"
                   >
                     <span className="flex items-center gap-2">
                       <SlidersHorizontal className="w-4 h-4" />
-                      {filtersOpen ? "Filters" : ""}
+                      Filters
                       {activeFilterCount > 0 && (
                         <span className="ml-1 w-5 h-5 rounded-full bg-orange-500 text-white text-xs font-bold flex items-center justify-center">
                           {activeFilterCount}
@@ -571,32 +631,29 @@ export default function LifecycleManagementPage() {
                   </button>
 
                   {filtersOpen && (
-                    <div className="px-4 pb-4 space-y-5 border-t border-gray-100">
+                    <div className="space-y-5 border-t border-gray-100 px-5 py-5">
 
                       {/* Status */}
-                      <div className="pt-4 space-y-2">
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</p>
-                        {ALL_STATUSES.map((s) => (
-                          <label key={s} className="flex items-center gap-2 cursor-pointer group">
-                            <input
-                              type="checkbox"
-                              checked={filterStatuses.has(s)}
-                              onChange={() => toggleStatus(s)}
-                              className="rounded border-gray-300 text-orange-500"
-                            />
-                            <span className="text-sm text-gray-700 group-hover:text-gray-900">{s}</span>
-                            <span className={`ml-auto inline-flex h-4 px-1.5 rounded text-xs font-medium items-center ${STATUS_BADGE_CLASSES[s]}`}>
-                              {initiatives.filter((i) => i.status === s).length}
-                            </span>
-                          </label>
-                        ))}
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-gray-700">Status</p>
+                        <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as "all" | InitiativeStatus)}>
+                          <SelectTrigger className="h-9 text-sm">
+                            <SelectValue placeholder="All statuses" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All statuses</SelectItem>
+                            {ALL_STATUSES.map((s) => (
+                              <SelectItem key={s} value={s}>{s}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
 
                       {/* Division */}
                       <div className="space-y-2">
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Division</p>
-                        <Select value={filterDivision} onValueChange={(v) => setFilterDivision(v as any)}>
-                          <SelectTrigger className="h-8 text-xs">
+                        <p className="text-xs font-medium text-gray-700">Division</p>
+                        <Select value={filterDivision} onValueChange={(v) => updateDivisionFilter(v as Division | "all")}>
+                          <SelectTrigger className="h-9 text-sm">
                             <SelectValue placeholder="All divisions" />
                           </SelectTrigger>
                           <SelectContent>
@@ -610,30 +667,48 @@ export default function LifecycleManagementPage() {
 
                       {/* Initiative Type */}
                       <div className="space-y-2">
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Initiative Type</p>
-                        <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                          {ALL_TYPES.map((t) => (
-                            <label key={t} className="flex items-center gap-2 cursor-pointer group">
-                              <input
-                                type="checkbox"
-                                checked={filterTypes.has(t)}
-                                onChange={() => toggleType(t)}
-                                className="rounded border-gray-300 text-orange-500"
-                              />
-                              <span className="text-xs text-gray-700 group-hover:text-gray-900 leading-tight">{t}</span>
-                            </label>
-                          ))}
-                        </div>
+                        <p className="text-xs font-medium text-gray-700">Initiative Type</p>
+                        <Select value={filterType} onValueChange={(v) => setFilterType(v as "all" | InitiativeType)}>
+                          <SelectTrigger className="h-9 text-sm">
+                            <SelectValue placeholder="All initiative types" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All initiative types</SelectItem>
+                            {ALL_TYPES.map((t) => (
+                              <SelectItem key={t} value={t}>{t}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-gray-700">Strategic Priority</p>
+                        <Select
+                          value={filterStrategicPriority}
+                          onValueChange={(v) => updatePriorityFilter(v as "all" | StrategicPrioritySlug)}
+                        >
+                          <SelectTrigger className="h-9 text-sm">
+                            <SelectValue placeholder="All strategic priorities" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All strategic priorities</SelectItem>
+                            {STRATEGIC_PRIORITIES.map((priority) => (
+                              <SelectItem key={priority.slug} value={priority.slug}>
+                                {priority.title}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
 
                       {/* Owner search */}
                       <div className="space-y-2">
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Owner</p>
+                        <p className="text-xs font-medium text-gray-700">Owner</p>
                         <Input
                           value={filterOwner}
                           onChange={(e) => setFilterOwner(e.target.value)}
                           placeholder="Search by owner name"
-                          className="h-8 text-xs"
+                          className="h-9 text-sm"
                         />
                       </div>
                     </div>
@@ -649,6 +724,30 @@ export default function LifecycleManagementPage() {
                     {activeFilterCount > 0 && <span className="ml-1 text-orange-600 font-medium">(filtered)</span>}
                   </p>
                 </div>
+
+                {filterStrategicPriority !== "all" && (
+                  <div className="mb-4">
+                    <button
+                      onClick={() => updatePriorityFilter("all")}
+                      className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1.5 text-sm font-medium text-orange-800 hover:bg-orange-100 transition-colors"
+                    >
+                      Filtered by: {STRATEGIC_PRIORITY_BY_SLUG[filterStrategicPriority].title}
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+
+                {filterDivision !== "all" && (
+                  <div className="mb-4">
+                    <button
+                      onClick={() => updateDivisionFilter("all")}
+                      className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-sm font-medium text-sky-800 hover:bg-sky-100 transition-colors"
+                    >
+                      Division: {filterDivision}
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
 
                 {filteredInitiatives.length === 0 ? (
                   <div className="text-center py-12">
@@ -672,7 +771,7 @@ export default function LifecycleManagementPage() {
                       return (
                         <div
                           key={initiative.id}
-                          onClick={() => navigate(`/marketplaces/lifecycle-management/initiative/${initiative.id}`)}
+                          onClick={() => navigate(`/marketplaces/initiative-portfolio/initiative/${initiative.id}`)}
                           className="bg-white border border-gray-200 rounded-xl hover:shadow-xl hover:border-orange-300 hover:-translate-y-1 transition-all duration-300 cursor-pointer overflow-hidden"
                         >
                           {/* Gradient header */}
@@ -695,6 +794,13 @@ export default function LifecycleManagementPage() {
                           {/* Card body */}
                           <div className="p-4">
                             <p className="text-xs text-gray-500 mb-2">{initiative.division}</p>
+                            {initiative.strategicPriority && (
+                              <div className="mb-2">
+                                <span className="inline-flex items-center rounded-full bg-orange-50 px-2.5 py-1 text-[11px] font-semibold text-orange-700 border border-orange-200">
+                                  {STRATEGIC_PRIORITY_BY_SLUG[initiative.strategicPriority].title}
+                                </span>
+                              </div>
+                            )}
                             <h3 className="text-base font-semibold text-gray-900 mb-2 line-clamp-2">
                               {initiative.name}
                             </h3>
@@ -773,7 +879,7 @@ export default function LifecycleManagementPage() {
 
           <TabsContent value="explore-start" className="mt-0">
             <div className="space-y-6">
-              <div className="flex items-end justify-between gap-4 flex-wrap">
+              <div className="space-y-4">
                 <div>
                   <h2 className="text-lg font-semibold text-foreground">Explore & Start</h2>
                   <p className="text-sm text-muted-foreground mt-1">
@@ -790,48 +896,39 @@ export default function LifecycleManagementPage() {
                       className="border-0 px-0 shadow-none focus-visible:ring-0"
                     />
                   </div>
-                  <p className="mt-2 text-xs text-gray-500">
-                    Showing {visibleFrameworks.length} of {initiativeFrameworks.length} frameworks
-                  </p>
                 </div>
               </div>
 
-              <div className="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
+              <div className="grid items-start gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
                 <aside className={frameworkFiltersOpen ? "w-full" : "w-auto"}>
                   <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
                     <button
                       onClick={() => setFrameworkFiltersOpen((prev) => !prev)}
-                      className="flex w-full items-center justify-between px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                      className="flex w-full items-center justify-between px-5 py-4 text-sm font-semibold text-gray-900 hover:bg-gray-50"
                     >
                       <span className="flex items-center gap-2">
                         <SlidersHorizontal className="h-4 w-4" />
-                        {frameworkFiltersOpen ? "Framework Filters" : "Filters"}
+                        Filters
                       </span>
-                      <span className="text-xs text-gray-400">{frameworkCategories.size + frameworkComplexities.size + (frameworkDuration !== "all" ? 1 : 0) + (frameworkDivision !== "all" ? 1 : 0)}</span>
+                      <span className="text-xs text-gray-400">{(frameworkCategory !== "all" ? 1 : 0) + (frameworkComplexity !== "all" ? 1 : 0) + (frameworkDuration !== "all" ? 1 : 0) + (frameworkDivision !== "all" ? 1 : 0)}</span>
                     </button>
                     {frameworkFiltersOpen ? (
-                      <div className="space-y-5 border-t border-gray-100 px-4 py-4">
+                      <div className="space-y-5 border-t border-gray-100 px-5 py-5">
                         <div className="space-y-2">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Category</p>
-                          {(["Internal", "External"] as const).map((category) => (
-                            <label key={category} className="flex items-center gap-2 text-sm text-gray-700">
-                              <input
-                                type="checkbox"
-                                checked={frameworkCategories.has(category)}
-                                onChange={() =>
-                                  setFrameworkCategories((prev) => {
-                                    const next = new Set(prev);
-                                    next.has(category) ? next.delete(category) : next.add(category);
-                                    return next;
-                                  })
-                                }
-                              />
-                              {category}
-                            </label>
-                          ))}
+                          <p className="text-xs font-medium text-gray-700">Category</p>
+                          <Select value={frameworkCategory} onValueChange={(value) => setFrameworkCategory(value as "all" | "Internal" | "External")}>
+                            <SelectTrigger className="h-9 text-sm">
+                              <SelectValue placeholder="All categories" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All categories</SelectItem>
+                              <SelectItem value="Internal">Internal</SelectItem>
+                              <SelectItem value="External">External</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                         <div className="space-y-2">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Duration</p>
+                          <p className="text-xs font-medium text-gray-700">Duration</p>
                           <Select value={frameworkDuration} onValueChange={setFrameworkDuration}>
                             <SelectTrigger className="h-9 text-sm">
                               <SelectValue placeholder="All durations" />
@@ -846,26 +943,21 @@ export default function LifecycleManagementPage() {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Complexity</p>
-                          {(["simple", "moderate", "complex"] as const).map((complexity) => (
-                            <label key={complexity} className="flex items-center gap-2 text-sm capitalize text-gray-700">
-                              <input
-                                type="checkbox"
-                                checked={frameworkComplexities.has(complexity)}
-                                onChange={() =>
-                                  setFrameworkComplexities((prev) => {
-                                    const next = new Set(prev);
-                                    next.has(complexity) ? next.delete(complexity) : next.add(complexity);
-                                    return next;
-                                  })
-                                }
-                              />
-                              {complexity}
-                            </label>
-                          ))}
+                          <p className="text-xs font-medium text-gray-700">Complexity</p>
+                          <Select value={frameworkComplexity} onValueChange={(value) => setFrameworkComplexity(value as "all" | "simple" | "moderate" | "complex")}>
+                            <SelectTrigger className="h-9 text-sm">
+                              <SelectValue placeholder="All complexities" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All complexities</SelectItem>
+                              <SelectItem value="simple">Simple</SelectItem>
+                              <SelectItem value="moderate">Moderate</SelectItem>
+                              <SelectItem value="complex">Complex</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                         <div className="space-y-2">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Division Relevance</p>
+                          <p className="text-xs font-medium text-gray-700">Division Relevance</p>
                           <Select value={frameworkDivision} onValueChange={setFrameworkDivision}>
                             <SelectTrigger className="h-9 text-sm">
                               <SelectValue placeholder="All divisions" />
@@ -884,6 +976,17 @@ export default function LifecycleManagementPage() {
                 </aside>
 
                 <div className="space-y-6">
+                  <div className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+                    <div className="flex items-center gap-3 text-sm text-gray-600">
+                      <span className="font-medium text-gray-900">
+                        Showing {visibleFrameworks.length} of {initiativeFrameworks.length} frameworks
+                      </span>
+                    </div>
+                    <span className="hidden sm:inline text-xs text-gray-500">
+                      Open a framework to view details and start a request
+                    </span>
+                  </div>
+
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {visibleFrameworks.map((framework) => {
                       const Icon = FRAMEWORK_ICON_MAP[framework.iconName ?? "Activity"] ?? Activity;
@@ -893,7 +996,7 @@ export default function LifecycleManagementPage() {
                         <button
                           key={framework.id}
                           type="button"
-                          onClick={() => navigate(`/marketplaces/lifecycle-management/framework/${framework.id}`)}
+                          onClick={() => navigate(`/marketplaces/initiative-portfolio/framework/${framework.id}`)}
                           className="overflow-hidden rounded-2xl border border-gray-200 bg-white text-left transition-all hover:-translate-y-1 hover:border-orange-300 hover:shadow-xl"
                         >
                           <div className={`relative flex h-28 items-center justify-center bg-gradient-to-br ${framework.category === "Internal" ? "from-teal-500 to-emerald-600" : "from-blue-500 to-indigo-600"}`}>

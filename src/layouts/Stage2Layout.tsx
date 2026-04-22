@@ -149,8 +149,8 @@ export default function Stage2Layout() {
             <button 
               onClick={() =>
                 navigateToOrchestrator(
-                  'learning-center',
-                  'Learning Center',
+                  'learning',
+                  'Transformation Methodology & Learning',
                   'digital-transformation-fundamentals'
                 )
               }
@@ -173,8 +173,8 @@ export default function Stage2Layout() {
             <button 
               onClick={() =>
                 navigateToOrchestrator(
-                  'digital-intelligence',
-                  'Digital Intelligence'
+                  'intelligence',
+                  'Transformation Intelligence'
                 )
               }
               className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg ${isActiveService('Digital Intelligence')}`}

@@ -84,7 +84,7 @@ export default function LCInitiativeRequests() {
           </p>
         </div>
         <Button asChild className="bg-orange-600 hover:bg-orange-700 text-white">
-          <Link to="/marketplaces/lifecycle-management">Start New Initiative</Link>
+          <Link to="/marketplaces/initiative-portfolio">Start New Initiative</Link>
         </Button>
       </div>
 
@@ -157,7 +157,7 @@ export default function LCInitiativeRequests() {
           </p>
           {allRequests.length === 0 && (
             <Button asChild className="bg-orange-600 hover:bg-orange-700 text-white">
-              <Link to="/marketplaces/lifecycle-management">Go to Lifecycle Marketplace</Link>
+              <Link to="/marketplaces/initiative-portfolio">Go to Initiative Portfolio</Link>
             </Button>
           )}
         </div>

@@ -515,7 +515,7 @@ export default function KnowledgeCenterDetailPage() {
         <Header />
         <div className="max-w-7xl mx-auto px-4 py-20 text-center">
           <h1 className="text-2xl font-bold text-foreground mb-4">Item Not Found</h1>
-          <Button onClick={() => navigate("/marketplaces/knowledge-center")}>
+          <Button onClick={() => navigate("/marketplaces/knowledge")}>
             Back to Knowledge Centre
           </Button>
         </div>
@@ -543,9 +543,9 @@ export default function KnowledgeCenterDetailPage() {
             <nav className="flex items-center text-sm text-muted-foreground mb-4 flex-wrap gap-1">
               <Link to="/" className="hover:text-foreground transition-colors">Home</Link>
               <ChevronRight className="w-4 h-4 mx-1" />
-              <Link to="/marketplaces/knowledge-center" className="hover:text-foreground transition-colors">Knowledge Centre</Link>
+              <Link to="/marketplaces/knowledge" className="hover:text-foreground transition-colors">Knowledge Centre</Link>
               <ChevronRight className="w-4 h-4 mx-1" />
-              <Link to={`/marketplaces/knowledge-center?tab=${userArticle.sourceTab}`} className="hover:text-foreground transition-colors">{tabLabel}</Link>
+              <Link to={`/marketplaces/knowledge?tab=${userArticle.sourceTab}`} className="hover:text-foreground transition-colors">{tabLabel}</Link>
               <ChevronRight className="w-4 h-4 mx-1" />
               <span className="font-medium text-foreground">{userArticle.title}</span>
             </nav>
@@ -652,7 +652,7 @@ export default function KnowledgeCenterDetailPage() {
           <div className="mt-10 pt-4 border-t border-gray-100">
             <Button
               variant="outline"
-              onClick={() => navigate(`/marketplaces/knowledge-center?tab=${userArticle.sourceTab}`)}
+              onClick={() => navigate(`/marketplaces/knowledge?tab=${userArticle.sourceTab}`)}
             >
               ← Back to {tabLabel}
             </Button>
@@ -766,7 +766,7 @@ export default function KnowledgeCenterDetailPage() {
   };
 
   const getRelatedPath = (sourceTab: KnowledgeTab, sourceId: string) =>
-    `/marketplaces/knowledge-center/${sourceTab}/${sourceId}`;
+    `/marketplaces/knowledge/${sourceTab}/${sourceId}`;
 
   const requestTypeOptions: { value: TORequestType; label: string }[] = [
     { value: "clarification", label: "Clarification" },
@@ -841,14 +841,14 @@ export default function KnowledgeCenterDetailPage() {
             </Link>
             <ChevronRight className="w-4 h-4 mx-2" />
             <Link
-              to="/marketplaces/knowledge-center"
+              to="/marketplaces/knowledge"
               className="hover:text-foreground transition-colors"
             >
               Knowledge Centre
             </Link>
             <ChevronRight className="w-4 h-4 mx-2" />
             <Link
-              to={`/marketplaces/knowledge-center?tab=${normalizedTab}`}
+              to={`/marketplaces/knowledge?tab=${normalizedTab}`}
               className="hover:text-foreground transition-colors"
             >
               {tabLabels[normalizedTab]}

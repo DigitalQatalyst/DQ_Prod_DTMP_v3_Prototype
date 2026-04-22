@@ -270,7 +270,7 @@ export default function LCStage2Overview() {
                         </Badge>
                       </div>
                       <button
-                        onClick={() => { window.location.href = `/marketplaces/lifecycle-management/initiative/${r.initiativeId}/insights`; }}
+                        onClick={() => { window.location.href = `/marketplaces/initiative-portfolio/initiative/${r.initiativeId}/insights`; }}
                         className="text-xs text-teal-600 hover:text-teal-800 font-medium mt-2 flex items-center gap-1"
                       >
                         View in Lifecycle â†’
@@ -306,7 +306,7 @@ export default function LCStage2Overview() {
                       onClick={() => {
                         window.localStorage.setItem("dtmp.lifecycle.openInitiativeId", ini.id);
                         toast({ title: "Opening Stage 1", description: "Navigating to Lifecycle Management (demo)." });
-                        window.location.href = "/marketplaces/lifecycle-management";
+                        window.location.href = "/marketplaces/initiative-portfolio";
                       }}
                     >
                       Open in Lifecycle
@@ -318,10 +318,10 @@ export default function LCStage2Overview() {
 
             <div className="flex flex-wrap gap-3 pt-2">
               <Button asChild variant="outline">
-                <Link to="/marketplaces/lifecycle-management">Browse Initiatives</Link>
+                <Link to="/marketplaces/initiative-portfolio">Browse Initiatives</Link>
               </Button>
               <Button asChild>
-                <Link to="/marketplaces/lifecycle-management">Start Initiative</Link>
+                <Link to="/marketplaces/initiative-portfolio">Start Initiative</Link>
               </Button>
             </div>
           </CardContent>
@@ -345,7 +345,7 @@ export default function LCStage2Overview() {
             <div className="text-center py-6 text-sm text-gray-500">
               <p>No initiative requests yet.</p>
               <Button asChild className="mt-3 bg-orange-600 hover:bg-orange-700 text-white" size="sm">
-                <Link to="/marketplaces/lifecycle-management">Start an Initiative</Link>
+                <Link to="/marketplaces/initiative-portfolio">Start an Initiative</Link>
               </Button>
             </div>
           ) : (

@@ -105,7 +105,7 @@ export default function LCMyInitiatives() {
                         title: "Opening Lifecycle",
                         description: "Stage 1 will open the “See Insights” cockpit for this initiative (demo/localStorage).",
                       });
-                      window.location.href = "/marketplaces/lifecycle-management";
+                      window.location.href = "/marketplaces/initiative-portfolio";
                     }}
                   >
                     <Eye className="w-4 h-4" />
