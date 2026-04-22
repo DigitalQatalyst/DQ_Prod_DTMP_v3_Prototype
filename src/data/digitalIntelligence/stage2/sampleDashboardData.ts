@@ -303,6 +303,29 @@ export const sampleDashboardData: Record<string, DashboardData> = {
       { timestamp: '2026-02-17', value: 42, label: 'Day 6' },
       { timestamp: '2026-02-18', value: 51, label: 'Day 7' }
     ],
+    widgetData: {
+      'component-risk': [
+        { name: 'Database Servers', value: 35 },
+        { name: 'Storage Arrays', value: 28 },
+        { name: 'Network Equipment', value: 18 },
+        { name: 'Application Servers', value: 12 },
+        { name: 'Backup Systems', value: 7 }
+      ],
+      'maintenance-schedule': [
+        { name: 'DB-Primary-01', value: 5, label: 'Feb 14, 2:00 AM' },
+        { name: 'Storage-Array-02', value: 12, label: 'Feb 18, 3:00 AM' },
+        { name: 'App-Server-05', value: 18, label: 'Feb 25, 1:00 AM' },
+        { name: 'Network-Switch-03', value: 22, label: 'Mar 2, 2:00 AM' },
+        { name: 'Backup-System-01', value: 28, label: 'Mar 8, 3:00 AM' }
+      ],
+      'health-dimensions': [
+        { name: 'CPU Health', value: 72 },
+        { name: 'Memory Health', value: 68 },
+        { name: 'Disk I/O', value: 55 },
+        { name: 'Network', value: 82 },
+        { name: 'Temperature', value: 48 }
+      ]
+    },
     metrics: [
       {
         id: 'high-risk-systems',
@@ -334,6 +357,25 @@ export const sampleDashboardData: Record<string, DashboardData> = {
         value: '$45K',
         trend: 'up',
         trendLabel: 'By preventing failures',
+        severity: 'success'
+      },
+      {
+        id: 'mtbf',
+        label: 'Mean Time Between Failures',
+        value: '847',
+        unit: 'hours',
+        trend: 'up',
+        trendValue: 12,
+        trendLabel: '+12% vs last quarter',
+        severity: 'success'
+      },
+      {
+        id: 'prediction-accuracy',
+        label: 'Prediction Accuracy',
+        value: '88%',
+        trend: 'up',
+        trendValue: 3,
+        trendLabel: '+3% improvement',
         severity: 'success'
       }
     ],

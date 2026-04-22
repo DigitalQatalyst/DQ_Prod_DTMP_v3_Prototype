@@ -42,9 +42,12 @@ const featuredDashboardConfigs: Record<string, any> = {
   // Line hero for predictions + pie for components → bar + radar
   'predictive-maintenance': {
     widgets: [
-      { id: 'failure-risk', type: 'metric', title: 'Systems at Risk', description: 'Predicted failures next 30 days', position: { row: 1, col: 1, width: 1, height: 1 } },
-      { id: 'mtbf', type: 'metric', title: 'Mean Time Between Failures', description: 'Average reliability', position: { row: 1, col: 2, width: 1, height: 1 } },
-      { id: 'cost-saved', type: 'metric', title: 'Cost Avoided', description: 'Preventive savings this quarter', position: { row: 1, col: 3, width: 1, height: 1 } },
+      { id: 'high-risk-systems', type: 'metric', title: 'High Risk Systems', description: 'Systems with elevated failure probability', position: { row: 1, col: 1, width: 1, height: 1 } },
+      { id: 'predicted-failures', type: 'metric', title: 'Predicted Failures (7 days)', description: 'Expected failures in next week', position: { row: 1, col: 2, width: 1, height: 1 } },
+      { id: 'maintenance-windows', type: 'metric', title: 'Optimal Maintenance Windows', description: 'Recommended maintenance slots', position: { row: 1, col: 3, width: 1, height: 1 } },
+      { id: 'cost-savings', type: 'metric', title: 'Potential Cost Savings', description: 'Preventive savings this quarter', position: { row: 2, col: 1, width: 1, height: 1 } },
+      { id: 'mtbf', type: 'metric', title: 'Mean Time Between Failures', description: 'Average system reliability', position: { row: 2, col: 2, width: 1, height: 1 } },
+      { id: 'prediction-accuracy', type: 'metric', title: 'Prediction Accuracy', description: 'AI model performance', position: { row: 2, col: 3, width: 1, height: 1 } },
       { id: 'failure-probability', type: 'chart', chartType: 'line', title: 'Failure Probability Forecast', description: 'Predicted failure likelihood over next 90 days', position: { row: 2, col: 1, width: 2, height: 1 } },
       { id: 'component-risk', type: 'chart', chartType: 'pie', title: 'Risk by Component Type', description: 'Failure distribution across hardware categories', position: { row: 2, col: 3, width: 1, height: 1 } },
       { id: 'maintenance-schedule', type: 'chart', chartType: 'bar', title: 'Optimal Maintenance Windows', description: 'Recommended maintenance by system priority', position: { row: 3, col: 1, width: 2, height: 1 } },
