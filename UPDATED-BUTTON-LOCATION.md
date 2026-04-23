@@ -15,7 +15,7 @@
 2. Click any service card (e.g., "Predictive Maintenance Intelligence")
 3. You're now on the detail page
 
-### Step 2: Look for the Purple Gradient Box
+### Step 2: Look for the Purple Gradient B
 
 The page structure now looks like this:
 
