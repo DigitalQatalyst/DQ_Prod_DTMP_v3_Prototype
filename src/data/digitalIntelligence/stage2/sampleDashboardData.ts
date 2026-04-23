@@ -1537,7 +1537,10 @@ export const sampleDashboardData: Record<string, DashboardData> = {
     metrics: [
       { id: 'readiness-score', label: 'Readiness Score', value: 74, unit: 'out of 100', trend: 'up', trendValue: 4.2, trendLabel: '+4.2% vs last month', severity: 'success' },
       { id: 'blockers', label: 'Active Blockers', value: 5, trend: 'down', trendValue: -2, trendLabel: '2 fewer than last month', severity: 'warning' },
-      { id: 'enablers-met', label: 'Enablers Met', value: '18/24', trend: 'up', trendValue: 3, trendLabel: '3 new enablers met', severity: 'success' }
+      { id: 'enablers-met', label: 'Enablers Met', value: '18/24', trend: 'up', trendValue: 3, trendLabel: '3 new enablers met', severity: 'success' },
+      { id: 'critical-dimensions', label: 'Critical Dimensions', value: 2, unit: 'below threshold', trend: 'stable', trendLabel: 'Requires attention', severity: 'error' },
+      { id: 'improvement-velocity', label: 'Improvement Velocity', value: '+3.5', unit: 'points/month', trend: 'up', trendValue: 12, trendLabel: '+12% acceleration', severity: 'success' },
+      { id: 'target-timeline', label: 'Target Achievement', value: 'Apr 2026', trend: 'up', trendLabel: 'On track for 80-point goal', severity: 'info' }
     ],
     insights: [
       { id: 'trs-insight-001', type: 'alert', severity: 'medium', title: 'Change Management Capacity at Risk', description: 'Change management readiness dimension scored 52/100, well below the 70-point threshold. Only 3 of 8 change agents are certified.', confidence: 89, actionable: true, suggestedAction: 'Fast-track change management certification for 5 additional agents. Target completion by end of Q1 2026.' },

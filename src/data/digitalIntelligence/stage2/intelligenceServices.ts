@@ -296,12 +296,15 @@ const featuredDashboardConfigs: Record<string, any> = {
       { id: 'readiness-score', type: 'metric', title: 'Readiness Score', description: 'Overall transformation readiness', position: { row: 1, col: 1, width: 1, height: 1 } },
       { id: 'blockers', type: 'metric', title: 'Active Blockers', description: 'Critical readiness gaps', position: { row: 1, col: 2, width: 1, height: 1 } },
       { id: 'enablers-met', type: 'metric', title: 'Enablers Met', description: 'Prerequisites satisfied', position: { row: 1, col: 3, width: 1, height: 1 } },
-      { id: 'readiness-radar', type: 'chart', chartType: 'radar', title: 'Readiness Dimensions', description: 'People, process, technology, culture, governance', position: { row: 2, col: 1, width: 2, height: 1 } },
-      { id: 'readiness-trend', type: 'chart', chartType: 'line', title: 'Readiness Score Trend', description: 'Monthly progression toward readiness threshold', position: { row: 2, col: 3, width: 1, height: 1 } },
-      { id: 'gap-analysis', type: 'chart', chartType: 'bar', title: 'Gap Analysis', description: 'Current vs target state by dimension', position: { row: 3, col: 1, width: 2, height: 1 } },
-      { id: 'risk-dist', type: 'chart', chartType: 'pie', title: 'Risk Categories', description: 'Readiness risks by type', position: { row: 3, col: 3, width: 1, height: 1 } },
-      { id: 'ai-insights', type: 'insight', title: 'Readiness Intelligence', description: 'Risk identification and enabler recommendations', position: { row: 4, col: 1, width: 2, height: 1 } },
-      { id: 'readiness-table', type: 'table', title: 'Readiness Checklist', description: 'Dimension-by-dimension readiness status', position: { row: 4, col: 3, width: 1, height: 1 } }
+      { id: 'critical-dimensions', type: 'metric', title: 'Critical Dimensions', description: 'Dimensions below threshold', position: { row: 2, col: 1, width: 1, height: 1 } },
+      { id: 'improvement-velocity', type: 'metric', title: 'Improvement Velocity', description: 'Rate of readiness improvement', position: { row: 2, col: 2, width: 1, height: 1 } },
+      { id: 'target-timeline', type: 'metric', title: 'Target Achievement', description: 'Projected goal completion', position: { row: 2, col: 3, width: 1, height: 1 } },
+      { id: 'readiness-radar', type: 'chart', chartType: 'radar', title: 'Readiness Dimensions', description: 'People, process, technology, culture, governance', position: { row: 3, col: 1, width: 2, height: 1 } },
+      { id: 'readiness-trend', type: 'chart', chartType: 'line', title: 'Readiness Score Trend', description: 'Monthly progression toward readiness threshold', position: { row: 3, col: 3, width: 1, height: 1 } },
+      { id: 'gap-analysis', type: 'chart', chartType: 'bar', title: 'Gap Analysis', description: 'Current vs target state by dimension', position: { row: 4, col: 1, width: 2, height: 1 } },
+      { id: 'risk-dist', type: 'chart', chartType: 'pie', title: 'Risk Categories', description: 'Readiness risks by type', position: { row: 4, col: 3, width: 1, height: 1 } },
+      { id: 'ai-insights', type: 'insight', title: 'Readiness Intelligence', description: 'Risk identification and enabler recommendations', position: { row: 5, col: 1, width: 2, height: 1 } },
+      { id: 'readiness-table', type: 'table', title: 'Readiness Checklist', description: 'Dimension-by-dimension readiness status', position: { row: 5, col: 3, width: 1, height: 1 } }
     ],
     filters: [
       { id: 'dateRange', label: 'Assessment Period', type: 'daterange', defaultValue: 'latest' },
