@@ -6,7 +6,32 @@
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export type InitiativeStatus = "Active" | "Scoping" | "At Risk" | "On Hold" | "Completed";
+export type InitiativeStatus =
+  | "Active"
+  | "Scoping"
+  | "At Risk"
+  | "On Hold"
+  | "Completed"
+  | "Pending"
+  | "Clarification Requested"
+  | "Rejected";
+
+export type ActivityEntryType =
+  | "Status Change"
+  | "Milestone"
+  | "Risk"
+  | "Blocker"
+  | "Budget"
+  | "Service Request"
+  | "Submission";
+
+export interface ActivityEntry {
+  id: string;
+  timestamp: string;
+  actor: string;
+  action: string;
+  type: ActivityEntryType;
+}
 
 export type InitiativeType =
   | "Architecture Remediation"
@@ -99,6 +124,7 @@ export interface Initiative {
   name: string;
   division: Division;
   type: InitiativeType;
+  strategicPriority?: import("@/data/strategicPriorities").StrategicPrioritySlug;
   status: InitiativeStatus;
   progress: number;
   eaAlignmentScore: number | null; // null = not yet assessed
@@ -111,6 +137,7 @@ export interface Initiative {
   fromPortfolio?: boolean;
   portfolioCardId?: string;
   updatedAt: string;
+  activity: ActivityEntry[];
 }
 
 export interface PortfolioStore {
@@ -126,6 +153,7 @@ const SEED_INITIATIVES: Initiative[] = [
     name: "Smart Grid Modernisation Programme",
     division: "Transmission",
     type: "IT/OT Convergence",
+    strategicPriority: "programmes-in-one-direction",
     status: "Active",
     progress: 58,
     eaAlignmentScore: 92,
@@ -143,6 +171,7 @@ const SEED_INITIATIVES: Initiative[] = [
     name: "Virtual Engineer 2026 Programme",
     division: "All Divisions",
     type: "AI Deployment",
+    strategicPriority: "ai-readiness-first",
     status: "Active",
     progress: 45,
     eaAlignmentScore: 89,
@@ -160,6 +189,7 @@ const SEED_INITIATIVES: Initiative[] = [
     name: "DTMP Enterprise Rollout",
     division: "Corporate & Strategy",
     type: "Platform Deployment",
+    strategicPriority: "one-architecture-standard",
     status: "Active",
     progress: 52,
     eaAlignmentScore: 96,
@@ -177,6 +207,7 @@ const SEED_INITIATIVES: Initiative[] = [
     name: "Customer Experience Transformation",
     division: "Customer Services",
     type: "DXP Programme",
+    strategicPriority: "investment-governed-upfront",
     status: "Active",
     progress: 41,
     eaAlignmentScore: 85,
@@ -194,6 +225,7 @@ const SEED_INITIATIVES: Initiative[] = [
     name: "Net-Zero Architecture Programme",
     division: "All Divisions",
     type: "Net-Zero Technology",
+    strategicPriority: "net-zero-by-design",
     status: "Scoping",
     progress: 10,
     eaAlignmentScore: 88,
@@ -211,6 +243,7 @@ const SEED_INITIATIVES: Initiative[] = [
     name: "Legacy Billing System Replacement",
     division: "Customer Services",
     type: "Application Modernisation",
+    strategicPriority: "investment-governed-upfront",
     status: "Scoping",
     progress: 8,
     eaAlignmentScore: 81,
@@ -228,6 +261,7 @@ const SEED_INITIATIVES: Initiative[] = [
     name: "OT Network Security Remediation",
     division: "Transmission",
     type: "Security Uplift",
+    strategicPriority: "reliability-never-compromised",
     status: "At Risk",
     progress: 30,
     eaAlignmentScore: 74,
@@ -245,6 +279,7 @@ const SEED_INITIATIVES: Initiative[] = [
     name: "DEWA Enterprise Data Strategy",
     division: "Innovation & AI",
     type: "Data Platform",
+    strategicPriority: "ai-readiness-first",
     status: "Active",
     progress: 34,
     eaAlignmentScore: 87,
@@ -262,6 +297,7 @@ const SEED_INITIATIVES: Initiative[] = [
     name: "Generation PLC Firmware Remediation",
     division: "Generation",
     type: "Architecture Remediation",
+    strategicPriority: "reliability-never-compromised",
     status: "Scoping",
     progress: 5,
     eaAlignmentScore: 82,
@@ -281,6 +317,7 @@ const SEED_INITIATIVES: Initiative[] = [
     name: "EA Maturity Improvement — Water Services",
     division: "Water",
     type: "EA Maturity Improvement",
+    strategicPriority: "one-architecture-standard",
     status: "Active",
     progress: 22,
     eaAlignmentScore: 78,
@@ -944,21 +981,85 @@ const parseJson = <T>(raw: string | null, fallback: T): T => {
   }
 };
 
+const normalizeStore = (store: PortfolioStore): PortfolioStore => {
+  const seedPriorityById = new Map(
+    SEED_INITIATIVES.map((initiative) => [initiative.id, initiative.strategicPriority] as const)
+  );
+
+  return {
+    ...store,
+    initiatives: store.initiatives.map((initiative) => ({
+      ...initiative,
+      strategicPriority: initiative.strategicPriority ?? seedPriorityById.get(initiative.id),
+      activity: (initiative as Initiative & { activity?: ActivityEntry[] }).activity ?? [],
+    })),
+  };
+};
+
 const readStore = (): PortfolioStore => {
-  if (!isBrowser) return { initiatives: SEED_INITIATIVES, projects: SEED_PROJECTS };
+  if (!isBrowser) return normalizeStore({ initiatives: SEED_INITIATIVES, projects: SEED_PROJECTS });
   const raw = window.localStorage.getItem(STORE_KEY);
   if (!raw) {
-    const seed: PortfolioStore = { initiatives: SEED_INITIATIVES, projects: SEED_PROJECTS };
+    const seed = normalizeStore({ initiatives: SEED_INITIATIVES, projects: SEED_PROJECTS });
     window.localStorage.setItem(STORE_KEY, JSON.stringify(seed));
     return seed;
   }
-  return parseJson<PortfolioStore>(raw, { initiatives: SEED_INITIATIVES, projects: SEED_PROJECTS });
+  return normalizeStore(
+    parseJson<PortfolioStore>(raw, { initiatives: SEED_INITIATIVES, projects: SEED_PROJECTS })
+  );
 };
 
 const writeStore = (store: PortfolioStore): void => {
   if (!isBrowser) return;
-  window.localStorage.setItem(STORE_KEY, JSON.stringify(store));
+  const serialised = JSON.stringify(store);
+  window.localStorage.setItem(STORE_KEY, serialised);
+  // Dispatch a storage event so same-tab listeners (Stage 1, Stage 2) update
+  // immediately — the native storage event only fires in *other* tabs.
+  window.dispatchEvent(new StorageEvent("storage", { key: STORE_KEY, newValue: serialised }));
 };
+
+// ── Activity helpers ──────────────────────────────────────────────────────────
+
+const getCurrentActor = (): string => {
+  if (!isBrowser) return "System";
+  const role = window.localStorage.getItem("dtmp.lifecycle.insightsRole");
+  const roleNames: Record<string, string> = {
+    "initiative-owner": "Eng. Khalid Al Rashidi",
+    "senior-stakeholder": "Eng. Mohammed Al Marzouqi",
+    "general-staff": "Fatima Al Hashimi",
+  };
+  return (role && roleNames[role]) || "System";
+};
+
+const makeActivityEntry = (
+  action: string,
+  type: ActivityEntryType,
+  actor?: string
+): ActivityEntry => ({
+  id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+  timestamp: new Date().toISOString(),
+  actor: actor ?? getCurrentActor(),
+  action,
+  type,
+});
+
+/** Append an activity entry to a specific initiative within an already-read store snapshot. */
+const appendActivity = (
+  store: PortfolioStore,
+  initiativeId: string,
+  entry: ActivityEntry
+): PortfolioStore => ({
+  ...store,
+  initiatives: store.initiatives.map((i) =>
+    i.id === initiativeId
+      ? { ...i, activity: [entry, ...(i.activity ?? [])] }
+      : i
+  ),
+});
+
+/** Given a projectId, look up its parentInitiativeId from the store. */
+const getInitiativeIdForProject = (store: PortfolioStore, projectId: string): string | undefined =>
+  store.projects.find((p) => p.id === projectId)?.parentInitiativeId;
 
 // ── Read ──────────────────────────────────────────────────────────────────────
 
@@ -995,11 +1096,19 @@ export const getBlockersByInitiativeId = (initiativeId: string): Blocker[] =>
 export const getAllBlockers = (): Blocker[] =>
   readStore().projects.flatMap((project) => project.blockers);
 
+// Statuses that are not yet active — RAG is not meaningful for these
+const NON_ACTIVE_STATUSES: InitiativeStatus[] = ["Pending", "Clarification Requested", "Rejected", "Completed", "On Hold"];
+
 export const computeInitiativeRAG = (initiative: Initiative): RAGStatus => {
+  // RAG only applies to initiatives that are actively in flight
+  if (NON_ACTIVE_STATUSES.includes(initiative.status)) return "Green";
+
   const projects = getProjectsByInitiativeId(initiative.id);
   const risks = projects.flatMap((project) => project.risks);
   const blockers = projects.flatMap((project) => project.blockers);
-  const delayedMilestones = projects.flatMap((project) => project.milestones).filter((milestone) => milestone.status === "Delayed");
+  const delayedMilestones = projects
+    .flatMap((project) => project.milestones)
+    .filter((milestone) => milestone.status === "Delayed");
 
   if (
     initiative.status === "At Risk" ||
@@ -1033,7 +1142,13 @@ export const updateProjectRAG = (projectId: string, rag: RAGStatus): Project | n
     updated = { ...p, rag, updatedAt: now };
     return updated;
   });
-  writeStore({ ...store, projects: nextProjects });
+  const initiativeId = getInitiativeIdForProject(store, projectId);
+  const entry = makeActivityEntry(
+    `Project '${updated?.name ?? projectId}' RAG updated to ${rag}`,
+    "Status Change"
+  );
+  const next = appendActivity({ ...store, projects: nextProjects }, initiativeId ?? "", entry);
+  writeStore(initiativeId ? next : { ...store, projects: nextProjects });
   return updated;
 };
 
@@ -1046,17 +1161,25 @@ export const updateMilestoneStatus = (
 ): Project | null => {
   const store = readStore();
   let updated: Project | null = null;
+  let milestoneName = milestoneId;
   const now = new Date().toISOString();
   const nextProjects = store.projects.map((p) => {
     if (p.id !== projectId) return p;
-    const nextMilestones = p.milestones.map((m) => (m.id === milestoneId ? { ...m, status } : m));
+    const nextMilestones = p.milestones.map((m) => {
+      if (m.id !== milestoneId) return m;
+      milestoneName = m.name;
+      return { ...m, status };
+    });
     const completedCount = nextMilestones.filter((m) => m.status === "Complete").length;
     const autoProgress =
       nextMilestones.length > 0 ? Math.round((completedCount / nextMilestones.length) * 100) : p.progress;
     updated = { ...p, milestones: nextMilestones, progress: autoProgress, updatedAt: now };
     return updated;
   });
-  writeStore({ ...store, projects: nextProjects });
+  const initiativeId = getInitiativeIdForProject(store, projectId);
+  const entry = makeActivityEntry(`Milestone '${milestoneName}' marked ${status}`, "Milestone");
+  const next = appendActivity({ ...store, projects: nextProjects }, initiativeId ?? "", entry);
+  writeStore(initiativeId ? next : { ...store, projects: nextProjects });
   return updated;
 };
 
@@ -1071,7 +1194,14 @@ export const updateProjectProgress = (projectId: string, progress: number): Proj
     updated = { ...p, progress: Math.min(100, Math.max(0, progress)), updatedAt: now };
     return updated;
   });
-  writeStore({ ...store, projects: nextProjects });
+  const initiativeId = getInitiativeIdForProject(store, projectId);
+  const clamped = Math.min(100, Math.max(0, progress));
+  const entry = makeActivityEntry(
+    `Project '${updated?.name ?? projectId}' progress updated to ${clamped}%`,
+    "Status Change"
+  );
+  const next = appendActivity({ ...store, projects: nextProjects }, initiativeId ?? "", entry);
+  writeStore(initiativeId ? next : { ...store, projects: nextProjects });
   return updated;
 };
 
@@ -1081,9 +1211,11 @@ export const updateInitiativeProgress = (initiativeId: string, progress: number)
   const store = readStore();
   let updated: Initiative | null = null;
   const now = new Date().toISOString();
+  const clamped = Math.min(100, Math.max(0, progress));
+  const entry = makeActivityEntry(`Initiative progress updated to ${clamped}%`, "Status Change");
   const nextInitiatives = store.initiatives.map((i) => {
     if (i.id !== initiativeId) return i;
-    updated = { ...i, progress: Math.min(100, Math.max(0, progress)), updatedAt: now };
+    updated = { ...i, progress: clamped, updatedAt: now, activity: [entry, ...(i.activity ?? [])] };
     return updated;
   });
   writeStore({ ...store, initiatives: nextInitiatives });
@@ -1096,9 +1228,10 @@ export const updateInitiativeStatus = (initiativeId: string, status: InitiativeS
   const store = readStore();
   let updated: Initiative | null = null;
   const now = new Date().toISOString();
+  const entry = makeActivityEntry(`Initiative status changed to ${status}`, "Status Change");
   const nextInitiatives = store.initiatives.map((i) => {
     if (i.id !== initiativeId) return i;
-    updated = { ...i, status, updatedAt: now };
+    updated = { ...i, status, updatedAt: now, activity: [entry, ...(i.activity ?? [])] };
     return updated;
   });
   writeStore({ ...store, initiatives: nextInitiatives });
@@ -1116,7 +1249,13 @@ export const updateProjectBudgetHealth = (projectId: string, budgetHealth: Budge
     updated = { ...p, budgetHealth, updatedAt: now };
     return updated;
   });
-  writeStore({ ...store, projects: nextProjects });
+  const initiativeId = getInitiativeIdForProject(store, projectId);
+  const entry = makeActivityEntry(
+    `Project '${updated?.name ?? projectId}' budget health updated to ${budgetHealth}`,
+    "Budget"
+  );
+  const next = appendActivity({ ...store, projects: nextProjects }, initiativeId ?? "", entry);
+  writeStore(initiativeId ? next : { ...store, projects: nextProjects });
   return updated;
 };
 
@@ -1129,16 +1268,22 @@ export const resolveBlocker = (
 ): Project | null => {
   const store = readStore();
   let updated: Project | null = null;
+  let blockerTitle = blockerId;
   const now = new Date().toISOString();
   const nextProjects = store.projects.map((p) => {
     if (p.id !== projectId) return p;
-    const nextBlockers = p.blockers.map((b) =>
-      b.id === blockerId ? { ...b, resolved: true, resolvedNote, resolutionNote: resolvedNote } : b
-    );
+    const nextBlockers = p.blockers.map((b) => {
+      if (b.id !== blockerId) return b;
+      blockerTitle = b.title;
+      return { ...b, resolved: true, resolvedNote, resolutionNote: resolvedNote };
+    });
     updated = { ...p, blockers: nextBlockers, updatedAt: now };
     return updated;
   });
-  writeStore({ ...store, projects: nextProjects });
+  const initiativeId = getInitiativeIdForProject(store, projectId);
+  const entry = makeActivityEntry(`Blocker '${blockerTitle}' resolved`, "Blocker");
+  const next = appendActivity({ ...store, projects: nextProjects }, initiativeId ?? "", entry);
+  writeStore(initiativeId ? next : { ...store, projects: nextProjects });
   return updated;
 };
 
@@ -1151,14 +1296,22 @@ export const updateRiskStatus = (
 ): Project | null => {
   const store = readStore();
   let updated: Project | null = null;
+  let riskTitle = riskId;
   const now = new Date().toISOString();
   const nextProjects = store.projects.map((p) => {
     if (p.id !== projectId) return p;
-    const nextRisks = p.risks.map((r) => (r.id === riskId ? { ...r, status } : r));
+    const nextRisks = p.risks.map((r) => {
+      if (r.id !== riskId) return r;
+      riskTitle = r.title;
+      return { ...r, status };
+    });
     updated = { ...p, risks: nextRisks, updatedAt: now };
     return updated;
   });
-  writeStore({ ...store, projects: nextProjects });
+  const initiativeId = getInitiativeIdForProject(store, projectId);
+  const entry = makeActivityEntry(`Risk '${riskTitle}' status updated to ${status}`, "Risk");
+  const next = appendActivity({ ...store, projects: nextProjects }, initiativeId ?? "", entry);
+  writeStore(initiativeId ? next : { ...store, projects: nextProjects });
   return updated;
 };
 
@@ -1171,16 +1324,25 @@ export const updateBlockerEscalation = (
 ): Project | null => {
   const store = readStore();
   let updated: Project | null = null;
+  let blockerTitle = blockerId;
   const now = new Date().toISOString();
   const nextProjects = store.projects.map((p) => {
     if (p.id !== projectId) return p;
-    const nextBlockers = p.blockers.map((b) =>
-      b.id === blockerId ? { ...b, escalationStatus } : b
-    );
+    const nextBlockers = p.blockers.map((b) => {
+      if (b.id !== blockerId) return b;
+      blockerTitle = b.title;
+      return { ...b, escalationStatus };
+    });
     updated = { ...p, blockers: nextBlockers, updatedAt: now };
     return updated;
   });
-  writeStore({ ...store, projects: nextProjects });
+  const initiativeId = getInitiativeIdForProject(store, projectId);
+  const entry = makeActivityEntry(
+    `Blocker '${blockerTitle}' escalation updated to ${escalationStatus}`,
+    "Blocker"
+  );
+  const next = appendActivity({ ...store, projects: nextProjects }, initiativeId ?? "", entry);
+  writeStore(initiativeId ? next : { ...store, projects: nextProjects });
   return updated;
 };
 
@@ -1193,9 +1355,13 @@ export const updateInitiativeBudgetSpent = (
   const store = readStore();
   let updated: Initiative | null = null;
   const now = new Date().toISOString();
+  const entry = makeActivityEntry(
+    `Initiative budget spent updated to AED ${budgetSpent.toLocaleString()}`,
+    "Budget"
+  );
   const nextInitiatives = store.initiatives.map((i) => {
     if (i.id !== initiativeId) return i;
-    updated = { ...i, budgetSpent, updatedAt: now };
+    updated = { ...i, budgetSpent, updatedAt: now, activity: [entry, ...(i.activity ?? [])] };
     return updated;
   });
   writeStore({ ...store, initiatives: nextInitiatives });
@@ -1216,19 +1382,31 @@ export const updateProjectBudgetSpent = (
     updated = { ...p, budgetSpent, updatedAt: now };
     return updated;
   });
-  writeStore({ ...store, projects: nextProjects });
+  const initiativeId = getInitiativeIdForProject(store, projectId);
+  const entry = makeActivityEntry(
+    `Project '${updated?.name ?? projectId}' budget spent updated to AED ${budgetSpent.toLocaleString()}`,
+    "Budget"
+  );
+  const next = appendActivity({ ...store, projects: nextProjects }, initiativeId ?? "", entry);
+  writeStore(initiativeId ? next : { ...store, projects: nextProjects });
   return updated;
 };
 
 // ── Create — Initiative ───────────────────────────────────────────────────────
 
-export const addInitiative = (data: Omit<Initiative, "id" | "updatedAt">): Initiative => {
+export const addInitiative = (
+  data: Omit<Initiative, "id" | "updatedAt" | "activity" | "status"> & { status?: InitiativeStatus }
+): Initiative => {
   const store = readStore();
   const now = new Date().toISOString();
+  const submissionEntry = makeActivityEntry("Initiative submitted for approval", "Submission");
+  const { status: _ignoredStatus, ...initiativeData } = data;
   const initiative: Initiative = {
-    ...data,
+    ...initiativeData,
     id: `init-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+    status: "Pending",
     updatedAt: now,
+    activity: [submissionEntry],
   };
   writeStore({ ...store, initiatives: [initiative, ...store.initiatives] });
   return initiative;
@@ -1264,6 +1442,7 @@ export const resetStore = (): void => {
 
 export const getPortfolioSummary = () => {
   const { initiatives, projects } = readStore();
+  const assessed = initiatives.filter((i) => i.eaAlignmentScore !== null);
   return {
     totalInitiatives: initiatives.length,
     activeInitiatives: initiatives.filter((i) => i.status === "Active").length,
@@ -1271,13 +1450,18 @@ export const getPortfolioSummary = () => {
     redProjects: projects.filter((p) => p.rag === "Red").length,
     amberProjects: projects.filter((p) => p.rag === "Amber").length,
     greenProjects: projects.filter((p) => p.rag === "Green").length,
-    avgEaAlignment: Math.round(
-      initiatives
-        .filter((i) => i.eaAlignmentScore !== null)
-        .reduce((sum, i) => sum + (i.eaAlignmentScore ?? 0), 0) /
-        initiatives.filter((i) => i.eaAlignmentScore !== null).length
-    ),
+    avgEaAlignment: assessed.length > 0
+      ? Math.round(assessed.reduce((sum, i) => sum + (i.eaAlignmentScore ?? 0), 0) / assessed.length)
+      : null,
     totalBudget: initiatives.reduce((sum, i) => sum + (i.budget ?? 0), 0),
     totalBudgetSpent: initiatives.reduce((sum, i) => sum + i.budgetSpent, 0),
+    // Unique strategic priority values present in the store — drives filter dropdown in Stage 1
+    strategicPriorityValues: [
+      ...new Set(
+        initiatives
+          .map((i) => i.strategicPriority)
+          .filter((v): v is NonNullable<typeof v> => v != null)
+      ),
+    ],
   };
 };

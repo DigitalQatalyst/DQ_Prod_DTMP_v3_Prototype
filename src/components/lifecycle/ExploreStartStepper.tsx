@@ -2,18 +2,20 @@ interface ExploreStartStepperProps {
   activeStep: 1 | 2 | 3;
   selectedFramework?: string | null;
   selectedTemplate?: string | null;
+  confirmationNote?: string | null;
 }
 
 const STEPS = [
   { step: 1, label: "Select Framework" },
   { step: 2, label: "Choose Template" },
-  { step: 3, label: "Submit Request" },
+  { step: 3, label: "Confirmation" },
 ] as const;
 
 export default function ExploreStartStepper({
   activeStep,
   selectedFramework,
   selectedTemplate,
+  confirmationNote,
 }: ExploreStartStepperProps) {
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -23,7 +25,7 @@ export default function ExploreStartStepper({
         const note =
           item.step === 1 ? selectedFramework :
           item.step === 2 ? selectedTemplate :
-          activeStep === 3 ? "Ready to submit" : undefined;
+          activeStep === 3 ? confirmationNote ?? "Confirmation ready" : undefined;
 
         return (
           <div key={item.step} className="flex items-center gap-3">
