@@ -1,6 +1,7 @@
-import { Tag, TrendingUp } from "lucide-react";
+import { Tag, TrendingUp, AlertCircle } from "lucide-react";
 import { BestPractice } from "@/data/knowledgeCenter/bestPractices";
 import { cn } from "@/lib/utils";
+import { getKnowledgeItem, isKnowledgeItemStale } from "@/data/knowledgeCenter/knowledgeItems";
 
 interface BestPracticeCardProps {
   practice: BestPractice;
@@ -15,6 +16,8 @@ const complexityColors = {
 
 export function BestPracticeCard({ practice, onClick }: BestPracticeCardProps) {
   const Icon = practice.icon;
+  const knowledgeItem = getKnowledgeItem("best-practices", practice.id);
+  const isStale = knowledgeItem ? isKnowledgeItemStale(knowledgeItem) : false;
   
   return (
     <div
@@ -25,11 +28,19 @@ export function BestPracticeCard({ practice, onClick }: BestPracticeCardProps) {
         <div className="w-16 h-16 rounded-lg bg-green-50 flex items-center justify-center">
           <Icon className="w-8 h-8 text-green-600" />
         </div>
-        {practice.featured && (
-          <span className="bg-orange-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
-            Featured
-          </span>
-        )}
+        <div className="flex flex-col gap-2 items-end">
+          {practice.featured && (
+            <span className="bg-orange-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
+              Featured
+            </span>
+          )}
+          {isStale && (
+            <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+              <AlertCircle className="w-3 h-3" />
+              Review recommended
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="flex items-center gap-2 mb-3">

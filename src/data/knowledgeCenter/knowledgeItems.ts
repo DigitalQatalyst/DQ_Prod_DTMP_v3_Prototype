@@ -35,6 +35,8 @@ export interface KnowledgeItem {
   phase: string;
   updatedAt: string;
   author: string;
+  lastReviewed?: string;
+  reviewCycleDays?: number;
 }
 
 const toIsoDate = (value: string): string => {
@@ -66,6 +68,8 @@ const mapBestPractice = (item: BestPractice): KnowledgeItem => ({
   phase: "Discern",
   updatedAt: item.dateAdded,
   author: "Transformation Office",
+  lastReviewed: item.dateAdded,
+  reviewCycleDays: 365,
 });
 
 const mapTestimonial = (item: Testimonial): KnowledgeItem => ({
@@ -237,3 +241,9 @@ export const getRelatedKnowledgeItems = (
 
   return [...sameTab, ...crossTab].slice(0, limit);
 };
+
+export function isKnowledgeItemStale(item: KnowledgeItem): boolean {
+  if (!item.lastReviewed) return false;
+  const daysSinceReview = (Date.now() - new Date(item.lastReviewed).getTime()) / (1000 * 60 * 60 * 24);
+  return daysSinceReview > (item.reviewCycleDays ?? 365);
+}

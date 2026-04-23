@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
-import { ChevronRight, BookOpen, Users, Award, Lightbulb, Quote, Map, Library, FileText } from "lucide-react";
+import { ChevronRight, BookOpen, Users, Award, Lightbulb, Quote, Map, Library, FileText, Plus } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -928,7 +928,7 @@ export default function KnowledgeCenterPage() {
           </p>
 
           {/* Stats */}
-          <div className="flex flex-wrap gap-6 text-sm text-muted-foreground">
+          <div className="flex flex-wrap gap-6 text-sm text-muted-foreground items-center">
             <span className="flex items-center gap-2">
               <BookOpen className="w-4 h-4" />
               {totalResourceCount} Total Resources
@@ -941,6 +941,13 @@ export default function KnowledgeCenterPage() {
               <Award className="w-4 h-4" />
               Expert-Validated Content
             </span>
+            <button
+              onClick={() => navigate("/marketplaces/knowledge-center/contribute")}
+              className="ml-auto flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Contribute Knowledge
+            </button>
           </div>
         </div>
       </section>
