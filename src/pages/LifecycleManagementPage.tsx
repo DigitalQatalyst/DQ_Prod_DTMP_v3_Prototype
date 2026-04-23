@@ -8,6 +8,8 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { SeeInsightsDrawer } from "@/components/lifecycle/SeeInsightsDrawer";
 import { RoleSelectorModal } from "@/components/lifecycle/RoleSelectorModal";
+import { LCInsightsLoginModal } from "@/components/lifecycle/LCInsightsLoginModal";
+import ExploreStartStepper from "@/components/lifecycle/ExploreStartStepper";
 import FrameworkSidePanel from "@/components/lifecycle/FrameworkSidePanel";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -36,7 +38,9 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
 
 import {
+  computeInitiativeRAG,
   getInitiatives,
+  getPortfolioSummary,
   type Division,
   type Initiative,
   type InitiativeStatus,
@@ -48,6 +52,7 @@ import {
   type LifecycleInsightsRole,
   LIFECYCLE_ROLE_LABELS,
 } from "@/data/shared/lifecycleRole";
+import { isUserAuthenticated } from "@/data/sessionAuth";
 
 import {
   initiativeFrameworks,
@@ -58,16 +63,12 @@ import {
   INITIATIVE_LEVEL_SERVICES,
   LC_SERVICE_SLA,
   addApprovalRequest,
+  type InitiativeApprovalRequest,
   addLCRequest,
   type LCServiceType,
 } from "@/data/lifecycle/serviceRequestState";
 import { DEWA_ROLE_OPTIONS } from "@/data/shared/dewaRoles";
-import {
-  STRATEGIC_PRIORITIES,
-  STRATEGIC_PRIORITY_BY_SLUG,
-  isStrategicPrioritySlug,
-  type StrategicPrioritySlug,
-} from "@/data/strategicPriorities";
+import { STRATEGIC_PRIORITY_BY_SLUG, isStrategicPrioritySlug, type StrategicPrioritySlug } from "@/data/strategicPriorities";
 
 type Stage1Tab = "initiatives" | "explore-start";
 
@@ -77,12 +78,31 @@ const STATUS_BADGE_CLASSES: Record<InitiativeStatus, string> = {
   "At Risk": "bg-amber-100 text-amber-800 border-amber-200",
   "On Hold": "bg-slate-200 text-slate-600 border-slate-200",
   Completed: "bg-green-100 text-green-700 border-green-200",
+  Pending: "bg-yellow-100 text-yellow-700 border-yellow-200",
+  "Clarification Requested": "bg-sky-100 text-sky-700 border-sky-200",
+  Rejected: "bg-red-100 text-red-700 border-red-200",
 };
 
 const fmtBudget = (b: number | null | undefined) =>
   b == null ? "TBC" : `AED ${(b / 1_000_000).toFixed(0)}M`;
 
-const ALL_STATUSES: InitiativeStatus[] = ["Active", "Scoping", "At Risk", "On Hold", "Completed"];
+const fmtAed = (value: number | null | undefined) =>
+  value == null ? "TBC" : `AED ${value.toLocaleString()}`;
+
+const fmtDate = (value: string) =>
+  new Date(value).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+
+const addHours = (isoDate: string, hours: number) =>
+  new Date(new Date(isoDate).getTime() + hours * 60 * 60 * 1000).toISOString();
+
+const APPROVAL_RESPONSE_HOURS: Record<(typeof PRIORITY_OPTIONS)[number], number> = {
+  Critical: 48,
+  High: 72,
+  Medium: 120,
+  Low: 120,
+};
+
+const ALL_STATUSES: InitiativeStatus[] = ["Active", "Scoping", "At Risk", "On Hold", "Completed", "Pending", "Clarification Requested", "Rejected"];
 
 const ALL_TYPES: InitiativeType[] = [
   "Architecture Remediation", "Application Modernisation", "Technology Rationalisation",
@@ -105,6 +125,8 @@ const DIVISION_OPTIONS: Division[] = [
   "DEWA Group Subsidiaries",
   "All Divisions",
 ];
+
+const ALL_DIVISION_FILTERS: Array<Division | "all"> = ["all", ...DIVISION_OPTIONS];
 
 const INITIATIVE_CARD_TYPE_COLORS = [
   "bg-blue-50 text-blue-700 border-blue-200",
@@ -201,38 +223,48 @@ export default function LifecycleManagementPage() {
 
   const [initiatives, setInitiatives] = useState<Initiative[]>(() => getInitiatives());
   const refreshInitiatives = () => setInitiatives(getInitiatives());
-  const [searchQuery, setSearchQuery] = useState("");
+  const [initiativeSearchQuery, setInitiativeSearchQuery] = useState("");
 
   // ── Sidebar filters ─────────────────────────────────────────────────────────
   const [filterStatus, setFilterStatus] = useState<"all" | InitiativeStatus>("all");
   const [filterDivision, setFilterDivision] = useState<Division | "all">("all");
   const [filterType, setFilterType] = useState<"all" | InitiativeType>("all");
   const [filterStrategicPriority, setFilterStrategicPriority] = useState<"all" | StrategicPrioritySlug>("all");
-  const [filterOwner, setFilterOwner] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(true);
 
-  const updateDivisionFilter = (value: Division | "all") => {
-    setFilterDivision(value);
-
+  const updateSearchParam = (key: string, value: string | null) => {
     const next = new URLSearchParams(searchParams);
-    if (value === "all") {
-      next.delete("division");
+    if (!value) {
+      next.delete(key);
     } else {
-      next.set("division", value);
+      next.set(key, value);
     }
     setSearchParams(next, { replace: true });
   };
 
+  const updateDivisionFilter = (value: Division | "all") => {
+    setFilterDivision(value);
+    updateSearchParam("division", value === "all" ? null : value);
+  };
+
   const updatePriorityFilter = (value: "all" | StrategicPrioritySlug) => {
     setFilterStrategicPriority(value);
+    updateSearchParam("priority", value === "all" ? null : value);
+  };
 
-    const next = new URLSearchParams(searchParams);
-    if (value === "all") {
-      next.delete("priority");
-    } else {
-      next.set("priority", value);
-    }
-    setSearchParams(next, { replace: true });
+  const updateStatusFilter = (value: "all" | InitiativeStatus) => {
+    setFilterStatus(value);
+    updateSearchParam("status", value === "all" ? null : value);
+  };
+
+  const updateTypeFilter = (value: "all" | InitiativeType) => {
+    setFilterType(value);
+    updateSearchParam("type", value === "all" ? null : value);
+  };
+
+  const updateInitiativeSearch = (value: string) => {
+    setInitiativeSearchQuery(value);
+    updateSearchParam("q", value.trim() ? value.trim() : null);
   };
 
   const clearFilters = () => {
@@ -240,46 +272,64 @@ export default function LifecycleManagementPage() {
     setFilterDivision("all");
     setFilterType("all");
     setFilterStrategicPriority("all");
-    setFilterOwner("");
-    const next = new URLSearchParams(searchParams);
-    next.delete("priority");
-    next.delete("division");
-    setSearchParams(next, { replace: true });
+    setInitiativeSearchQuery("");
+    setSearchParams({}, { replace: true });
   };
 
   useEffect(() => {
     const divisionParam = searchParams.get("division");
     const priorityParam = searchParams.get("priority");
+    const statusParam = searchParams.get("status");
+    const typeParam = searchParams.get("type");
+    const queryParam = searchParams.get("q");
 
-    if (divisionParam && DIVISION_OPTIONS.includes(divisionParam as Division)) {
-      setFilterDivision(divisionParam as Division);
-    } else {
-      setFilterDivision("all");
-    }
-
-    if (isStrategicPrioritySlug(priorityParam)) {
-      setFilterStrategicPriority(priorityParam);
-      return;
-    }
-    setFilterStrategicPriority("all");
+    setFilterDivision(
+      divisionParam && ALL_DIVISION_FILTERS.includes(divisionParam as Division | "all")
+        ? (divisionParam as Division | "all")
+        : "all"
+    );
+    setFilterStrategicPriority(isStrategicPrioritySlug(priorityParam) ? priorityParam : "all");
+    setFilterStatus(statusParam && (["all", ...ALL_STATUSES] as string[]).includes(statusParam) ? (statusParam as "all" | InitiativeStatus) : "all");
+    setFilterType(typeParam && (["all", ...ALL_TYPES] as string[]).includes(typeParam) ? (typeParam as "all" | InitiativeType) : "all");
+    setInitiativeSearchQuery(queryParam ?? "");
   }, [searchParams]);
+
+  useEffect(() => {
+    const handleStorage = () => refreshInitiatives();
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+
+  const strategicPriorityOptions = useMemo(
+    () => getPortfolioSummary().strategicPriorityValues.filter(isStrategicPrioritySlug),
+    [initiatives]
+  );
+
+  const portfolioSummary = useMemo(() => getPortfolioSummary(), [initiatives]);
+
+  const initiativeRagCounts = useMemo(() => {
+    return initiatives.reduce(
+      (acc, initiative) => {
+        acc[computeInitiativeRAG(initiative)] += 1;
+        return acc;
+      },
+      { Red: 0, Amber: 0, Green: 0 } as Record<"Red" | "Amber" | "Green", number>
+    );
+  }, [initiatives]);
 
   const activeFilterCount =
     (filterStatus !== "all" ? 1 : 0) +
     (filterType !== "all" ? 1 : 0) +
     (filterDivision !== "all" ? 1 : 0) +
-    (filterStrategicPriority !== "all" ? 1 : 0) +
-    (filterOwner.trim() ? 1 : 0);
+    (filterStrategicPriority !== "all" ? 1 : 0);
 
   const filteredInitiatives = useMemo(() => {
-    const ownerQ = filterOwner.trim().toLowerCase();
-    const query = searchQuery.trim().toLowerCase();
+    const query = initiativeSearchQuery.trim().toLowerCase();
     return initiatives.filter((ini) => {
       if (filterStatus !== "all" && ini.status !== filterStatus) return false;
       if (filterDivision !== "all" && ini.division !== filterDivision) return false;
       if (filterType !== "all" && ini.type !== filterType) return false;
       if (filterStrategicPriority !== "all" && ini.strategicPriority !== filterStrategicPriority) return false;
-      if (ownerQ && !ini.owner?.toLowerCase().includes(ownerQ)) return false;
       if (query) {
         const haystack = [
           ini.name,
@@ -293,16 +343,35 @@ export default function LifecycleManagementPage() {
       }
       return true;
     });
-  }, [initiatives, filterStatus, filterDivision, filterType, filterStrategicPriority, filterOwner, searchQuery]);
+  }, [initiatives, filterStatus, filterDivision, filterType, filterStrategicPriority, initiativeSearchQuery]);
 
   // ── See Insights (role-gated) ───────────────────────────────────────────────
   const [drawerInitiative, setDrawerInitiative] = useState<Initiative | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerRole, setDrawerRole] = useState<LifecycleInsightsRole | null>(() => getLifecycleRole());
   const [roleModalOpen, setRoleModalOpen] = useState(false);
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const [loginPendingAction, setLoginPendingAction] = useState<"insights" | "request" | null>(null);
+
+  const handleLoginSuccess = (role: LifecycleInsightsRole) => {
+    setLoginModalOpen(false);
+    if (loginPendingAction === "insights" && drawerInitiative) {
+      setDrawerRole(role);
+      setDrawerOpen(true);
+    } else if (loginPendingAction === "request" && selectedFramework) {
+      setRequestModalOpen(true);
+    }
+    setLoginPendingAction(null);
+  };
 
   const openSeeInsights = (initiative: Initiative) => {
     setDrawerInitiative(initiative);
+
+    if (!isUserAuthenticated()) {
+      setLoginPendingAction("insights");
+      setLoginModalOpen(true);
+      return;
+    }
 
     const currentRole = getLifecycleRole();
     if (currentRole) {
@@ -352,11 +421,12 @@ export default function LifecycleManagementPage() {
   const [frameworkDuration, setFrameworkDuration] = useState("all");
   const [frameworkDivision, setFrameworkDivision] = useState("all");
   const [frameworkFiltersOpen, setFrameworkFiltersOpen] = useState(true);
+  const [frameworkSearchQuery, setFrameworkSearchQuery] = useState("");
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [stakeholderRoles, setStakeholderRoles] = useState<string[]>([]);
 
   const visibleFrameworks = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
+    const query = frameworkSearchQuery.trim().toLowerCase();
     return initiativeFrameworks.filter((framework) => {
       if (frameworkCategory !== "all" && framework.category !== frameworkCategory) return false;
       if (frameworkComplexity !== "all" && templateComplexity(framework.compatibleTemplates[0]) !== frameworkComplexity) return false;
@@ -379,10 +449,11 @@ export default function LifecycleManagementPage() {
       }
       return true;
     });
-  }, [frameworkCategory, frameworkComplexity, frameworkDivision, frameworkDuration, searchQuery]);
+  }, [frameworkCategory, frameworkComplexity, frameworkDivision, frameworkDuration, frameworkSearchQuery]);
 
   const [requestModalOpen, setRequestModalOpen] = useState(false);
   const [selectedFramework, setSelectedFramework] = useState<InitiativeFramework | null>(null);
+  const [requestConfirmation, setRequestConfirmation] = useState<InitiativeApprovalRequest | null>(null);
 
   const [initiativeName, setInitiativeName] = useState("");
   const [initiativeDivision, setInitiativeDivision] = useState<Division>("Transmission");
@@ -425,6 +496,13 @@ export default function LifecycleManagementPage() {
 
   const openInitiativeRequest = (framework: InitiativeFramework) => {
     setSelectedFramework(framework);
+    if (!isUserAuthenticated()) {
+      setLoginPendingAction("request");
+      setLoginModalOpen(true);
+      return;
+    }
+
+    setRequestConfirmation(null);
     setStakeholderRoles([]);
     setRequestModalOpen(true);
 
@@ -455,7 +533,7 @@ export default function LifecycleManagementPage() {
     const role = drawerRole ?? "initiative-owner";
     const account = getDemoAccount(role);
 
-    addApprovalRequest({
+    const approval = addApprovalRequest({
       frameworkType: selectedFramework.type,
       initiativeName: trimmed(initiativeName),
       division: initiativeDivision,
@@ -476,15 +554,35 @@ export default function LifecycleManagementPage() {
       submittedBy: account.name,
     });
 
-    setRequestModalOpen(false);
-    setSelectedFramework(null);
+    setRequestConfirmation(approval);
     toast({
       title: "Submitted for TO approval",
       description: "Your initiative request was added to the approval queue.",
     });
+  };
+
+  const closeInitiativeRequest = (open: boolean) => {
+    setRequestModalOpen(open);
+    if (!open) {
+      setRequestConfirmation(null);
+      setSelectedFramework(null);
+    }
+  };
+
+  const viewSubmittedRequestStatus = () => {
+    setRequestModalOpen(false);
+    setRequestConfirmation(null);
+    setSelectedFramework(null);
     navigate("/stage2/lifecycle-management", {
       state: { cardId: "initiative-requests" },
     });
+  };
+
+  const backToPortfolioFromConfirmation = () => {
+    setRequestModalOpen(false);
+    setRequestConfirmation(null);
+    setSelectedFramework(null);
+    setActiveTab("initiatives");
   };
 
   // ── Request Service (initiative-level) ──────────────────────────────────────
@@ -565,14 +663,14 @@ export default function LifecycleManagementPage() {
               Marketplaces
             </Link>
             <ChevronRight className="w-4 h-4 mx-2" />
-            <span className="font-medium text-foreground">Lifecycle Management</span>
+            <span className="font-medium text-foreground">Initiative & Programme Portfolio</span>
           </nav>
 
           <span className="inline-flex items-center gap-2 bg-orange-100 text-orange-700 px-4 py-2 rounded-full text-sm font-semibold uppercase mb-4">
             Drive
           </span>
 
-          <h1 className="text-3xl lg:text-4xl font-bold text-primary-navy mb-3">Lifecycle Management</h1>
+          <h1 className="text-3xl lg:text-4xl font-bold text-primary-navy mb-3">Initiative & Programme Portfolio</h1>
           <p className="text-base lg:text-lg text-muted-foreground max-w-4xl mb-4">
             The operational execution layer for DEWA transformation initiatives — from conception through delivery and verified outcome.
           </p>
@@ -588,7 +686,7 @@ export default function LifecycleManagementPage() {
                 value="initiatives"
                 className="flex items-center gap-2 px-6 py-4 text-muted-foreground hover:text-foreground font-medium transition-colors relative rounded-none border-b-2 border-transparent data-[state=active]:border-orange-600 data-[state=active]:text-primary-navy bg-transparent"
               >
-                Active Initiatives
+                Portfolio Discovery
               </TabsTrigger>
               <TabsTrigger
                 value="explore-start"
@@ -603,6 +701,39 @@ export default function LifecycleManagementPage() {
 
         <div className="max-w-7xl mx-auto px-4 lg:px-8 py-8">
           <TabsContent value="initiatives" className="mt-0">
+            <div className="space-y-6">
+              <section className="sticky top-20 z-20 space-y-4 rounded-2xl border border-gray-200 bg-white/95 px-5 py-5 shadow-sm backdrop-blur">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-orange-700">Portfolio Overview</p>
+                    <h2 className="text-2xl font-semibold text-gray-950">Initiative & Programme Portfolio</h2>
+                    <p className="text-sm text-gray-600">
+                      Filter the full initiative estate and scan computed delivery health before drilling into detail.
+                    </p>
+                  </div>
+                  <div className="w-full max-w-md">
+                    <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3">
+                      <Search className="h-4 w-4 text-gray-400" />
+                      <Input
+                        value={initiativeSearchQuery}
+                        onChange={(e) => updateInitiativeSearch(e.target.value)}
+                        placeholder="Search initiatives, owners, divisions, priorities"
+                        className="border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+                  <Card className="border-gray-200 shadow-none"><CardContent className="p-4"><p className="text-xs font-medium text-gray-500">Total Initiatives</p><p className="mt-2 text-2xl font-semibold text-gray-950">{portfolioSummary.totalInitiatives}</p></CardContent></Card>
+                  <Card className="border-gray-200 shadow-none"><CardContent className="p-4"><p className="text-xs font-medium text-gray-500">Active Initiatives</p><p className="mt-2 text-2xl font-semibold text-gray-950">{portfolioSummary.activeInitiatives}</p></CardContent></Card>
+                  <Card className="border-gray-200 shadow-none"><CardContent className="p-4 space-y-2"><p className="text-xs font-medium text-gray-500">RAG Distribution</p><div className="flex items-center gap-3 text-sm"><span className="inline-flex items-center gap-1.5 text-red-700"><span className="h-2.5 w-2.5 rounded-full bg-red-500" />{initiativeRagCounts.Red}</span><span className="inline-flex items-center gap-1.5 text-amber-700"><span className="h-2.5 w-2.5 rounded-full bg-amber-500" />{initiativeRagCounts.Amber}</span><span className="inline-flex items-center gap-1.5 text-emerald-700"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />{initiativeRagCounts.Green}</span></div></CardContent></Card>
+                  <Card className="border-gray-200 shadow-none"><CardContent className="p-4"><p className="text-xs font-medium text-gray-500">EA Alignment</p><p className="mt-2 text-2xl font-semibold text-gray-950">{portfolioSummary.avgEaAlignment === null ? "Not assessed" : `${portfolioSummary.avgEaAlignment}/100`}</p></CardContent></Card>
+                  <Card className="border-gray-200 shadow-none"><CardContent className="p-4"><p className="text-xs font-medium text-gray-500">Total Budget</p><p className="mt-2 text-xl font-semibold text-gray-950">{fmtAed(portfolioSummary.totalBudget)}</p></CardContent></Card>
+                  <Card className="border-gray-200 shadow-none"><CardContent className="p-4"><p className="text-xs font-medium text-gray-500">Budget Spent</p><p className="mt-2 text-xl font-semibold text-gray-950">{fmtAed(portfolioSummary.totalBudgetSpent)}</p></CardContent></Card>
+                </div>
+              </section>
+
             <div className="flex gap-6">
               {/* Sidebar filters */}
               <aside className={filtersOpen ? "w-60 flex-shrink-0" : "w-auto flex-shrink-0"}>
@@ -636,7 +767,7 @@ export default function LifecycleManagementPage() {
                       {/* Status */}
                       <div className="space-y-2">
                         <p className="text-xs font-medium text-gray-700">Status</p>
-                        <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as "all" | InitiativeStatus)}>
+                        <Select value={filterStatus} onValueChange={(v) => updateStatusFilter(v as "all" | InitiativeStatus)}>
                           <SelectTrigger className="h-9 text-sm">
                             <SelectValue placeholder="All statuses" />
                           </SelectTrigger>
@@ -668,7 +799,7 @@ export default function LifecycleManagementPage() {
                       {/* Initiative Type */}
                       <div className="space-y-2">
                         <p className="text-xs font-medium text-gray-700">Initiative Type</p>
-                        <Select value={filterType} onValueChange={(v) => setFilterType(v as "all" | InitiativeType)}>
+                        <Select value={filterType} onValueChange={(v) => updateTypeFilter(v as "all" | InitiativeType)}>
                           <SelectTrigger className="h-9 text-sm">
                             <SelectValue placeholder="All initiative types" />
                           </SelectTrigger>
@@ -692,24 +823,13 @@ export default function LifecycleManagementPage() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="all">All strategic priorities</SelectItem>
-                            {STRATEGIC_PRIORITIES.map((priority) => (
-                              <SelectItem key={priority.slug} value={priority.slug}>
-                                {priority.title}
+                            {strategicPriorityOptions.map((prioritySlug) => (
+                              <SelectItem key={prioritySlug} value={prioritySlug}>
+                                {STRATEGIC_PRIORITY_BY_SLUG[prioritySlug].title}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
-                      </div>
-
-                      {/* Owner search */}
-                      <div className="space-y-2">
-                        <p className="text-xs font-medium text-gray-700">Owner</p>
-                        <Input
-                          value={filterOwner}
-                          onChange={(e) => setFilterOwner(e.target.value)}
-                          placeholder="Search by owner name"
-                          className="h-9 text-sm"
-                        />
                       </div>
                     </div>
                   )}
@@ -720,7 +840,7 @@ export default function LifecycleManagementPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-4">
                   <p className="text-sm text-gray-500">
-                    {filteredInitiatives.length} of {initiatives.length} active initiatives
+                    {filteredInitiatives.length} of {initiatives.length} initiatives
                     {activeFilterCount > 0 && <span className="ml-1 text-orange-600 font-medium">(filtered)</span>}
                   </p>
                 </div>
@@ -754,13 +874,13 @@ export default function LifecycleManagementPage() {
                     {initiatives.length === 0 ? (
                       <>
                         <h3 className="text-lg font-semibold text-gray-900 mb-2">No initiatives found</h3>
-                        <p className="text-gray-600">Create an initiative from the "Start an Initiative" tab.</p>
+                        <p className="text-gray-600">Use Explore & Start to submit a governed initiative request.</p>
                       </>
                     ) : (
                       <>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">No results</h3>
-                        <p className="text-gray-600 mb-4">No initiatives match your current filters.</p>
-                        <Button variant="outline" onClick={clearFilters}>Clear filters</Button>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">No initiatives match your filters</h3>
+                        <p className="text-gray-600 mb-4">Reset the current filters to restore the full portfolio.</p>
+                        <Button variant="outline" onClick={clearFilters}>Reset filters</Button>
                       </>
                     )}
                   </div>
@@ -768,11 +888,13 @@ export default function LifecycleManagementPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
                     {filteredInitiatives.map((initiative) => {
                       const InitIcon = getInitiativeIcon(initiative.type as InitiativeType);
+                      const rag = computeInitiativeRAG(initiative);
+                      const ragDotClass = rag === "Red" ? "bg-red-500" : rag === "Amber" ? "bg-amber-500" : "bg-emerald-500";
+                      const ragTextClass = rag === "Red" ? "text-red-700" : rag === "Amber" ? "text-amber-700" : "text-emerald-700";
                       return (
                         <div
                           key={initiative.id}
-                          onClick={() => navigate(`/marketplaces/initiative-portfolio/initiative/${initiative.id}`)}
-                          className="bg-white border border-gray-200 rounded-xl hover:shadow-xl hover:border-orange-300 hover:-translate-y-1 transition-all duration-300 cursor-pointer overflow-hidden"
+                          className="bg-white border border-gray-200 rounded-xl hover:shadow-xl hover:border-orange-300 hover:-translate-y-1 transition-all duration-300 overflow-hidden"
                         >
                           {/* Gradient header */}
                           <div
@@ -786,27 +908,56 @@ export default function LifecycleManagementPage() {
                             </span>
                             {initiative.fromPortfolio && (
                               <span className="absolute top-3 left-3 bg-white/20 backdrop-blur-sm text-white px-2.5 py-1 rounded-full text-xs font-semibold">
-                                Raised from Portfolio
+                                Derived from portfolio gap
                               </span>
                             )}
                           </div>
 
                           {/* Card body */}
                           <div className="p-4">
-                            <p className="text-xs text-gray-500 mb-2">{initiative.division}</p>
-                            {initiative.strategicPriority && (
-                              <div className="mb-2">
-                                <span className="inline-flex items-center rounded-full bg-orange-50 px-2.5 py-1 text-[11px] font-semibold text-orange-700 border border-orange-200">
-                                  {STRATEGIC_PRIORITY_BY_SLUG[initiative.strategicPriority].title}
-                                </span>
-                              </div>
-                            )}
-                            <h3 className="text-base font-semibold text-gray-900 mb-2 line-clamp-2">
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-xs text-gray-500">{initiative.division}</p>
+                              <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${pickTypeBadgeClasses(initiative.type)}`}>
+                                {initiative.type}
+                              </span>
+                            </div>
+                            <h3 className="text-base font-semibold text-gray-900 mb-2 line-clamp-2" title={initiative.name}>
                               {initiative.name}
                             </h3>
                             <p className="text-sm text-gray-600 mb-3 line-clamp-3">
                               {initiative.description}
                             </p>
+                            <div className="mb-3 flex items-center justify-between text-sm">
+                              <span className="inline-flex items-center gap-2">
+                                <span className={`h-2.5 w-2.5 rounded-full ${ragDotClass}`} />
+                                <span className={ragTextClass}>{rag}</span>
+                              </span>
+                              <span className="text-gray-500">{getInitiativeProjectCount(initiative)} projects</span>
+                            </div>
+                            <div className="mb-3 grid grid-cols-2 gap-3 rounded-lg bg-gray-50 p-3">
+                              <div>
+                                <p className="text-[11px] uppercase tracking-wide text-gray-500">EA Alignment</p>
+                                <p className="mt-1 text-sm font-medium text-gray-900">
+                                  {initiative.eaAlignmentScore === null ? "Not assessed" : `${initiative.eaAlignmentScore}/100`}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-[11px] uppercase tracking-wide text-gray-500">Strategic Priority</p>
+                                <p className={`mt-1 text-sm font-medium ${initiative.strategicPriority ? "text-gray-900" : "text-gray-400"}`}>
+                                  {initiative.strategicPriority
+                                    ? STRATEGIC_PRIORITY_BY_SLUG[initiative.strategicPriority].title
+                                    : "Not set"}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-[11px] uppercase tracking-wide text-gray-500">Target Date</p>
+                                <p className="mt-1 text-sm font-medium text-gray-900">{fmtDate(initiative.targetDate)}</p>
+                              </div>
+                              <div>
+                                <p className="text-[11px] uppercase tracking-wide text-gray-500">Owner</p>
+                                <p className="mt-1 text-sm font-medium text-gray-900">{initiative.owner}</p>
+                              </div>
+                            </div>
                             {initiative.fromPortfolio && (
                               <div className="mb-3 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2">
                                 <p className="text-xs font-medium text-blue-800">Portfolio provenance</p>
@@ -832,41 +983,41 @@ export default function LifecycleManagementPage() {
                               </div>
                             )}
 
-                            {/* Metadata strip */}
-                            <div className="flex flex-wrap items-center gap-2 mb-3">
-                              <Badge variant="outline" className={`text-xs ${pickTypeBadgeClasses(initiative.type)} border`}>
-                                {initiative.type}
-                              </Badge>
-                              {initiative.eaAlignmentScore !== null && (
-                                <Badge className="text-xs bg-slate-50 text-slate-700 border border-slate-200">
-                                  EA: {initiative.eaAlignmentScore}%
-                                </Badge>
-                              )}
-                              {initiative.status === "Completed" && (
-                                <Badge className="text-xs bg-green-50 text-green-700 border border-green-200">
-                                  Closure Recorded
-                                </Badge>
-                              )}
-                            </div>
-
-                            {/* Bottom strip — progress bar or meta */}
-                            {(initiative.status === "Active" || initiative.status === "At Risk") ? (
-                              <div className="border-t border-gray-100 pt-3 space-y-1.5">
-                                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                  <span className="flex items-center gap-1">
-                                    <Activity className="w-3 h-3" />
-                                    {getInitiativeProjectCount(initiative)} projects
-                                  </span>
-                                  <span className="font-medium text-foreground">{initiative.progress}%</span>
+                            <div className="border-t border-gray-100 pt-3 space-y-3">
+                              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                <span className="flex items-center gap-1">
+                                  <Activity className="w-3 h-3" />
+                                  Delivery progress
+                                </span>
+                                <span className="font-medium text-foreground">{initiative.progress}%</span>
+                              </div>
+                              <Progress value={initiative.progress} className="h-1.5" />
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-xs text-gray-500">{getInitiativeProjectCount(initiative)} projects</span>
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-orange-700 hover:text-orange-800 hover:bg-orange-50 px-2"
+                                    onClick={() => openSeeInsights(initiative)}
+                                  >
+                                    <Eye className="w-3.5 h-3.5 mr-1" />
+                                    Insights
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                      navigate(`/marketplaces/initiative-portfolio/initiative/${initiative.id}`, {
+                                        state: { portfolioSearch: location.search },
+                                      })
+                                    }
+                                  >
+                                    View Detail
+                                  </Button>
                                 </div>
-                                <Progress value={initiative.progress} className="h-1.5" />
                               </div>
-                            ) : (
-                              <div className="border-t border-gray-100 pt-3 flex items-center justify-between text-xs text-muted-foreground">
-                                <span>{getInitiativeProjectCount(initiative)} projects</span>
-                                <span>Target: {initiative.targetDate}</span>
-                              </div>
-                            )}
+                            </div>
                           </div>
                         </div>
                       );
@@ -874,6 +1025,7 @@ export default function LifecycleManagementPage() {
                   </div>
                 )}
               </div>
+            </div>
             </div>
           </TabsContent>
 
@@ -890,8 +1042,8 @@ export default function LifecycleManagementPage() {
                   <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3">
                     <Search className="h-4 w-4 text-gray-400" />
                     <Input
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
+                      value={frameworkSearchQuery}
+                      onChange={(e) => setFrameworkSearchQuery(e.target.value)}
                       placeholder="Search frameworks..."
                       className="border-0 px-0 shadow-none focus-visible:ring-0"
                     />
@@ -1058,18 +1210,45 @@ export default function LifecycleManagementPage() {
         document.body
       )}
 
+      {loginModalOpen && createPortal(
+        <LCInsightsLoginModal
+          onSuccess={handleLoginSuccess}
+          onClose={() => {
+            setLoginModalOpen(false);
+            setLoginPendingAction(null);
+          }}
+        />,
+        document.body
+      )}
+
       {/* Initiative request form */}
-      <Dialog open={requestModalOpen} onOpenChange={setRequestModalOpen}>
+      <Dialog open={requestModalOpen} onOpenChange={closeInitiativeRequest}>
         <DialogContent className="flex flex-col sm:max-w-2xl max-h-[90vh] p-0 gap-0">
           <div className="px-6 pt-6 pb-4 border-b border-gray-100 flex-shrink-0">
             <DialogHeader>
-              <DialogTitle>Submit Governed Initiative Request</DialogTitle>
-              <DialogDescription>Confirm the framework, template, and operating intent before sending this request to the TO approval queue.</DialogDescription>
+              <DialogTitle>{requestConfirmation ? "Request Submitted" : "Submit Governed Initiative Request"}</DialogTitle>
+              <DialogDescription>
+                {requestConfirmation
+                  ? "Confirmation generated from the submitted approval record."
+                  : "Confirm the framework, template, and operating intent before sending this request to the TO approval queue."}
+              </DialogDescription>
             </DialogHeader>
+            <div className="mt-4">
+              <ExploreStartStepper
+                activeStep={3}
+                selectedFramework={selectedFramework?.type ?? null}
+                selectedTemplate={
+                  selectedTemplateId
+                    ? lifecycleTemplates.find((template) => template.id === selectedTemplateId)?.title ?? selectedTemplateId
+                    : null
+                }
+                confirmationNote={requestConfirmation ? "Submitted" : "Ready to submit"}
+              />
+            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto px-6 py-4">
-          {selectedFramework && (
+          {selectedFramework && !requestConfirmation && (
             <div className="space-y-4">
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -1223,16 +1402,71 @@ export default function LifecycleManagementPage() {
               </div>
             </div>
           )}
+
+          {requestConfirmation && (
+            <div className="space-y-6">
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Confirmation</p>
+                <h3 className="mt-1 text-xl font-semibold text-emerald-950">{requestConfirmation.initiativeName}</h3>
+                <p className="mt-2 text-sm text-emerald-900">
+                  Your request has been sent to the Transformation Office for review. You will be notified when a decision is made.
+                </p>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-xl border border-gray-200 bg-white p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Reference Number</p>
+                  <p className="mt-2 text-lg font-semibold text-gray-950">{requestConfirmation.id}</p>
+                </div>
+                <div className="rounded-xl border border-gray-200 bg-white p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Status</p>
+                  <Badge className="mt-2 border bg-yellow-100 text-yellow-700 border-yellow-200">
+                    {requestConfirmation.status}
+                  </Badge>
+                </div>
+                <div className="rounded-xl border border-gray-200 bg-white p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Expected Response Date</p>
+                  <p className="mt-2 text-lg font-semibold text-gray-950">
+                    {fmtDate(addHours(requestConfirmation.submittedAt, APPROVAL_RESPONSE_HOURS[requestConfirmation.priority]))}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-gray-200 bg-white p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Submitted</p>
+                  <p className="mt-2 text-lg font-semibold text-gray-950">{fmtDate(requestConfirmation.submittedAt)}</p>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-orange-100 bg-orange-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-orange-700">What Happens Next</p>
+                <p className="mt-2 text-sm text-orange-900">
+                  Your request has been sent to the Transformation Office for review. You will be notified when a decision is made.
+                </p>
+              </div>
+            </div>
+          )}
           </div>
 
           <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex-shrink-0">
             <DialogFooter>
-              <Button variant="outline" onClick={() => setRequestModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button className="bg-orange-600 hover:bg-orange-700 text-white" onClick={submitInitiativeRequest}>
-                Submit for Approval
-              </Button>
+              {requestConfirmation ? (
+                <>
+                  <Button variant="outline" onClick={backToPortfolioFromConfirmation}>
+                    Back to Portfolio
+                  </Button>
+                  <Button className="bg-orange-600 hover:bg-orange-700 text-white" onClick={viewSubmittedRequestStatus}>
+                    View Status
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="outline" onClick={() => closeInitiativeRequest(false)}>
+                    Cancel
+                  </Button>
+                  <Button className="bg-orange-600 hover:bg-orange-700 text-white" onClick={submitInitiativeRequest}>
+                    Submit for Approval
+                  </Button>
+                </>
+              )}
             </DialogFooter>
           </div>
         </DialogContent>

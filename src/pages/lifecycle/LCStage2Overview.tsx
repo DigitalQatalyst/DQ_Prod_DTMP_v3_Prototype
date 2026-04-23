@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { BarChart3, ClipboardList, RefreshCw, TrendingUp } from "lucide-react";
 
@@ -51,8 +51,18 @@ export default function LCStage2Overview() {
       .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()),
     [currentUser.name]
   );
-  const initiatives = useMemo(() => getInitiatives(), []);
-  const projects = useMemo(() => getProjects(), []);
+  const [initiatives, setInitiatives] = useState<Initiative[]>(() => getInitiatives());
+  const [projects, setProjects] = useState(() => getProjects());
+
+  useEffect(() => {
+    const refreshPortfolioData = () => {
+      setInitiatives(getInitiatives());
+      setProjects(getProjects());
+    };
+
+    window.addEventListener("storage", refreshPortfolioData);
+    return () => window.removeEventListener("storage", refreshPortfolioData);
+  }, []);
 
   const myInitiatives = useMemo(() => {
     const mine: Initiative[] = [];
@@ -270,7 +280,7 @@ export default function LCStage2Overview() {
                         </Badge>
                       </div>
                       <button
-                        onClick={() => { window.location.href = `/marketplaces/initiative-portfolio/initiative/${r.initiativeId}/insights`; }}
+                        onClick={() => { window.location.href = `/marketplaces/initiative-portfolio/initiative/${r.initiativeId}`; }}
                         className="text-xs text-teal-600 hover:text-teal-800 font-medium mt-2 flex items-center gap-1"
                       >
                         View in Lifecycle â†’

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { createPortal } from "react-dom";
+import { useParams, useNavigate, Link, useLocation } from "react-router-dom";
 import {
   Activity,
   AlertTriangle,
@@ -17,13 +18,15 @@ import {
 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import AIInitiativeRecommender from "@/components/lifecycle/AIInitiativeRecommender";
 import { LCInsightsLoginModal } from "@/components/lifecycle/LCInsightsLoginModal";
+import { SeeInsightsDrawer } from "@/components/lifecycle/SeeInsightsDrawer";
+import { RoleSelectorModal } from "@/components/lifecycle/RoleSelectorModal";
 import { isUserAuthenticated } from "@/data/sessionAuth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { getActivityEvents } from "@/data/shared/activityEventStore";
 import { getLCRequestsByInitiative } from "@/data/lifecycle/serviceRequestState";
 import {
@@ -40,8 +43,6 @@ import {
 } from "@/data/shared/lifecycleRole";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
-
-type DetailTab = "overview" | "projects" | "applications" | "compliance" | "products" | "retirement";
 
 interface AppEntry {
   name: string;
@@ -203,44 +204,74 @@ const DIVISION_GRADIENT: Partial<Record<Division, string>> = {
 const fmtBudget = (b: number | null | undefined) =>
   b == null ? "TBC" : `AED ${(b / 1_000_000).toFixed(0)}M`;
 
-const TABS: { id: DetailTab; label: string; icon: React.FC<{ className?: string }> }[] = [
-  { id: "overview", label: "Overview", icon: Briefcase },
-  { id: "projects", label: "Projects", icon: FolderKanban },
-  { id: "applications", label: "Applications", icon: Server },
-  { id: "compliance", label: "Compliance", icon: ShieldCheck },
-  { id: "products", label: "Products", icon: Package },
-  { id: "retirement", label: "Retirement", icon: Archive },
-];
+const INITIATIVE_CAPABILITY_LINKS: Partial<Record<InitiativeType, { label: string; tab: string }>> = {
+  "IT/OT Convergence": { label: "Operational Technology", tab: "ot-asset-portfolio" },
+  "Net-Zero Technology": { label: "Operational Technology", tab: "ot-asset-portfolio" },
+  "Architecture Remediation": { label: "IT Asset Estate", tab: "it-asset-portfolio" },
+  "Application Modernisation": { label: "IT Asset Estate", tab: "it-asset-portfolio" },
+  "Technology Rationalisation": { label: "Technology Rationalisation", tab: "technology-rationalisation" },
+  "AI Deployment": { label: "Data & Digital Capability", tab: "data-digital-portfolio" },
+  "Data Platform": { label: "Data & Digital Capability", tab: "data-digital-portfolio" },
+  "DXP Programme": { label: "Data & Digital Capability", tab: "data-digital-portfolio" },
+  "Platform Deployment": { label: "Project Portfolio", tab: "project-portfolio" },
+};
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
 export default function LCInitiativeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const portfolioSearch = (location.state as { portfolioSearch?: string } | null)?.portfolioSearch ?? "";
+  const portfolioLink = { pathname: "/marketplaces/initiative-portfolio", search: portfolioSearch };
 
   const initiative = useMemo(
     () => getInitiatives().find((i) => i.id === id) ?? null,
     [id]
   );
 
-  const [activeTab, setActiveTab] = useState<DetailTab>("overview");
-
   // ── See Insights ────────────────────────────────────────────────────────────
   const [drawerRole, setDrawerRole] = useState<LifecycleInsightsRole | null>(() => getLifecycleRole());
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [roleModalOpen, setRoleModalOpen] = useState(false);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
 
   const openSeeInsights = () => {
-    if (isUserAuthenticated()) {
-      navigate(`/marketplaces/initiative-portfolio/initiative/${id}/insights`);
-    } else {
+    if (!isUserAuthenticated()) {
       setLoginModalOpen(true);
+      return;
     }
+
+    const currentRole = getLifecycleRole();
+    if (currentRole) {
+      setDrawerRole(currentRole);
+      setDrawerOpen(true);
+      setRoleModalOpen(false);
+      return;
+    }
+
+    setRoleModalOpen(true);
   };
 
   const handleLoginSuccess = (role: LifecycleInsightsRole) => {
     setDrawerRole(role);
     setLoginModalOpen(false);
-    navigate(`/marketplaces/initiative-portfolio/initiative/${id}/insights`);
+    setDrawerOpen(true);
+  };
+
+  const closeSeeInsights = () => {
+    setDrawerOpen(false);
+  };
+
+  const handleChangeRole = () => {
+    setDrawerOpen(false);
+    setRoleModalOpen(true);
+  };
+
+  const handleRoleSelected = (role: LifecycleInsightsRole) => {
+    setDrawerRole(role);
+    setRoleModalOpen(false);
+    setDrawerOpen(true);
   };
 
   // ── Derived data ────────────────────────────────────────────────────────────
@@ -263,7 +294,7 @@ export default function LCInitiativeDetailPage() {
         <Header />
         <div className="max-w-7xl mx-auto px-4 py-20 text-center">
           <h1 className="text-2xl font-bold text-foreground mb-4">Initiative not found</h1>
-          <Button onClick={() => navigate("/marketplaces/initiative-portfolio")} className="bg-orange-600 hover:bg-orange-700 text-white">
+          <Button onClick={() => navigate(portfolioLink)} className="bg-orange-600 hover:bg-orange-700 text-white">
             Back to Initiative Portfolio
           </Button>
         </div>
@@ -281,6 +312,7 @@ export default function LCInitiativeDetailPage() {
   const openRequests = requests.filter((request) => !["Delivered", "Completed"].includes(request.status)).length;
   const completedRequests = requests.filter((request) => ["Delivered", "Completed"].includes(request.status)).length;
   const isCompleted = initiative.status === "Completed";
+  const capabilityLink = INITIATIVE_CAPABILITY_LINKS[initiative.type];
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -293,7 +325,7 @@ export default function LCInitiativeDetailPage() {
             <ChevronRight className="w-4 h-4" />
             <Link to="/marketplaces" className="hover:text-foreground transition-colors">Marketplaces</Link>
             <ChevronRight className="w-4 h-4" />
-            <Link to="/marketplaces/initiative-portfolio" className="hover:text-foreground transition-colors">Initiative & Programme Portfolio</Link>
+            <Link to={portfolioLink} className="hover:text-foreground transition-colors">Initiative & Programme Portfolio</Link>
             <ChevronRight className="w-4 h-4" />
             <span className="font-medium text-foreground line-clamp-1">{initiative.name}</span>
           </nav>
@@ -311,7 +343,7 @@ export default function LCInitiativeDetailPage() {
               <span className="text-gray-500 text-sm">{initiative.division}</span>
               {initiative.fromPortfolio && (
                 <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs">
-                  Raised from Portfolio
+                  Derived from portfolio gap
                 </Badge>
               )}
             </div>
@@ -339,6 +371,15 @@ export default function LCInitiativeDetailPage() {
                 </Badge>
               )}
             </div>
+            {capabilityLink && (
+              <button
+                onClick={() => navigate("/marketplaces/asset-capability", { state: { tab: capabilityLink.tab } })}
+                className="inline-flex w-fit items-center gap-2 text-sm font-medium text-blue-700 hover:text-blue-800"
+              >
+                <ExternalLink className="h-4 w-4" />
+                View linked capability domain: {capabilityLink.label}
+              </button>
+            )}
             {initiative.fromPortfolio && (
               <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
                 <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Portfolio Provenance</p>
@@ -399,48 +440,28 @@ export default function LCInitiativeDetailPage() {
         </div>
       </section>
 
-      {/* Tabs + two-column layout */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as DetailTab)} className="w-full">
-        <div className="bg-white border-b-2 border-gray-200">
-          <div className="max-w-7xl mx-auto px-4">
-            <TabsList className="h-auto bg-transparent p-0 gap-1 overflow-x-auto flex justify-start">
-              {TABS.map(({ id: tabId, label, icon: Icon }) => (
-                <TabsTrigger
-                  key={tabId}
-                  value={tabId}
-                  className="flex items-center gap-1.5 px-5 py-4 text-muted-foreground hover:text-foreground font-medium transition-colors relative rounded-none border-b-2 border-transparent data-[state=active]:border-orange-600 data-[state=active]:text-primary-navy bg-transparent"
-                >
-                  <Icon className="w-4 h-4" />
-                  {label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </div>
-        </div>
-
-        <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-8">
           <div className="flex flex-col lg:flex-row gap-8">
 
             {/* ── Left: tab content ──────────────────────────────────────── */}
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 space-y-8">
 
               {/* Overview */}
-              <TabsContent value="overview" className="mt-0">
-                <div className="space-y-6">
-                  <div>
-                    <h2 className="text-2xl font-bold text-foreground mb-3">Initiative Overview</h2>
-                    <p className="text-base text-muted-foreground leading-relaxed">{initiative.description}</p>
-                  </div>
+              <section className="space-y-6">
+              <div>
+                <h2 className="text-2xl font-bold text-foreground mb-3">Initiative Overview</h2>
+                <p className="text-base text-muted-foreground leading-relaxed">{initiative.description}</p>
+              </div>
 
-                  <Separator />
+              <AIInitiativeRecommender initiative={initiative} />
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <Metric label="Owner" value={initiative.owner} />
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                <Metric label="Owner" value={initiative.owner} />
                     <Metric label="Division" value={initiative.division} />
                     <Metric label="Budget" value={fmtBudget(initiative.budget)} />
-                    <Metric label="Budget Spent" value={fmtBudget(initiative.budgetSpent)} />
                     <Metric label="Target Date" value={initiative.targetDate} />
                     <Metric label="EA Alignment" value={initiative.eaAlignmentScore === null ? "Not Assessed" : `${initiative.eaAlignmentScore}%`} />
+                    <Metric label="Projects" value={String(initiativeProjects.length)} />
                   </div>
 
                   {isActive && (
@@ -453,13 +474,12 @@ export default function LCInitiativeDetailPage() {
                     </div>
                   )}
 
-                  <Separator />
+              </section>
 
-                </div>
-              </TabsContent>
+              <Separator />
 
               {/* Projects */}
-              <TabsContent value="projects" className="mt-0">
+              <section className="space-y-4">
                 <h2 className="text-2xl font-bold text-foreground mb-5">Linked Projects</h2>
                 <div className="space-y-4">
                   {initiativeProjects.length === 0 ? (
@@ -468,10 +488,12 @@ export default function LCInitiativeDetailPage() {
                     initiativeProjects.map((p) => <ProjectCard key={p.id} project={p} />)
                   )}
                 </div>
-              </TabsContent>
+              </section>
+
+              <Separator />
 
               {/* Applications */}
-              <TabsContent value="applications" className="mt-0">
+              <section className="space-y-3">
                 <h2 className="text-2xl font-bold text-foreground mb-5">Applications in Scope</h2>
                 <div className="space-y-3">
                   {applications.map((app, i) => (
@@ -491,10 +513,12 @@ export default function LCInitiativeDetailPage() {
                     </div>
                   ))}
                 </div>
-              </TabsContent>
+              </section>
+
+              <Separator />
 
               {/* Compliance */}
-              <TabsContent value="compliance" className="mt-0">
+              <section className="space-y-3">
                 <h2 className="text-2xl font-bold text-foreground mb-5">Compliance & Governance</h2>
                 <div className="space-y-3">
                   {complianceChecks.map((check, i) => (
@@ -516,10 +540,12 @@ export default function LCInitiativeDetailPage() {
                     </div>
                   ))}
                 </div>
-              </TabsContent>
+              </section>
+
+              <Separator />
 
               {/* Products */}
-              <TabsContent value="products" className="mt-0">
+              <section className="space-y-3">
                 <h2 className="text-2xl font-bold text-foreground mb-5">Products & Capabilities</h2>
                 <div className="space-y-3">
                   {products.map((prod, i) => (
@@ -538,10 +564,12 @@ export default function LCInitiativeDetailPage() {
                     </div>
                   ))}
                 </div>
-              </TabsContent>
+              </section>
+
+              <Separator />
 
               {/* Retirement */}
-              <TabsContent value="retirement" className="mt-0">
+              <section className="space-y-3">
                 <h2 className="text-2xl font-bold text-foreground mb-5">Asset Retirement Plan</h2>
                 <div className="space-y-3">
                   {retirements.map((ret, i) => (
@@ -561,13 +589,21 @@ export default function LCInitiativeDetailPage() {
                     </div>
                   ))}
                 </div>
-              </TabsContent>
+              </section>
             </div>
 
             {/* ── Right sidebar ──────────────────────────────────────────── */}
             <aside className="lg:w-80 flex-shrink-0">
               <div className="lg:sticky lg:top-24 bg-white border border-gray-200 rounded-xl p-6 shadow-sm space-y-6">
                 <h3 className="text-base font-bold text-foreground">Initiative Details</h3>
+
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => navigate(portfolioLink)}
+                >
+                  Back to Portfolio
+                </Button>
 
                 {/* Key facts table */}
                 <table className="w-full">
@@ -583,9 +619,7 @@ export default function LCInitiativeDetailPage() {
                     ].map(({ label, value }) => (
                       <tr key={label} className="border-b border-gray-100 last:border-0">
                         <td className="text-xs text-muted-foreground py-2.5 pr-3 w-28">{label}</td>
-                        <td className="text-xs font-medium text-foreground py-2.5">
-                          {typeof value === "string" ? value : value}
-                        </td>
+                        <td className="text-xs font-medium text-foreground py-2.5">{value}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -604,8 +638,16 @@ export default function LCInitiativeDetailPage() {
 
                 <Separator />
 
-                {/* CTA buttons */}
                 <div className="space-y-2">
+                  {isUserAuthenticated() && (
+                    <Button
+                      className="w-full bg-orange-600 text-white hover:bg-orange-700"
+                      onClick={() => navigate(`/stage2/lifecycle-management/${initiative.id}`)}
+                    >
+                      <Briefcase className="w-4 h-4 mr-2" />
+                      View in Workspace
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     className="w-full border-orange-200 text-orange-700 hover:bg-orange-50"
@@ -614,6 +656,16 @@ export default function LCInitiativeDetailPage() {
                     <Eye className="w-4 h-4 mr-2" />
                     See Insights
                   </Button>
+                  {capabilityLink && (
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => navigate("/marketplaces/asset-capability", { state: { tab: capabilityLink.tab } })}
+                    >
+                      <ExternalLink className="w-4 h-4 mr-2" />
+                      Capability Canvas
+                    </Button>
+                  )}
                   {initiative.fromPortfolio && initiative.portfolioCardId && (
                     <Button
                       variant="outline"
@@ -637,8 +689,6 @@ export default function LCInitiativeDetailPage() {
             </aside>
           </div>
         </div>
-      </Tabs>
-
       <Footer />
 
       {/* Insights login modal */}
@@ -647,6 +697,24 @@ export default function LCInitiativeDetailPage() {
           onSuccess={handleLoginSuccess}
           onClose={() => setLoginModalOpen(false)}
         />
+      )}
+
+      {roleModalOpen && createPortal(
+        <RoleSelectorModal
+          onClose={() => setRoleModalOpen(false)}
+          onRoleSelected={handleRoleSelected}
+        />,
+        document.body
+      )}
+
+      {drawerOpen && drawerRole && createPortal(
+        <SeeInsightsDrawer
+          initiative={initiative}
+          role={drawerRole}
+          onClose={closeSeeInsights}
+          onChangeRole={handleChangeRole}
+        />,
+        document.body
       )}
     </div>
   );
