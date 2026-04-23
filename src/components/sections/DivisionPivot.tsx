@@ -197,11 +197,11 @@ export function DivisionPivot() {
         </div>
         <div className="text-center mt-8">
           <Link
-            to="/marketplaces/learning-center"
+            to="/onboarding"
             className="inline-flex items-center gap-2 px-8 py-3 rounded-xl font-semibold text-sm text-white"
             style={{ background: "linear-gradient(135deg, #1e3a5f 0%, #0369A1 100%)" }}
           >
-            New to DTMP? Start in the Learning Centre <ArrowRight size={16} />
+            New to DTMP? Start your orientation <ArrowRight size={16} />
           </Link>
         </div>
       </div>

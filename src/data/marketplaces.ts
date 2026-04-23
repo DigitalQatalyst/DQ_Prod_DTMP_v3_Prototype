@@ -27,26 +27,26 @@ export interface Marketplace {
 export const marketplaces: Marketplace[] = [
   // DISCERN
   {
-    id: "learning-center",
+    id: "learning",
     phase: "Discern",
     icon: GraduationCap,
-    name: "DTMP Learning Centre",
+    name: "Transformation Methodology & Learning",
     description:
       "Structured pathways for EA literacy, digital transformation fundamentals, and DEWA architecture standards across all divisions.",
-    features: ["Courses & Curricula", "Learning Tracks", "Reviews"],
+    features: ["Courses & Curricula", "Learning Tracks", "Certificates"],
     serviceCount: 25,
-    route: "/marketplaces/learning-center",
+    route: "/marketplaces/learning",
   },
   {
-    id: "knowledge-center",
+    id: "knowledge",
     phase: "Discern",
     icon: BookOpen,
-    name: "DTMP Knowledge Centre",
+    name: "Knowledge & Best Practices",
     description:
       "DEWA-specific architecture knowledge, governance references, strategy documents, standards, and published design outputs accessible enterprise-wide.",
     features: ["Best Practices", "Design Reports", "Architecture Standards", "Governance Frameworks"],
     serviceCount: 89,
-    route: "/marketplaces/knowledge-center",
+    route: "/marketplaces/knowledge",
   },
 
   // DESIGN
@@ -54,7 +54,7 @@ export const marketplaces: Marketplace[] = [
     id: "document-studio",
     phase: "Design",
     icon: FileText,
-    name: "DTMP Document Studio",
+    name: "Transformation Artefacts (Document Studio)",
     description:
       "AI-powered document generation fulfilled by the Corporate EA Office with defined SLAs for all DEWA divisions.",
     features: [
@@ -68,7 +68,7 @@ export const marketplaces: Marketplace[] = [
     id: "solution-specs",
     phase: "Design",
     icon: Layout,
-    name: "DTMP Solution Specs",
+    name: "Solution Specifications",
     description:
       "Standardised architecture blueprints and solution specifications applicable across all DEWA divisions.",
     features: ["Solution Specifications", "Architecture Diagrams", "Component Details"],
@@ -81,7 +81,7 @@ export const marketplaces: Marketplace[] = [
     id: "solution-build",
     phase: "Deploy",
     icon: Hammer,
-    name: "DTMP Solution Build",
+    name: "Solution Build",
     description:
       "Build resources, delivery capacity, and implementation support for projects across all DEWA divisions.",
     features: ["Implementation Resources", "Code Samples", "Integration Patterns"],
@@ -91,50 +91,50 @@ export const marketplaces: Marketplace[] = [
 
   // DRIVE
   {
-    id: "lifecycle-management",
+    id: "initiative-portfolio",
     phase: "Drive",
     icon: RefreshCw,
-    name: "DTMP Lifecycle Management",
+    name: "Initiative & Programme Portfolio",
     description:
       "Govern initiatives through stage gates, compliance checkpoints, and architecture reviews across enterprise programmes.",
     features: ["Application Lifecycle", "Project Lifecycle", "Compliance Tracking"],
     serviceCount: 12,
-    route: "/marketplaces/lifecycle-management",
+    route: "/marketplaces/initiative-portfolio",
   },
   {
-    id: "portfolio-management",
+    id: "asset-capability",
     phase: "Drive",
     icon: Briefcase,
-    name: "DTMP Portfolio Management",
-    description: "Centralized oversight for application and project portfolios",
-    features: ["Application Portfolio", "Project Portfolio"],
+    name: "Asset & Capability Portfolio",
+    description: "Centralised oversight for IT and OT asset portfolios mapped to EA capability domains.",
+    features: ["Capability Canvas", "Asset Landscape", "OT/IT Coverage"],
     serviceCount: 11,
-    route: "/marketplaces/portfolio-management",
+    route: "/marketplaces/asset-capability",
   },
   {
-    id: "digital-intelligence",
+    id: "intelligence",
     phase: "Drive",
     icon: BarChart3,
-    name: "DTMP Digital Intelligence",
+    name: "Transformation Intelligence",
     description:
-      "AI-powered maturity insights, system analytics, and project intelligence",
+      "Standing intelligence views and on-demand reports for programme health, maturity progression, and EA data quality.",
     features: [
-      "Systems Portfolio & Lifecycle",
+      "Programme Intelligence",
       "Digital Maturity",
-      "Projects Portfolio & Lifecycle",
+      "On-Demand Reports",
     ],
     serviceCount: 7,
-    route: "/marketplaces/digital-intelligence",
+    route: "/marketplaces/intelligence",
   },
   {
-    id: "support-services",
+    id: "support",
     phase: "Drive",
     icon: HelpCircle,
-    name: "DTMP Support Services",
-    description: "Technical support and expert consultancy services",
-    features: ["Technical Support", "Expert Consultancy"],
+    name: "Support & Expert Services",
+    description: "Platform support, data corrections, expert consultancy, and EA advisory services.",
+    features: ["Platform Support", "Data Corrections", "Expert Consultancy"],
     serviceCount: 14,
-    route: "/marketplaces/support-services",
+    route: "/marketplaces/support",
   },
 ];
 

@@ -43,8 +43,8 @@ const LifecycleDetailPage = () => {
         <div className="max-w-7xl mx-auto px-4 py-20 text-center">
           <h1 className="text-2xl font-bold text-foreground mb-4">Service Not Found</h1>
           <p className="text-muted-foreground mb-6">The requested lifecycle service could not be found.</p>
-          <Button onClick={() => navigate('/marketplaces/lifecycle-management')}>
-            Back to Lifecycle Management
+          <Button onClick={() => navigate('/marketplaces/initiative-portfolio')}>
+            Back to Initiative Portfolio
           </Button>
         </div>
         <Footer />
@@ -69,9 +69,9 @@ const LifecycleDetailPage = () => {
             <ChevronRight className="w-4 h-4 mx-2" />
             <Link to="/marketplaces" className="hover:text-foreground transition-colors">Marketplaces</Link>
             <ChevronRight className="w-4 h-4 mx-2" />
-            <Link to="/marketplaces/lifecycle-management" className="hover:text-foreground transition-colors">Lifecycle Management</Link>
+            <Link to="/marketplaces/initiative-portfolio" className="hover:text-foreground transition-colors">Initiative & Programme Portfolio</Link>
             <ChevronRight className="w-4 h-4 mx-2" />
-            <Link to={`/marketplaces/lifecycle-management?tab=${tab}`} className="hover:text-foreground transition-colors">{tabDisplayName}</Link>
+            <Link to={`/marketplaces/initiative-portfolio?tab=${tab}`} className="hover:text-foreground transition-colors">{tabDisplayName}</Link>
             <ChevronRight className="w-4 h-4 mx-2" />
             <span className="font-medium text-foreground line-clamp-1">{service.title}</span>
           </nav>

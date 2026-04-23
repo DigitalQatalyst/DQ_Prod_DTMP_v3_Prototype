@@ -231,7 +231,7 @@ export default function LCInitiativeDetailPage() {
 
   const openSeeInsights = () => {
     if (isUserAuthenticated()) {
-      navigate(`/marketplaces/lifecycle-management/initiative/${id}/insights`);
+      navigate(`/marketplaces/initiative-portfolio/initiative/${id}/insights`);
     } else {
       setLoginModalOpen(true);
     }
@@ -240,7 +240,7 @@ export default function LCInitiativeDetailPage() {
   const handleLoginSuccess = (role: LifecycleInsightsRole) => {
     setDrawerRole(role);
     setLoginModalOpen(false);
-    navigate(`/marketplaces/lifecycle-management/initiative/${id}/insights`);
+    navigate(`/marketplaces/initiative-portfolio/initiative/${id}/insights`);
   };
 
   // ── Derived data ────────────────────────────────────────────────────────────
@@ -263,8 +263,8 @@ export default function LCInitiativeDetailPage() {
         <Header />
         <div className="max-w-7xl mx-auto px-4 py-20 text-center">
           <h1 className="text-2xl font-bold text-foreground mb-4">Initiative not found</h1>
-          <Button onClick={() => navigate("/marketplaces/lifecycle-management")} className="bg-orange-600 hover:bg-orange-700 text-white">
-            Back to Lifecycle Management
+          <Button onClick={() => navigate("/marketplaces/initiative-portfolio")} className="bg-orange-600 hover:bg-orange-700 text-white">
+            Back to Initiative Portfolio
           </Button>
         </div>
         <Footer />
@@ -293,7 +293,7 @@ export default function LCInitiativeDetailPage() {
             <ChevronRight className="w-4 h-4" />
             <Link to="/marketplaces" className="hover:text-foreground transition-colors">Marketplaces</Link>
             <ChevronRight className="w-4 h-4" />
-            <Link to="/marketplaces/lifecycle-management" className="hover:text-foreground transition-colors">Lifecycle Management</Link>
+            <Link to="/marketplaces/initiative-portfolio" className="hover:text-foreground transition-colors">Initiative & Programme Portfolio</Link>
             <ChevronRight className="w-4 h-4" />
             <span className="font-medium text-foreground line-clamp-1">{initiative.name}</span>
           </nav>
@@ -348,7 +348,7 @@ export default function LCInitiativeDetailPage() {
                 {initiative.portfolioCardId && (
                   <button
                     onClick={() =>
-                      navigate("/marketplaces/portfolio-management", {
+                      navigate("/marketplaces/asset-capability", {
                         state: { tab: "ot-asset-portfolio", highlightCardId: initiative.portfolioCardId },
                       })
                     }
@@ -619,7 +619,7 @@ export default function LCInitiativeDetailPage() {
                       variant="outline"
                       className="w-full border-blue-200 text-blue-700 hover:bg-blue-50"
                       onClick={() =>
-                        navigate("/marketplaces/portfolio-management", {
+                        navigate("/marketplaces/asset-capability", {
                           state: { tab: "ot-asset-portfolio", highlightCardId: initiative.portfolioCardId },
                         })
                       }

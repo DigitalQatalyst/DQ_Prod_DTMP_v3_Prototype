@@ -1,17 +1,18 @@
 import { Link } from "react-router-dom";
 import { BookOpen, Layers, ChevronRight, BarChart2 } from "lucide-react";
+import { landingGradients } from "@/components/landing/theme";
 
 export function FinalCTA() {
   return (
     <section
       className="py-16"
-      style={{ background: "linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #7c2d12 100%)" }}
+      style={{ background: landingGradients.darkCta }}
     >
       <div className="max-w-6xl mx-auto px-6 lg:px-8 flex flex-col lg:flex-row items-start lg:items-center gap-10">
         <div className="flex-1">
           <h2 className="text-3xl font-bold text-white mb-2">
             Enter the{" "}
-            <span style={{ color: "#a78bfa" }}>DEWA Enterprise DTMP</span>
+            <span style={{ color: "#a7f3d0" }}>DEWA Enterprise DTMP</span>
           </h2>
           <div className="w-10 h-0.5 bg-white/30 mb-4" />
           <p className="text-white/60 text-sm">
@@ -23,7 +24,7 @@ export function FinalCTA() {
             {
               icon: <BookOpen size={16} />,
               label: "Learn to work with DTMP today",
-              route: "/marketplaces/learning-center",
+              route: "/marketplaces/learning",
             },
             {
               icon: <Layers size={16} />,
@@ -33,7 +34,8 @@ export function FinalCTA() {
             {
               icon: <BarChart2 size={16} />,
               label: "View Active Architecture Portfolio",
-              route: "/marketplaces/portfolio-management",
+
+              route: "/marketplaces/initiative-portfolio",
             },
           ].map((item) => (
             <Link

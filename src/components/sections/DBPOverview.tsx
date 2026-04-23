@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Sun, Network, Bot, Building2, ArrowRight } from "lucide-react";
 import { SectionPill, IconBadge, StatCard } from "@/components/landing/shared";
+import { landingColors, landingGradients } from "@/components/landing/theme";
 
 const contextPillars = [
   {
@@ -38,7 +39,7 @@ const stats = [
 
 export function DBPOverview() {
   return (
-    <section className="py-20" style={{ background: "#EEF2FF" }}>
+    <section className="py-20" style={{ background: landingColors.surface }}>
       <div className="max-w-6xl mx-auto px-6 lg:px-8">
         <SectionPill label="Platform Overview" />
         <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 text-center mb-3">
@@ -52,7 +53,7 @@ export function DBPOverview() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
           {contextPillars.map((pillar) => (
-            <div key={pillar.title} className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 transition-all duration-200" onMouseEnter={e => (e.currentTarget.style.boxShadow = "6px 8px 24px rgba(0,0,0,0.13)")} onMouseLeave={e => (e.currentTarget.style.boxShadow = "")}>
+            <div key={pillar.title} className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 transition-all duration-200" onMouseEnter={e => (e.currentTarget.style.boxShadow = "6px 8px 24px rgba(6,95,70,0.16)")} onMouseLeave={e => (e.currentTarget.style.boxShadow = "")}>
               <IconBadge icon={<pillar.icon size={26} className="text-white" />} />
               <h3 className="font-bold text-slate-800 mt-4 mb-2 text-base">{pillar.title}</h3>
               <p className="text-slate-500 text-sm leading-relaxed">{pillar.description}</p>
@@ -67,9 +68,9 @@ export function DBPOverview() {
         </div>
         <div className="text-center">
           <Link
-            to="/marketplaces/knowledge-center/strategy-docs/dewa-enterprise-architecture-strategy?view=artefact"
+            to="/marketplaces/knowledge/strategy-docs/dewa-enterprise-architecture-strategy"
             className="inline-flex items-center gap-2 px-8 py-3 rounded-xl font-semibold text-sm text-white"
-            style={{ background: "linear-gradient(135deg, #1e3a5f 0%, #0369A1 100%)" }}
+            style={{ background: landingGradients.secondary }}
           >
             Explore the Unified EA Architecture <ArrowRight size={16} />
           </Link>

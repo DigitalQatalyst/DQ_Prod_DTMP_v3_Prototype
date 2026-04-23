@@ -252,7 +252,7 @@ export default function LCMyRequests() {
               </p>
             </div>
             <Button asChild variant="outline">
-              <Link to="/marketplaces/lifecycle-management">
+              <Link to="/marketplaces/initiative-portfolio">
                 Browse Lifecycle
               </Link>
             </Button>

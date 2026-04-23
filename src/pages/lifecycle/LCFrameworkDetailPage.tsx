@@ -81,7 +81,7 @@ export default function LCFrameworkDetailPage() {
               The requested framework detail page could not be loaded.
             </p>
             <Button asChild className="mt-6 bg-orange-600 text-white hover:bg-orange-700">
-              <Link to="/marketplaces/lifecycle-management">Back to Lifecycle Management</Link>
+              <Link to="/marketplaces/initiative-portfolio">Back to Initiative Portfolio</Link>
             </Button>
           </div>
         </main>
@@ -154,9 +154,9 @@ export default function LCFrameworkDetailPage() {
         <div className="space-y-8">
           <div className="space-y-4">
             <Button asChild variant="ghost" className="px-0 text-sm text-muted-foreground hover:bg-transparent hover:text-foreground">
-              <Link to="/marketplaces/lifecycle-management">
+              <Link to="/marketplaces/initiative-portfolio">
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Lifecycle Management
+                Back to Initiative Portfolio
               </Link>
             </Button>
 

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, BookOpen, Sparkles, MessageCircle } from "lucide-react";
+import { landingColors, landingGradients } from "@/components/landing/theme";
 
 const examplePrompts = [
   "What marketplaces are available?",
@@ -29,11 +30,10 @@ export function HeroSection() {
     <section
       className="relative py-10 lg:py-14 flex items-center overflow-hidden"
       style={{
-        background: "linear-gradient(135deg, #0a0f2c 0%, #1a1f4d 40%, #2a1f6f 70%, #1a103a 100%)",
+        background: landingGradients.hero,
         minHeight: 580,
       }}
     >
-      {/* soft grid pattern */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
@@ -42,23 +42,20 @@ export function HeroSection() {
           backgroundSize: "64px 64px",
         }}
       />
-      {/* center radial glow behind headline */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: "radial-gradient(circle at 50% 42%, rgba(255,255,255,0.08) 0%, transparent 58%)",
+          background: landingGradients.heroGlow,
         }}
       />
-      {/* vignette — darker edges */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: "radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.45) 100%)",
+          background: "radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.35) 100%)",
         }}
       />
 
       <div className="max-w-5xl mx-auto px-6 lg:px-8 relative z-10 text-center w-full">
-        {/* pill + title + subtitle */}
         <div className="max-w-4xl mx-auto">
           <div
             className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-8"
@@ -68,7 +65,7 @@ export function HeroSection() {
             }}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-white/40 inline-block" />
-            <span className="text-xs font-semibold uppercase tracking-widest text-white/50">
+            <span className="text-xs font-semibold uppercase tracking-widest text-white/60">
               DTMP — The Transformation Hub
             </span>
           </div>
@@ -77,7 +74,7 @@ export function HeroSection() {
             The EA Platform{" "}
             <span
               style={{
-                background: "linear-gradient(90deg, #a78bfa 0%, #f472b6 100%)",
+                background: "linear-gradient(90deg, #bbf7d0 0%, #5eead4 55%, #7dd3fc 100%)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
               }}
@@ -86,21 +83,20 @@ export function HeroSection() {
             </span>
           </h1>
 
-          <p className="text-white/60 text-lg mb-10 leading-relaxed">
-            Governed architecture tools, knowledge resources, and delivery marketplaces — empowering DEWA to design, align, and accelerate enterprise-wide digital transformation.
+          <p className="text-white/70 text-lg mb-10 leading-relaxed">
+            Governed architecture tools, knowledge resources, and delivery marketplaces —
+            empowering DEWA to design, align, and accelerate enterprise-wide digital transformation.
           </p>
         </div>
 
-        {/* AI chat bar */}
         <div
           ref={containerRef}
           className={`max-w-2xl mx-auto w-full mb-8 bg-white/95 transition-all overflow-hidden ${
-            focused ? "rounded-2xl ring-2 ring-slate-900 shadow-xl" : "rounded-2xl shadow-lg"
+            focused ? "rounded-2xl ring-2 ring-emerald-700 shadow-xl" : "rounded-2xl shadow-lg"
           }`}
         >
-          {/* Input row */}
           <div className={`px-6 py-5 flex items-center gap-4 ${focused ? "border-b border-slate-100" : ""}`}>
-            <Sparkles size={20} className="text-violet-500 flex-shrink-0" />
+            <Sparkles size={20} className="flex-shrink-0" style={{ color: landingColors.primary }} />
             <input
               type="text"
               value={query}
@@ -109,19 +105,23 @@ export function HeroSection() {
               placeholder="Ask me anything about DTMP... What do you need help with?"
               className="text-slate-700 text-base flex-1 text-left bg-transparent outline-none placeholder:text-slate-400"
             />
-            <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 shrink-0">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+            <span className="flex items-center gap-1.5 text-xs font-semibold shrink-0" style={{ color: landingColors.primary }}>
+              <span className="w-2 h-2 rounded-full inline-block" style={{ background: landingColors.primary }} />
               EA Ready
             </span>
             <div className="w-px h-5 bg-slate-200 shrink-0" />
-            <MessageCircle size={20} className="text-slate-400 hover:text-violet-500 transition-colors cursor-pointer shrink-0" />
+            <MessageCircle
+              size={20}
+              className="text-slate-400 transition-colors cursor-pointer shrink-0"
+              onMouseEnter={(e) => (e.currentTarget.style.color = landingColors.teal)}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "")}
+            />
           </div>
 
-          {/* Expanded panel */}
           {focused && (
             <div className="px-6 pt-4 pb-5 text-left">
               <p className="text-xs font-semibold text-slate-500 flex items-center gap-1.5 mb-3">
-                <Sparkles size={13} className="text-violet-400" />
+                <Sparkles size={13} style={{ color: landingColors.teal }} />
                 EA Assistant Examples:
               </p>
               <div className="flex flex-wrap gap-2 mb-4">
@@ -132,13 +132,23 @@ export function HeroSection() {
                       setQuery(prompt);
                       setFocused(false);
                     }}
-                    className="text-sm text-slate-700 font-medium px-4 py-2 rounded-xl border border-slate-200 hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700 transition-all"
+                    className="text-sm text-slate-700 font-medium px-4 py-2 rounded-xl border border-slate-200 transition-all"
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = "#86efac";
+                      e.currentTarget.style.background = "#f0fdf4";
+                      e.currentTarget.style.color = landingColors.primary;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = "";
+                      e.currentTarget.style.background = "";
+                      e.currentTarget.style.color = "";
+                    }}
                   >
                     {prompt}
                   </button>
                 ))}
               </div>
-              <p className="text-xs text-violet-500 flex items-center gap-1.5">
+              <p className="text-xs flex items-center gap-1.5" style={{ color: landingColors.teal }}>
                 <Sparkles size={12} />
                 Powered by AI — I can explain features, guide you, and help you find what you need
               </p>
@@ -146,10 +156,9 @@ export function HeroSection() {
           )}
         </div>
 
-        {/* CTAs */}
         <div className="flex flex-wrap justify-center gap-4">
           <Link
-            to="/marketplaces/learning-center"
+            to="/marketplaces/learning"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all"
             style={{
               background: "rgba(255,255,255,0.15)",
@@ -162,7 +171,7 @@ export function HeroSection() {
           <Link
             to="/marketplaces"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm text-white transition-all"
-            style={{ background: "linear-gradient(135deg, #6d28d9 0%, #db2777 60%, #ea580c 100%)" }}
+            style={{ background: landingGradients.primary }}
           >
             Explore Marketplaces <ArrowRight size={16} />
           </Link>

@@ -3,6 +3,7 @@ import { ArrowRight } from "lucide-react";
 import { StreamCard } from "@/components/cards/StreamCard";
 import { executionStreams } from "@/data/executionStreams";
 import { SectionPill } from "@/components/landing/shared";
+import { landingGradients } from "@/components/landing/theme";
 
 export function ExecutionStreams() {
   return (
@@ -22,11 +23,11 @@ export function ExecutionStreams() {
         </div>
         <div className="text-center">
           <Link
-            to="/marketplaces/portfolio-management"
+            to="/execution-streams"
             className="inline-flex items-center gap-2 px-8 py-3 rounded-xl font-semibold text-sm text-white"
-            style={{ background: "linear-gradient(135deg, #1e3a5f 0%, #0369A1 100%)" }}
+            style={{ background: landingGradients.secondary }}
           >
-            Explore All Programmes <ArrowRight size={16} />
+            Explore All Execution Streams <ArrowRight size={16} />
           </Link>
         </div>
       </div>

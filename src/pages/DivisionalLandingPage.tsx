@@ -12,7 +12,8 @@ import {
   divisionalLandingData,
   isDivisionId,
 } from "@/data/divisions/divisionalLandingData";
-import { SectionPill, IconBadge, StatCard } from "@/components/landing/shared";
+import { SectionPill, IconBadge } from "@/components/landing/shared";
+import { landingColors, landingGradients } from "@/components/landing/theme";
 
 // ── accent / hero config ──────────────────────────────────────────────────────
 const divisionConfig: Record<string, { accent: string; heroGradient: string; icon: React.ReactNode }> = {
@@ -22,8 +23,8 @@ const divisionConfig: Record<string, { accent: string; heroGradient: string; ico
     icon: <Droplets size={22} className="text-white" />,
   },
   "billing-services": {
-    accent: "#7C3AED",
-    heroGradient: "linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #7C3AED 100%)",
+    accent: "#0F766E",
+    heroGradient: "linear-gradient(135deg, #0b3a3a 0%, #115e59 40%, #0F766E 100%)",
     icon: <HeartHandshake size={22} className="text-white" />,
   },
   "innovation-future": {
@@ -62,17 +63,17 @@ const divisionConfig: Record<string, { accent: string; heroGradient: string; ico
     icon: <Building2 size={22} className="text-white" />,
   },
   subsidiaries: {
-    accent: "#6d28d9",
-    heroGradient: "linear-gradient(135deg, #1a0533 0%, #3b0764 40%, #6d28d9 100%)",
+    accent: "#0284C7",
+    heroGradient: "linear-gradient(135deg, #082f49 0%, #0f766e 40%, #0284C7 100%)",
     icon: <Layers size={22} className="text-white" />,
   },
 };
 
 const phaseColors: Record<string, string> = {
-  Discern: "#6d28d9",
+  Discern: "#0F766E",
   Design: "#0369A1",
   Deploy: "#16A34A",
-  Drive: "#D97706",
+  Drive: "#0F766E",
 };
 
 const priorityIcons = [Target, TrendingUp, Layers, Shield, BarChart2, Star];
@@ -151,7 +152,7 @@ export default function DivisionalLandingPage() {
               }`}
             >
               <div className={`px-6 py-5 flex items-center gap-4 ${aiFocused ? "border-b border-slate-100" : ""}`}>
-                <Sparkles size={20} className="text-violet-500 flex-shrink-0" />
+                <Sparkles size={20} className="flex-shrink-0" style={{ color: landingColors.primary }} />
                 <input
                   type="text"
                   value={aiQuery}
@@ -165,12 +166,17 @@ export default function DivisionalLandingPage() {
                   EA Ready
                 </span>
                 <div className="w-px h-5 bg-slate-200 shrink-0" />
-                <MessageCircle size={20} className="text-slate-400 hover:text-violet-500 transition-colors cursor-pointer shrink-0" />
+                <MessageCircle
+                  size={20}
+                  className="text-slate-400 transition-colors cursor-pointer shrink-0"
+                  onMouseEnter={(e) => (e.currentTarget.style.color = landingColors.teal)}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = "")}
+                />
               </div>
               {aiFocused && (
                 <div className="px-6 pt-4 pb-5 text-left">
                   <p className="text-xs font-semibold text-slate-500 flex items-center gap-1.5 mb-3">
-                    <Sparkles size={13} className="text-violet-400" />
+                    <Sparkles size={13} style={{ color: landingColors.teal }} />
                     EA Assistant Examples:
                   </p>
                   <div className="flex flex-wrap gap-2 mb-4">
@@ -178,13 +184,23 @@ export default function DivisionalLandingPage() {
                       <button
                         key={prompt}
                         onMouseDown={() => { setAiQuery(prompt); setAiFocused(false); }}
-                        className="text-sm text-slate-700 font-medium px-4 py-2 rounded-xl border border-slate-200 hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700 transition-all"
+                        className="text-sm text-slate-700 font-medium px-4 py-2 rounded-xl border border-slate-200 transition-all"
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = "#86efac";
+                          e.currentTarget.style.background = "#f0fdf4";
+                          e.currentTarget.style.color = landingColors.primary;
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = "";
+                          e.currentTarget.style.background = "";
+                          e.currentTarget.style.color = "";
+                        }}
                       >
                         {prompt}
                       </button>
                     ))}
                   </div>
-                  <p className="text-xs text-violet-500 flex items-center gap-1.5">
+                  <p className="text-xs flex items-center gap-1.5" style={{ color: landingColors.teal }}>
                     <Sparkles size={12} />
                     Powered by AI — I can explain features, guide you, and help you find what you need
                   </p>
@@ -194,7 +210,7 @@ export default function DivisionalLandingPage() {
             {/* CTAs */}
             <div className="flex flex-wrap justify-center gap-4">
               <Link
-                to="/marketplaces/learning-center"
+                to="/marketplaces/learning"
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all"
                 style={{ background: "rgba(255,255,255,0.15)", border: "1.5px solid rgba(255,255,255,0.3)", color: "#fff" }}
               >
@@ -212,7 +228,7 @@ export default function DivisionalLandingPage() {
         </section>
 
         {/* ── CONTEXT — 3 feature cards ── */}
-        <section className="py-20" style={{ background: "#EEF2FF" }}>
+        <section className="py-20" style={{ background: landingColors.surface }}>
           <div className="max-w-6xl mx-auto px-6 lg:px-8">
             <SectionPill label="Division Context" />
             <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 text-center mb-3">
@@ -223,7 +239,12 @@ export default function DivisionalLandingPage() {
             </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {data.whyItMatters.slice(0, 3).map((item, i) => (
-                <div key={i} className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+                <div
+                  key={i}
+                  className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 transition-all"
+                  onMouseEnter={(e) => (e.currentTarget.style.boxShadow = "6px 8px 24px rgba(6,95,70,0.16)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.boxShadow = "")}
+                >
                   <IconBadge icon={[<Brain />, <Zap />, <Shield />][i % 3]} />
                   <p className="text-slate-600 text-sm leading-relaxed mt-4">{item}</p>
                 </div>
@@ -254,7 +275,12 @@ export default function DivisionalLandingPage() {
             </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
               {data.heroFacts.map((fact, i) => (
-                <div key={i} className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm text-center flex items-center justify-center min-h-[100px]">
+                <div
+                  key={i}
+                  className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm text-center flex items-center justify-center min-h-[100px] transition-all"
+                  onMouseEnter={(e) => (e.currentTarget.style.boxShadow = "6px 8px 24px rgba(6,95,70,0.16)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.boxShadow = "")}
+                >
                   <p className="text-slate-800 font-bold text-base leading-snug">{fact}</p>
                 </div>
               ))}
@@ -263,7 +289,7 @@ export default function DivisionalLandingPage() {
               <Link
                 to="/marketplaces"
                 className="inline-flex items-center gap-2 px-8 py-3 rounded-xl font-semibold text-sm text-white transition-all"
-                style={{ background: "linear-gradient(135deg, #1e3a5f 0%, #0369A1 100%)" }}
+                style={{ background: landingGradients.secondary }}
               >
                 Explore the Unified EA Architecture <ArrowRight size={16} />
               </Link>
@@ -272,7 +298,7 @@ export default function DivisionalLandingPage() {
         </section>
 
         {/* ── PRIORITIES — numbered grid ── */}
-        <section className="py-20" style={{ background: "#EEF2FF" }}>
+        <section className="py-20" style={{ background: landingColors.surface }}>
           <div className="max-w-6xl mx-auto px-6 lg:px-8">
             <SectionPill label="Strategic Priorities" />
             <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 text-center mb-3">
@@ -285,12 +311,17 @@ export default function DivisionalLandingPage() {
               {data.priorities.map((p, i) => {
                 const Icon = priorityIcons[i % priorityIcons.length];
                 return (
-                  <div key={i} className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 relative">
+                  <div
+                    key={i}
+                    className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 relative transition-all"
+                    onMouseEnter={(e) => (e.currentTarget.style.boxShadow = "6px 8px 24px rgba(6,95,70,0.16)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.boxShadow = "")}
+                  >
                     <span className="absolute top-4 right-4 text-xs font-bold text-slate-300">{i + 1}</span>
                     <IconBadge icon={<Icon size={18} className="text-white" />} />
                     <h3 className="font-bold text-slate-800 mt-4 mb-2 text-base">{p.title}</h3>
                     <p className="text-slate-500 text-sm leading-relaxed mb-4">{p.description}</p>
-                    <p className="text-xs font-semibold text-violet-600">{p.kpi}</p>
+                    <p className="text-xs font-semibold" style={{ color: landingColors.teal }}>{p.kpi}</p>
                   </div>
                 );
               })}
@@ -317,7 +348,7 @@ export default function DivisionalLandingPage() {
                   className="px-5 py-2 rounded-full text-sm font-semibold transition-all"
                   style={
                     activePhase === phase
-                      ? { background: "linear-gradient(135deg, #1e3a5f 0%, #0369A1 100%)", color: "#fff" }
+                      ? { background: landingGradients.secondary, color: "#fff" }
                       : { background: "#f1f5f9", color: "#64748b", border: "1.5px solid #e2e8f0" }
                   }
                 >
@@ -341,7 +372,12 @@ export default function DivisionalLandingPage() {
               {filteredMarketplaces.map((mp, i) => {
                 const Icon = marketplaceIcons[i % marketplaceIcons.length];
                 return (
-                  <div key={i} className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col">
+                  <div
+                    key={i}
+                    className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col transition-all"
+                    onMouseEnter={(e) => (e.currentTarget.style.boxShadow = "8px 12px 32px rgba(6,95,70,0.18)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.boxShadow = "")}
+                  >
                     <IconBadge icon={<Icon size={18} className="text-white" />} />
                     <p className="text-xs font-bold uppercase tracking-widest mt-4 mb-1"
                       style={{ color: phaseColors[mp.phase] }}>
@@ -365,7 +401,7 @@ export default function DivisionalLandingPage() {
         </section>
 
         {/* ── ROLES ── */}
-        <section className="py-20" style={{ background: "#EEF2FF" }}>
+        <section className="py-20" style={{ background: landingColors.surface }}>
           <div className="max-w-6xl mx-auto px-6 lg:px-8">
             <SectionPill label="User Journeys" />
             <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 text-center mb-3">
@@ -378,7 +414,12 @@ export default function DivisionalLandingPage() {
               {data.roles.map((role, i) => {
                 const Icon = roleIcons[i % roleIcons.length];
                 return (
-                  <div key={i} className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col">
+                  <div
+                    key={i}
+                    className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col transition-all"
+                    onMouseEnter={(e) => (e.currentTarget.style.boxShadow = "8px 12px 32px rgba(6,95,70,0.18)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.boxShadow = "")}
+                  >
                     <IconBadge icon={<Icon size={18} className="text-white" />} />
                     <h3 className="font-bold text-slate-800 mt-4 mb-1 text-base">{role.name}</h3>
                     <p className="text-slate-500 text-sm leading-relaxed flex-1 mb-4">{role.summary}</p>
@@ -399,7 +440,7 @@ export default function DivisionalLandingPage() {
         {/* ── CTA BAND ── */}
         <section
           className="py-16"
-          style={{ background: "linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #7c2d12 100%)" }}
+          style={{ background: landingGradients.darkCta }}
         >
           <div className="max-w-6xl mx-auto px-6 lg:px-8 flex flex-col lg:flex-row items-start lg:items-center gap-10">
             <div className="flex-1">
@@ -414,9 +455,9 @@ export default function DivisionalLandingPage() {
             </div>
             <div className="flex flex-col gap-3 w-full lg:w-96">
               {[
-                { icon: <BookOpen size={16} />, label: "Learn to work with DTMP today", route: "/marketplaces/learning-center" },
+                { icon: <BookOpen size={16} />, label: "Learn to work with DTMP today", route: "/marketplaces/learning" },
                 { icon: <Layers size={16} />, label: "Explore EA Marketplaces", route: "/marketplaces" },
-                { icon: <Database size={16} />, label: "Browse Architecture Knowledge", route: "/marketplaces/knowledge-center" },
+                { icon: <Database size={16} />, label: "Browse Knowledge & Best Practices", route: "/marketplaces/knowledge" },
               ].map((item, i) => (
                 <Link
                   key={i}

@@ -1922,7 +1922,7 @@ export default function LCInsightsPage() {
   const [gateNotes,        setGateNotes]        = useState("");
 
   useEffect(() => {
-    if (!isUserAuthenticated()) navigate(`/marketplaces/lifecycle-management/initiative/${id}`);
+    if (!isUserAuthenticated()) navigate(`/marketplaces/initiative-portfolio/initiative/${id}`);
   }, [id, navigate]);
 
   const refresh = () => {
@@ -1991,9 +1991,9 @@ export default function LCInsightsPage() {
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="text-center">
           <p className="text-white text-lg font-semibold mb-4">Initiative not found</p>
-          <button onClick={() => navigate("/marketplaces/lifecycle-management")}
+          <button onClick={() => navigate("/marketplaces/initiative-portfolio")}
             className="text-teal-400 hover:text-teal-300 text-sm underline">
-            Back to Lifecycle Management
+            Back to Initiative Portfolio
           </button>
         </div>
       </div>
@@ -2224,7 +2224,7 @@ export default function LCInsightsPage() {
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => navigate(`/marketplaces/lifecycle-management/initiative/${id}`)}
+              onClick={() => navigate(`/marketplaces/initiative-portfolio/initiative/${id}`)}
               className="flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors text-sm"
             >
               <ArrowLeft className="w-4 h-4" />Back to Initiative
@@ -2372,7 +2372,7 @@ export default function LCInsightsPage() {
                   {initiative.portfolioCardId && (
                     <button
                       onClick={() =>
-                        navigate("/marketplaces/portfolio-management", {
+                        navigate("/marketplaces/asset-capability", {
                           state: { tab: "ot-asset-portfolio", highlightCardId: initiative.portfolioCardId },
                         })
                       }

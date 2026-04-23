@@ -1,18 +1,20 @@
 import { Link } from "react-router-dom";
 
+// Column 2 — all 9 marketplaces with approved spec names
 const platformLinks = [
-  { name: "All Marketplaces", path: "/marketplaces" },
-  { name: "Learning Centre", path: "/marketplaces/learning-center" },
-  { name: "Knowledge Centre", path: "/marketplaces/knowledge-center" },
-  { name: "Document Studio", path: "/marketplaces/document-studio" },
-  { name: "Solution Specs", path: "/marketplaces/solution-specs" },
+  { name: "Marketplace Hub", path: "/marketplaces" },
+  { name: "Transformation Methodology & Learning", path: "/marketplaces/learning" },
+  { name: "Knowledge & Best Practices", path: "/marketplaces/knowledge" },
+  { name: "Transformation Artefacts (Document Studio)", path: "/marketplaces/document-studio" },
+  { name: "Solution Specifications", path: "/marketplaces/solution-specs" },
   { name: "Solution Build", path: "/marketplaces/solution-build" },
-  { name: "Lifecycle Management", path: "/marketplaces/lifecycle-management" },
-  { name: "Portfolio Management", path: "/marketplaces/portfolio-management" },
-  { name: "Digital Intelligence", path: "/marketplaces/digital-intelligence" },
-  { name: "Support Services", path: "/marketplaces/support-services" },
+  { name: "Initiative & Programme Portfolio", path: "/marketplaces/initiative-portfolio" },
+  { name: "Asset & Capability Portfolio", path: "/marketplaces/asset-capability" },
+  { name: "Transformation Intelligence", path: "/marketplaces/intelligence" },
+  { name: "Support & Expert Services", path: "/marketplaces/support" },
 ];
 
+// Column 3 — all 10 DEWA divisions
 const divisionLinks = [
   { name: "Generation", path: "/divisions/generation" },
   { name: "Transmission", path: "/divisions/transmission" },
@@ -26,19 +28,21 @@ const divisionLinks = [
   { name: "DEWA Group Subsidiaries", path: "/divisions/subsidiaries" },
 ];
 
+// Column 4 — Resources (placeholders as per spec)
 const resourceLinks = [
-  { name: "EA Charter & Strategy", path: "/marketplaces/knowledge-center" },
-  { name: "User Guides", path: "/marketplaces/learning-center" },
-  { name: "Support Centre", path: "/marketplaces/support-services" },
-  { name: "Release Notes", path: "/marketplaces/knowledge-center" },
-  { name: "FAQs", path: "/marketplaces/learning-center" },
+  { name: "EA Charter", path: "/marketplaces/knowledge", active: true },
+  { name: "User Guides", path: null },
+  { name: "Support", path: "/marketplaces/support", active: true },
+  { name: "Release Notes", path: null },
+  { name: "FAQs", path: null },
 ];
 
+// Column 5 — Governance (placeholders as per spec)
 const governanceLinks = [
-  { name: "Enterprise EA Standards", path: "/marketplaces/knowledge-center" },
-  { name: "Architecture Compliance", path: "/marketplaces/lifecycle-management" },
-  { name: "Privacy Policy", path: "/marketplaces/knowledge-center" },
-  { name: "Contact Corporate EA Office", path: "/marketplaces/support-services" },
+  { name: "EA Standards", path: "/marketplaces/knowledge", active: true },
+  { name: "Compliance", path: null },
+  { name: "Privacy Policy", path: null },
+  { name: "Contact EA Office", path: "/marketplaces/support", active: true },
 ];
 
 export function Footer() {
@@ -46,6 +50,8 @@ export function Footer() {
     <footer className="bg-primary text-primary-foreground border-t border-primary-foreground/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8">
+
+          {/* Column 1 — Logo & Description */}
           <div>
             <Link to="/" className="flex items-center gap-2 mb-4">
               <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center overflow-hidden">
@@ -54,16 +60,20 @@ export function Footer() {
               <span className="text-2xl font-bold text-primary-foreground">DEWA</span>
             </Link>
             <p className="text-sm text-primary-foreground/70 leading-relaxed">
-              Governed by DEWA&apos;s Corporate Enterprise Architecture Office.
+              Digital Transformation Management Platform — governed by DEWA's Corporate Enterprise Architecture Office.
             </p>
           </div>
 
+          {/* Column 2 — Platform (Marketplaces) */}
           <div>
             <h3 className="text-sm uppercase font-semibold text-primary-foreground mb-4 tracking-wide">Platform</h3>
-            <ul className="space-y-3">
+            <ul className="space-y-2.5">
               {platformLinks.map((link) => (
                 <li key={link.name}>
-                  <Link to={link.path} className="text-sm text-primary-foreground/70 hover:text-primary-foreground transition-colors">
+                  <Link
+                    to={link.path}
+                    className="text-sm text-primary-foreground/70 hover:text-primary-foreground transition-colors leading-tight block"
+                  >
                     {link.name}
                   </Link>
                 </li>
@@ -71,12 +81,16 @@ export function Footer() {
             </ul>
           </div>
 
+          {/* Column 3 — Divisions */}
           <div>
             <h3 className="text-sm uppercase font-semibold text-primary-foreground mb-4 tracking-wide">Divisions</h3>
-            <ul className="space-y-3">
+            <ul className="space-y-2.5">
               {divisionLinks.map((link) => (
                 <li key={link.name}>
-                  <Link to={link.path} className="text-sm text-primary-foreground/70 hover:text-primary-foreground transition-colors">
+                  <Link
+                    to={link.path}
+                    className="text-sm text-primary-foreground/70 hover:text-primary-foreground transition-colors"
+                  >
                     {link.name}
                   </Link>
                 </li>
@@ -84,40 +98,61 @@ export function Footer() {
             </ul>
           </div>
 
+          {/* Column 4 — Resources */}
           <div>
             <h3 className="text-sm uppercase font-semibold text-primary-foreground mb-4 tracking-wide">Resources</h3>
-            <ul className="space-y-3">
+            <ul className="space-y-2.5">
               {resourceLinks.map((link) => (
                 <li key={link.name}>
-                  <Link to={link.path} className="text-sm text-primary-foreground/70 hover:text-primary-foreground transition-colors">
-                    {link.name}
-                  </Link>
+                  {link.active && link.path ? (
+                    <Link
+                      to={link.path}
+                      className="text-sm text-primary-foreground/70 hover:text-primary-foreground transition-colors"
+                    >
+                      {link.name}
+                    </Link>
+                  ) : (
+                    <span className="text-sm text-primary-foreground/35 cursor-default">
+                      {link.name} <span className="text-[10px]">(coming soon)</span>
+                    </span>
+                  )}
                 </li>
               ))}
             </ul>
           </div>
 
+          {/* Column 5 — Governance */}
           <div>
             <h3 className="text-sm uppercase font-semibold text-primary-foreground mb-4 tracking-wide">Governance</h3>
-            <ul className="space-y-3">
+            <ul className="space-y-2.5">
               {governanceLinks.map((link) => (
                 <li key={link.name}>
-                  <Link to={link.path} className="text-sm text-primary-foreground/70 hover:text-primary-foreground transition-colors">
-                    {link.name}
-                  </Link>
+                  {link.active && link.path ? (
+                    <Link
+                      to={link.path}
+                      className="text-sm text-primary-foreground/70 hover:text-primary-foreground transition-colors"
+                    >
+                      {link.name}
+                    </Link>
+                  ) : (
+                    <span className="text-sm text-primary-foreground/35 cursor-default">
+                      {link.name} <span className="text-[10px]">(coming soon)</span>
+                    </span>
+                  )}
                 </li>
               ))}
             </ul>
           </div>
         </div>
 
+        {/* Bottom bar */}
         <div className="mt-12 pt-8 border-t border-primary-foreground/10">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
             <p className="text-sm text-primary-foreground/55">
-              DTMP | Governed by DEWA&apos;s Corporate Enterprise Architecture Office | Enterprise Edition
+              DEWA | DigitalQatalyst | {new Date().getFullYear()}
             </p>
             <p className="text-sm text-primary-foreground/40">
-              2025 Dubai Electricity and Water Authority. Platform delivered by DigitalQatalyst.
+              Dubai Electricity and Water Authority — Enterprise Architecture Platform
             </p>
           </div>
         </div>

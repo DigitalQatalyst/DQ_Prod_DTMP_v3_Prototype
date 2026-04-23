@@ -43,6 +43,11 @@ import DivisionalLandingPage from "./pages/DivisionalLandingPage";
 import NotFound from "./pages/NotFound";
 import DigitalIntelligencePage from "./pages/DigitalIntelligencePage";
 import DigitalIntelligenceDetailPage from "./pages/DigitalIntelligenceDetailPage";
+import FourDModelPage from "./pages/FourDModelPage";
+import MethodologyPage from "./pages/MethodologyPage";
+import ExecutionStreamsPage from "./pages/ExecutionStreamsPage";
+import TransformationOfficePage from "./pages/TransformationOfficePage";
+import OnboardingPage from "./pages/OnboardingPage";
 import { isUserAuthenticated } from "./data/sessionAuth";
 import { getSessionRole, isTOStage3Role } from "./data/sessionRole";
 
@@ -72,7 +77,7 @@ const Stage3GuardedRoute = () => {
         state={{
           reason: "stage3-to-role-required",
           from: location.pathname,
-          marketplace: "portfolio-management",
+          marketplace: "asset-capability",
           serviceName: "Service Hub",
         }}
       />
@@ -91,7 +96,7 @@ const LCStage3GuardedRoute = () => {
   if (!authenticated) {
     return (
       <Navigate
-        to="/marketplaces/lifecycle-management"
+        to="/marketplaces/initiative-portfolio"
         replace
         state={{ reason: "stage3-auth-required", from: location.pathname }}
       />
@@ -120,7 +125,7 @@ const PMStage3GuardedRoute = () => {
   if (!authenticated) {
     return (
       <Navigate
-        to="/marketplaces/portfolio-management"
+        to="/marketplaces/asset-capability"
         replace
         state={{ reason: "stage3-auth-required", from: location.pathname }}
       />
@@ -148,6 +153,11 @@ const LegacyDocumentStudioRedirect = () => {
   return <Navigate to="/stage2/document-studio/overview" replace />;
 };
 
+const KCDetailRedirect = () => {
+  const { tab, cardId } = useParams<{ tab: string; cardId: string }>();
+  return <Navigate to={`/marketplaces/knowledge/${tab}/${cardId}`} replace />;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -157,14 +167,80 @@ const App = () => (
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/marketplaces" element={<MarketplacesPage />} />
-          
-          {/* Learning Center marketplace */}
-          <Route path="/marketplaces/learning-center" element={<LearningCenterPage />} />
-          <Route path="/marketplaces/learning-center/:tab/:cardId" element={<LearningCenterDetailPage />} />
+          <Route path="/onboarding" element={<OnboardingPage />} />
 
-          {/* Stage 2 - Transact App */}
+          {/* ── Transformation Methodology & Learning ─────────────────────── */}
+          <Route path="/marketplaces/learning" element={<LearningCenterPage />} />
+          <Route path="/marketplaces/learning/:tab/:cardId" element={<LearningCenterDetailPage />} />
+          {/* Legacy redirect */}
+          <Route path="/marketplaces/learning-center" element={<Navigate to="/marketplaces/learning" replace />} />
+          <Route path="/marketplaces/learning-center/:tab/:cardId" element={<Navigate to="/marketplaces/learning" replace />} />
+
+          {/* ── Knowledge & Best Practices ────────────────────────────────── */}
+          <Route path="/marketplaces/knowledge" element={<KnowledgeCenterPage />} />
+          <Route path="/marketplaces/knowledge/:tab/:cardId" element={<KnowledgeCenterDetailPage />} />
+          {/* Legacy redirects */}
+          <Route path="/marketplaces/knowledge-center" element={<Navigate to="/marketplaces/knowledge" replace />} />
+          <Route path="/marketplaces/knowledge-center/:tab/:cardId" element={<KCDetailRedirect />} />
+
+          {/* ── Transformation Artefacts (Document Studio) ───────────────── */}
+          <Route path="/marketplaces/document-studio" element={<DocumentStudioPage />} />
+          <Route path="/marketplaces/document-studio/:tab/:cardId" element={<DocumentStudioDetailPage />} />
+
+          {/* ── Solution Specifications ───────────────────────────────────── */}
+          <Route path="/marketplaces/solution-specs" element={<SolutionSpecsPage />} />
+          <Route path="/marketplaces/solution-specs/:id" element={<SolutionSpecDetailPage />} />
+          {/* Legacy blueprints redirect */}
+          <Route path="/marketplaces/blueprints" element={<Navigate to="/marketplaces/solution-specs" replace />} />
+          <Route path="/marketplaces/blueprints/:tab/:blueprintId" element={<Navigate to="/marketplaces/solution-specs" replace />} />
+
+          {/* ── Solution Build ────────────────────────────────────────────── */}
+          <Route path="/marketplaces/solution-build" element={<SolutionBuildPage />} />
+          <Route path="/marketplaces/solution-build/:id" element={<SolutionBuildDetailPage />} />
+
+          {/* ── Initiative & Programme Portfolio ──────────────────────────── */}
+          <Route path="/marketplaces/initiative-portfolio" element={<LifecycleManagementPage />} />
+          <Route path="/marketplaces/initiative-portfolio/framework/:frameworkId" element={<LCFrameworkDetailPage />} />
+          <Route path="/marketplaces/initiative-portfolio/initiative/:id" element={<LCInitiativeDetailPage />} />
+          <Route path="/marketplaces/initiative-portfolio/initiative/:id/insights" element={<LCInsightsPage />} />
+          <Route path="/marketplaces/initiative-portfolio/:tab/:cardId" element={<LifecycleDetailPage />} />
+          {/* Legacy redirect */}
+          <Route path="/marketplaces/lifecycle-management" element={<Navigate to="/marketplaces/initiative-portfolio" replace />} />
+          <Route path="/marketplaces/lifecycle-management/framework/:frameworkId" element={<Navigate to="/marketplaces/initiative-portfolio" replace />} />
+          <Route path="/marketplaces/lifecycle-management/initiative/:id" element={<Navigate to="/marketplaces/initiative-portfolio" replace />} />
+          <Route path="/marketplaces/lifecycle-management/:tab/:cardId" element={<Navigate to="/marketplaces/initiative-portfolio" replace />} />
+
+          {/* ── Asset & Capability Portfolio ──────────────────────────────── */}
+          <Route path="/marketplaces/asset-capability" element={<PortfolioManagementPage />} />
+          <Route path="/marketplaces/asset-capability/:tab/:cardId" element={<PortfolioDetailPage />} />
+          {/* Legacy redirect */}
+          <Route path="/marketplaces/portfolio-management" element={<Navigate to="/marketplaces/asset-capability" replace />} />
+          <Route path="/marketplaces/portfolio-management/:tab/:cardId" element={<Navigate to="/marketplaces/asset-capability" replace />} />
+
+          {/* ── Transformation Intelligence ───────────────────────────────── */}
+          <Route path="/marketplaces/intelligence" element={<DigitalIntelligencePage />} />
+          <Route path="/marketplaces/intelligence/:tab/:cardId" element={<DigitalIntelligenceDetailPage />} />
+          {/* Legacy redirect */}
+          <Route path="/marketplaces/digital-intelligence" element={<Navigate to="/marketplaces/intelligence" replace />} />
+          <Route path="/marketplaces/digital-intelligence/:tab/:cardId" element={<Navigate to="/marketplaces/intelligence" replace />} />
+
+          {/* ── Support & Expert Services ─────────────────────────────────── */}
+          <Route path="/marketplaces/support" element={<SupportServicesPage />} />
+          <Route path="/marketplaces/support/:tab/:cardId" element={<SupportServicesDetailPage />} />
+          {/* Legacy redirect */}
+          <Route path="/marketplaces/support-services" element={<Navigate to="/marketplaces/support" replace />} />
+          <Route path="/marketplaces/support-services/:tab/:cardId" element={<Navigate to="/marketplaces/support" replace />} />
+
+          {/* ── Stage 0 orientation pages ─────────────────────────────────── */}
+          <Route path="/4d-model" element={<FourDModelPage />} />
+          <Route path="/methodology" element={<MethodologyPage />} />
+          <Route path="/execution-streams" element={<ExecutionStreamsPage />} />
+          <Route path="/transformation-office" element={<TransformationOfficePage />} />
+          <Route path="/dbp" element={<ComingSoonPage pageName="DBP" />} />
+
+          {/* ── Stage 2 workspace ─────────────────────────────────────────── */}
           <Route path="/transact-app" element={<TransactAppPage />} />
-          {/* Learning Centre Stage 2 — accordion sidebar + course workspace */}
+          <Route path="/stage2" element={<Stage2AppPage />} />
           <Route path="/stage2/learning-center" element={<Stage2AppPage />} />
           <Route path="/stage2/learning-center/course/:courseId/:view" element={<Stage2AppPage />} />
           <Route path="/stage2/knowledge" element={<Navigate to="/stage2/knowledge/overview" replace />} />
@@ -198,93 +274,45 @@ const App = () => (
           <Route path="/stage2/templates/new-request" element={<Navigate to="/marketplaces/document-studio" replace />} />
           <Route path="/stage2/templates/my-requests" element={<Navigate to="/stage2/document-studio/my-requests" replace />} />
           <Route path="/stage2/templates/my-requests/:requestId" element={<LegacyDocumentStudioRedirect />} />
+          <Route path="/stage2/document-studio" element={<Navigate to="/stage2/document-studio/overview" replace />} />
+          <Route path="/stage2/document-studio/:view" element={<Stage2AppPage />} />
+          <Route path="/stage2/document-studio/:view/:requestId" element={<Stage2AppPage />} />
           <Route path="/stage2/intelligence" element={<Navigate to="/stage2/intelligence/overview" replace />} />
           <Route path="/stage2/intelligence/:intelligenceTab" element={<Stage2AppPage />} />
           <Route path="/stage2/intelligence/:intelligenceTab/:intelligenceItemId" element={<Stage2AppPage />} />
           <Route path="/stage2/lifecycle-management" element={<LCStage2ManagementRedirect />} />
-          <Route path="/stage2" element={<Stage2AppPage />} />
-          <Route path="/stage3" element={<Navigate to="/stage3/dashboard" replace />} />
-          <Route path="/stage3/:view" element={<Stage3GuardedRoute />} />
-
-          {/* Learning Centre Content Governance (Stage 3) */}
-          <Route path="/stage3/learning-centre" element={<Navigate to="/stage3/learning-centre/dashboard" replace />} />
-          <Route path="/stage3/learning-centre/:view" element={<LCGovernancePage />} />
-          
-          {/* Main platform routes */}
-          <Route path="/dbp" element={<ComingSoonPage pageName="DBP" />} />
-          <Route path="/4d-model" element={<ComingSoonPage pageName="4D Model" />} />
-          <Route path="/execution-streams" element={<ComingSoonPage pageName="Execution Streams" />} />
-          <Route path="/transformation-office" element={<ComingSoonPage pageName="Transformation Office" />} />
-          <Route path="/assets" element={<ComingSoonPage pageName="Assets" />} />
-          <Route path="/user-groups" element={<ComingSoonPage pageName="User Groups" />} />
-          <Route path="/visualization" element={<ComingSoonPage pageName="Visualization Dashboard" />} />
-          
-          {/* Knowledge Center marketplace */}
-          <Route path="/marketplaces/knowledge-center" element={<KnowledgeCenterPage />} />
-          <Route path="/marketplaces/knowledge-center/:tab/:cardId" element={<KnowledgeCenterDetailPage />} />
-
-          {/* Document Studio marketplace */}
-          <Route path="/marketplaces/document-studio" element={<DocumentStudioPage />} />
-          <Route path="/marketplaces/document-studio/:tab/:cardId" element={<DocumentStudioDetailPage />} />
-          <Route path="/stage2/document-studio" element={<Navigate to="/stage2/document-studio/overview" replace />} />
-          <Route path="/stage2/document-studio/:view" element={<Stage2AppPage />} />
-          <Route path="/stage2/document-studio/:view/:requestId" element={<Stage2AppPage />} />
-          <Route path="/stage3/document-studio" element={<Navigate to="/stage3/document-studio/overview" replace />} />
-          <Route path="/stage3/document-studio/:view" element={<Stage3GuardedRoute />} />
-          <Route path="/stage3/document-studio/:view/:requestId" element={<Stage3GuardedRoute />} />
-
-          {/* Blueprints marketplace - Legacy route with redirect */}
-          <Route path="/marketplaces/blueprints" element={<Navigate to="/marketplaces/solution-specs" replace />} />
-          <Route path="/marketplaces/blueprints/:tab/:blueprintId" element={<Navigate to="/marketplaces/solution-specs" replace />} />
-          
-          {/* Solution Specs marketplace */}
-          <Route path="/marketplaces/solution-specs" element={<SolutionSpecsPage />} />
-          <Route path="/marketplaces/solution-specs/:id" element={<SolutionSpecDetailPage />} />
-          <Route path="/stage3/solution-specs" element={<Navigate to="/stage3/solution-specs/overview" replace />} />
-          <Route path="/stage3/solution-specs/:view" element={<Stage3GuardedRoute />} />
-          
-          {/* Solution Build marketplace */}
-          <Route path="/marketplaces/solution-build" element={<SolutionBuildPage />} />
-          <Route path="/marketplaces/solution-build/:id" element={<SolutionBuildDetailPage />} />
-          {/* Solution Build Stage 2 — unified shell */}
           <Route path="/stage2/solution-build" element={<Navigate to="/stage2/solution-build/overview" replace />} />
           <Route path="/stage2/solution-build/:view" element={<Stage2AppPage />} />
-          {/* Legacy redirects for old /stage2/build/* links */}
           <Route path="/stage2/build" element={<Navigate to="/stage2/solution-build/overview" replace />} />
           <Route path="/stage2/build/overview" element={<Navigate to="/stage2/solution-build/overview" replace />} />
           <Route path="/stage2/build/requests" element={<Navigate to="/stage2/solution-build/my-requests" replace />} />
           <Route path="/stage2/build/deliverables" element={<Navigate to="/stage2/solution-build/deliverables" replace />} />
           <Route path="/stage2/build/revisions" element={<Navigate to="/stage2/solution-build/revisions" replace />} />
+
+          {/* ── Stage 3 T-Office ──────────────────────────────────────────── */}
+          <Route path="/stage3" element={<Navigate to="/stage3/dashboard" replace />} />
+          <Route path="/stage3/:view" element={<Stage3GuardedRoute />} />
+          <Route path="/stage3/document-studio" element={<Navigate to="/stage3/document-studio/overview" replace />} />
+          <Route path="/stage3/document-studio/:view" element={<Stage3GuardedRoute />} />
+          <Route path="/stage3/document-studio/:view/:requestId" element={<Stage3GuardedRoute />} />
+          <Route path="/stage3/solution-specs" element={<Navigate to="/stage3/solution-specs/overview" replace />} />
+          <Route path="/stage3/solution-specs/:view" element={<Stage3GuardedRoute />} />
           <Route path="/stage3/solution-build" element={<Navigate to="/stage3/solution-build/overview" replace />} />
           <Route path="/stage3/solution-build/:view" element={<Stage3GuardedRoute />} />
-          
-          {/* Support Services marketplace */}
-          <Route path="/marketplaces/support-services" element={<SupportServicesPage />} />
-          <Route path="/marketplaces/support-services/:tab/:cardId" element={<SupportServicesDetailPage />} />
-          
-          {/* Digital Intelligence marketplace */}
-          <Route path="/marketplaces/digital-intelligence" element={<DigitalIntelligencePage />} />
-          <Route path="/marketplaces/digital-intelligence/:tab/:cardId" element={<DigitalIntelligenceDetailPage />} />
-          
-          {/* Portfolio Management marketplace */}
-          <Route path="/marketplaces/portfolio-management" element={<PortfolioManagementPage />} />
-          <Route path="/marketplaces/portfolio-management/:tab/:cardId" element={<PortfolioDetailPage />} />
-          
-          {/* Lifecycle Management marketplace */}
-          <Route path="/marketplaces/lifecycle-management" element={<LifecycleManagementPage />} />
-          <Route path="/marketplaces/lifecycle-management/framework/:frameworkId" element={<LCFrameworkDetailPage />} />
-          <Route path="/marketplaces/lifecycle-management/initiative/:id" element={<LCInitiativeDetailPage />} />
-          <Route path="/marketplaces/lifecycle-management/initiative/:id/insights" element={<LCInsightsPage />} />
-          <Route path="/marketplaces/lifecycle-management/:tab/:cardId" element={<LifecycleDetailPage />} />
-          {/* Lifecycle Management Stage 3 — TO Office */}
+          <Route path="/stage3/learning-centre" element={<Navigate to="/stage3/learning-centre/dashboard" replace />} />
+          <Route path="/stage3/learning-centre/:view" element={<LCGovernancePage />} />
           <Route path="/stage3/lifecycle-management" element={<Navigate to="/stage3/lifecycle-management/overview" replace />} />
           <Route path="/stage3/lifecycle-management/:view" element={<LCStage3GuardedRoute />} />
-          {/* Portfolio Management Stage 3 — TO Office */}
           <Route path="/stage3/portfolio-management" element={<Navigate to="/stage3/portfolio-management/overview" replace />} />
           <Route path="/stage3/portfolio-management/:view" element={<PMStage3GuardedRoute />} />
+
+          {/* ── Division landing pages ────────────────────────────────────── */}
           <Route path="/divisions/:divisionId" element={<DivisionalLandingPage />} />
-          
-          {/* Resource routes */}
+
+          {/* ── Resource & placeholder routes ─────────────────────────────── */}
+          <Route path="/assets" element={<ComingSoonPage pageName="Assets" />} />
+          <Route path="/user-groups" element={<ComingSoonPage pageName="User Groups" />} />
+          <Route path="/visualization" element={<ComingSoonPage pageName="Visualization Dashboard" />} />
           <Route path="/best-practices" element={<ComingSoonPage pageName="Best Practices" />} />
           <Route path="/standards" element={<ComingSoonPage pageName="Architecture Standards" />} />
           <Route path="/support" element={<ComingSoonPage pageName="Support Center" />} />
@@ -294,8 +322,8 @@ const App = () => (
           <Route path="/contact" element={<ComingSoonPage pageName="Contact Us" />} />
           <Route path="/privacy" element={<ComingSoonPage pageName="Privacy Policy" />} />
           <Route path="/terms" element={<ComingSoonPage pageName="Terms of Service" />} />
-          
-          {/* Catch-all */}
+
+          {/* ── Catch-all ─────────────────────────────────────────────────── */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

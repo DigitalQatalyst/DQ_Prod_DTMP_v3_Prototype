@@ -255,7 +255,7 @@
    // --- Card click -> navigate to detail page -------------------------------
    const handleServiceClick = useCallback(
      (serviceId: string) => {
-       navigate(`/marketplaces/digital-intelligence/${activeTab}/${serviceId}`);
+       navigate(`/marketplaces/intelligence/${activeTab}/${serviceId}`);
      },
      [navigate, activeTab]
    );

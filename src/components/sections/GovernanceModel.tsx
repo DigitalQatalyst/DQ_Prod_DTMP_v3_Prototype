@@ -3,6 +3,7 @@ import { ArrowRight } from "lucide-react";
 import { GovernanceCard } from "@/components/cards/GovernanceCard";
 import { governancePhases } from "@/data/governance";
 import { SectionPill } from "@/components/landing/shared";
+import { landingGradients } from "@/components/landing/theme";
 
 export function GovernanceModel() {
   return (
@@ -22,11 +23,11 @@ export function GovernanceModel() {
         </div>
         <div className="text-center">
           <Link
-            to="/marketplaces"
+            to="/4d-model"
             className="inline-flex items-center gap-2 px-8 py-3 rounded-xl font-semibold text-sm text-white"
-            style={{ background: "linear-gradient(135deg, #6d28d9 0%, #0369A1 100%)" }}
+            style={{ background: landingGradients.secondary }}
           >
-            Explore the 4D Governance Framework <ArrowRight size={16} />
+            Explore the Full 4D Governance Model <ArrowRight size={16} />
           </Link>
         </div>
       </div>

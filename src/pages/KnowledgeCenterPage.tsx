@@ -421,7 +421,7 @@ export default function KnowledgeCenterPage() {
               <TabsContent value="best-practices" className="mt-0">
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                   {pagedBestPractices.map((item) => (
-                    <BestPracticeCard key={item.id} practice={item} onClick={() => navigate(`/marketplaces/knowledge-center/best-practices/${item.id}`)} />
+                    <BestPracticeCard key={item.id} practice={item} onClick={() => navigate(`/marketplaces/knowledge/best-practices/${item.id}`)} />
                   ))}
                 </div>
               </TabsContent>
@@ -429,7 +429,7 @@ export default function KnowledgeCenterPage() {
               <TabsContent value="testimonials" className="mt-0">
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                   {pagedTestimonials.map((item) => (
-                    <TestimonialCard key={item.id} testimonial={item} onClick={() => navigate(`/marketplaces/knowledge-center/testimonials/${item.id}`)} />
+                    <TestimonialCard key={item.id} testimonial={item} onClick={() => navigate(`/marketplaces/knowledge/testimonials/${item.id}`)} />
                   ))}
                 </div>
               </TabsContent>
@@ -437,7 +437,7 @@ export default function KnowledgeCenterPage() {
               <TabsContent value="playbooks" className="mt-0">
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                   {pagedPlaybooks.map((item) => (
-                    <PlaybookCard key={item.id} playbook={item} onClick={() => navigate(`/marketplaces/knowledge-center/playbooks/${item.id}`)} />
+                    <PlaybookCard key={item.id} playbook={item} onClick={() => navigate(`/marketplaces/knowledge/playbooks/${item.id}`)} />
                   ))}
                 </div>
               </TabsContent>
@@ -445,7 +445,7 @@ export default function KnowledgeCenterPage() {
               <TabsContent value="design-reports" className="mt-0">
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                   {pagedDesignReports.map((item) => (
-                    <DesignReportCard key={item.id} report={item} onClick={() => navigate(`/marketplaces/knowledge-center/design-reports/${item.id}`)} />
+                    <DesignReportCard key={item.id} report={item} onClick={() => navigate(`/marketplaces/knowledge/design-reports/${item.id}`)} />
                   ))}
                 </div>
               </TabsContent>
@@ -456,7 +456,7 @@ export default function KnowledgeCenterPage() {
                     <LibraryItemCard
                       key={item.id}
                       item={toDocumentCardItem(item)}
-                      onClick={() => navigate(`/marketplaces/knowledge-center/policies-procedures/${item.id}`)}
+                      onClick={() => navigate(`/marketplaces/knowledge/policies-procedures/${item.id}`)}
                     />
                   ))}
                 </div>
@@ -468,7 +468,7 @@ export default function KnowledgeCenterPage() {
                     <LibraryItemCard
                       key={item.id}
                       item={toDocumentCardItem(item)}
-                      onClick={() => navigate(`/marketplaces/knowledge-center/executive-summaries/${item.id}`)}
+                      onClick={() => navigate(`/marketplaces/knowledge/executive-summaries/${item.id}`)}
                     />
                   ))}
                 </div>
@@ -480,7 +480,7 @@ export default function KnowledgeCenterPage() {
                     <LibraryItemCard
                       key={item.id}
                       item={toDocumentCardItem(item)}
-                      onClick={() => navigate(`/marketplaces/knowledge-center/strategy-docs/${item.id}`)}
+                      onClick={() => navigate(`/marketplaces/knowledge/strategy-docs/${item.id}`)}
                     />
                   ))}
                 </div>
@@ -492,7 +492,7 @@ export default function KnowledgeCenterPage() {
                     <LibraryItemCard
                       key={item.id}
                       item={toDocumentCardItem(item)}
-                      onClick={() => navigate(`/marketplaces/knowledge-center/architecture-standards/${item.id}`)}
+                      onClick={() => navigate(`/marketplaces/knowledge/architecture-standards/${item.id}`)}
                     />
                   ))}
                 </div>
@@ -504,7 +504,7 @@ export default function KnowledgeCenterPage() {
                     <LibraryItemCard
                       key={item.id}
                       item={toDocumentCardItem(item)}
-                      onClick={() => navigate(`/marketplaces/knowledge-center/governance-frameworks/${item.id}`)}
+                      onClick={() => navigate(`/marketplaces/knowledge/governance-frameworks/${item.id}`)}
                     />
                   ))}
                 </div>
@@ -527,7 +527,7 @@ export default function KnowledgeCenterPage() {
                         item={toUserArticleCardItem(article)}
                         onClick={() =>
                           navigate(
-                            `/marketplaces/knowledge-center/${article.sourceTab}/${article.id}`
+                            `/marketplaces/knowledge/${article.sourceTab}/${article.id}`
                           )
                         }
                       />
