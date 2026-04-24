@@ -1534,6 +1534,37 @@ export const sampleDashboardData: Record<string, DashboardData> = {
       { timestamp: '2026-01-01', value: 71, label: 'Jan 2026' },
       { timestamp: '2026-02-01', value: 74, label: 'Feb 2026' }
     ],
+    widgetData: {
+      'readiness-radar': [
+        { name: 'Leadership & Vision', value: 82 },
+        { name: 'Culture & Change', value: 52 },
+        { name: 'Technology', value: 78 },
+        { name: 'Data Governance', value: 48 },
+        { name: 'Talent & Skills', value: 71 }
+      ],
+      'readiness-trend': [
+        { name: 'Sep 2025', value: 58 },
+        { name: 'Oct 2025', value: 62 },
+        { name: 'Nov 2025', value: 65 },
+        { name: 'Dec 2025', value: 68 },
+        { name: 'Jan 2026', value: 71 },
+        { name: 'Feb 2026', value: 74 }
+      ],
+      'gap-analysis': [
+        { name: 'Leadership & Vision', value: 3 },
+        { name: 'Technology', value: 2 },
+        { name: 'Talent & Skills', value: 9 },
+        { name: 'Culture & Change', value: 18 },
+        { name: 'Data Governance', value: 27 }
+      ],
+      'risk-dist': [
+        { name: 'Process Gaps', value: 35 },
+        { name: 'Skills Shortage', value: 28 },
+        { name: 'Cultural Resistance', value: 22 },
+        { name: 'Technology Debt', value: 10 },
+        { name: 'Budget Constraints', value: 5 }
+      ]
+    },
     metrics: [
       { id: 'readiness-score', label: 'Readiness Score', value: 74, unit: 'out of 100', trend: 'up', trendValue: 4.2, trendLabel: '+4.2% vs last month', severity: 'success' },
       { id: 'blockers', label: 'Active Blockers', value: 5, trend: 'down', trendValue: -2, trendLabel: '2 fewer than last month', severity: 'warning' },
