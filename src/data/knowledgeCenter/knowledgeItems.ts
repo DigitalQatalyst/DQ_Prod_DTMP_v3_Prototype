@@ -6,6 +6,7 @@ import { policyReports, type PolicyReport } from "./policyReports";
 import { procedureReports, type ProcedureReport } from "./procedureReports";
 import { executiveSummaries, type ExecutiveSummary } from "./executiveSummaries";
 import { strategyDocs, type StrategyDoc } from "./strategyDocs";
+import { getLatestReview } from "./reviewState";
 import {
   mapBestPracticeToDepartment,
   mapIndustryToDepartment,
@@ -37,6 +38,8 @@ export interface KnowledgeItem {
   author: string;
   lastReviewed?: string;
   reviewCycleDays?: number;
+  endorsements?: number;
+  relatedCourseIds?: string[];
 }
 
 const toIsoDate = (value: string): string => {
@@ -70,6 +73,8 @@ const mapBestPractice = (item: BestPractice): KnowledgeItem => ({
   author: "Transformation Office",
   lastReviewed: item.dateAdded,
   reviewCycleDays: 365,
+  endorsements: Math.floor(Math.random() * 50) + 10,
+  relatedCourseIds: [],
 });
 
 const mapTestimonial = (item: Testimonial): KnowledgeItem => ({
@@ -244,6 +249,16 @@ export const getRelatedKnowledgeItems = (
 
 export function isKnowledgeItemStale(item: KnowledgeItem): boolean {
   if (!item.lastReviewed) return false;
+  
+  // Check if there's a recent review that marks content as accurate
+  const latestReview = getLatestReview(item.id);
+  if (latestReview && latestReview.outcome === "accurate") {
+    // Use the review date instead of lastReviewed
+    const daysSinceReview = (Date.now() - new Date(latestReview.reviewedAt).getTime()) / (1000 * 60 * 60 * 24);
+    return daysSinceReview > (item.reviewCycleDays ?? 365);
+  }
+  
+  // Fall back to original lastReviewed date
   const daysSinceReview = (Date.now() - new Date(item.lastReviewed).getTime()) / (1000 * 60 * 60 * 24);
   return daysSinceReview > (item.reviewCycleDays ?? 365);
 }

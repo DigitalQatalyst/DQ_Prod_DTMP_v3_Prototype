@@ -408,7 +408,7 @@ export default function Stage2AppPage() {
     matchedLearningCourse?.id || fallbackLearningCourseId;
 
   const {
-    marketplace: stateMarketplace = "portfolio-management",
+    marketplace: stateMarketplace = "overview",
     cardId: rawStateCardId,
     serviceName: stateServiceName = "Portfolio Service",
   } = state;

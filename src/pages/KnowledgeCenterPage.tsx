@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
-import { ChevronRight, BookOpen, Users, Award, Lightbulb, Quote, Map, Library, FileText, Plus } from "lucide-react";
+import { ChevronRight, BookOpen, Users, Award, Lightbulb, Quote, Map, Library, FileText, Plus, Star, Clock, ArrowRight } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -27,6 +27,7 @@ import type { ProcedureReport } from "@/data/knowledgeCenter/procedureReports";
 import type { ExecutiveSummary } from "@/data/knowledgeCenter/executiveSummaries";
 import type { StrategyDoc } from "@/data/knowledgeCenter/strategyDocs";
 import { getKnowledgeItem } from "@/data/knowledgeCenter/knowledgeItems";
+import { courses } from "@/data/learningCenter/courses";
 import {
   mapBestPracticeToDepartment,
   mapIndustryToDepartment,
@@ -1228,6 +1229,80 @@ export default function KnowledgeCenterPage() {
 
       {/* Mobile Filter Button */}
       <MobileFilterButton onClick={() => setFilterOpen(true)} />
+
+      {/* Deepen Your Learning Section */}
+      <section className="bg-gradient-to-b from-blue-50 to-white py-16">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h2 className="text-2xl font-bold text-primary-navy mb-2">
+                Deepen Your Learning
+              </h2>
+              <p className="text-muted-foreground">
+                Complement your knowledge with structured learning paths from the Learning Centre
+              </p>
+            </div>
+            <Link
+              to="/marketplaces/learning-center"
+              className="hidden md:flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium transition-colors"
+            >
+              View All Courses
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {courses
+              .filter((course) => course.featured || course.id === "dt-fundamentals" || course.id === "4d-model-mastery" || course.id === "transformation-leadership")
+              .slice(0, 4)
+              .map((course) => (
+                <Link
+                  key={course.id}
+                  to={`/marketplaces/learning-center/courses/${course.id}`}
+                  className="bg-white border border-gray-200 rounded-xl p-6 hover:border-blue-300 hover:shadow-lg transition-all group"
+                >
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <BookOpen className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <span className="text-xs font-semibold text-blue-600 uppercase">
+                      {course.level}
+                    </span>
+                  </div>
+                  
+                  <h3 className="text-lg font-semibold text-foreground mb-2 group-hover:text-blue-600 transition-colors">
+                    {course.title}
+                  </h3>
+                  
+                  <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                    {course.description}
+                  </p>
+                  
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {course.duration}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+                      {course.rating}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+          </div>
+
+          <div className="mt-8 text-center md:hidden">
+            <Link
+              to="/marketplaces/learning-center"
+              className="inline-flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium transition-colors"
+            >
+              View All Courses
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
+      </section>
 
       <Footer />
     </div>

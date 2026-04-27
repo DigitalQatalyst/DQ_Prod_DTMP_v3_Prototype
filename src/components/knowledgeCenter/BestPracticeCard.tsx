@@ -1,7 +1,13 @@
-import { Tag, TrendingUp, AlertCircle } from "lucide-react";
+import { Tag, TrendingUp, AlertCircle, ThumbsUp, FileCheck } from "lucide-react";
 import { BestPractice } from "@/data/knowledgeCenter/bestPractices";
 import { cn } from "@/lib/utils";
 import { getKnowledgeItem, isKnowledgeItemStale } from "@/data/knowledgeCenter/knowledgeItems";
+import { endorseKnowledgeItem, unendorseKnowledgeItem, hasUserEndorsed, getEndorsementCount } from "@/data/knowledgeCenter/endorsementState";
+import { getSessionUser } from "@/data/sessionAuth";
+import { canUserReview, getLatestReview } from "@/data/knowledgeCenter/reviewState";
+import { QuickReviewModal } from "@/components/knowledgeCenter/QuickReviewModal";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface BestPracticeCardProps {
   practice: BestPractice;
@@ -16,12 +22,78 @@ const complexityColors = {
 
 export function BestPracticeCard({ practice, onClick }: BestPracticeCardProps) {
   const Icon = practice.icon;
+  const navigate = useNavigate();
   const knowledgeItem = getKnowledgeItem("best-practices", practice.id);
-  const isStale = knowledgeItem ? isKnowledgeItemStale(knowledgeItem) : false;
+  const sessionUser = getSessionUser();
+  const userId = sessionUser?.email || "anonymous";
+  const itemId = `best-practices:${practice.id}`;
+  
+  const [isStale, setIsStale] = useState(knowledgeItem ? isKnowledgeItemStale(knowledgeItem) : false);
+  const [hasEndorsed, setHasEndorsed] = useState(hasUserEndorsed(itemId, userId));
+  const [endorsementCount, setEndorsementCount] = useState(
+    (knowledgeItem?.endorsements || 0) + getEndorsementCount(itemId)
+  );
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewTrigger, setReviewTrigger] = useState(0); // Trigger to force re-check
+  
+  const userCanReview = canUserReview(sessionUser?.role, sessionUser?.email);
+  const [latestReviewDate, setLatestReviewDate] = useState(
+    getLatestReview(itemId)?.reviewedAt || knowledgeItem?.lastReviewed
+  );
+  const latestReview = getLatestReview(itemId);
+  
+  // Recalculate staleness when review changes
+  useEffect(() => {
+    if (knowledgeItem) {
+      const staleStatus = isKnowledgeItemStale(knowledgeItem);
+      setIsStale(staleStatus);
+    }
+  }, [reviewTrigger, knowledgeItem]);
+  
+  const handleEndorse = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (hasEndorsed) {
+      unendorseKnowledgeItem(itemId, userId);
+      setHasEndorsed(false);
+      setEndorsementCount(prev => prev - 1);
+    } else {
+      endorseKnowledgeItem(itemId, userId);
+      setHasEndorsed(true);
+      setEndorsementCount(prev => prev + 1);
+    }
+  };
+  
+  const handleQuickReview = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setShowReviewModal(true);
+  };
+  
+  const handleReviewSubmitted = () => {
+    // Update the review date to today
+    const newReview = getLatestReview(itemId);
+    if (newReview) {
+      setLatestReviewDate(newReview.reviewedAt);
+    }
+    // Trigger recalculation of staleness
+    setReviewTrigger(prev => prev + 1);
+  };
+  
+  const handleOpenDetailedReview = () => {
+    // Navigate to detail page for detailed review
+    navigate(`/marketplaces/knowledge-center/best-practices/${practice.id}`);
+  };
+  
+  const handleCardClick = () => {
+    // Don't navigate if modal is open
+    if (showReviewModal) return;
+    onClick();
+  };
   
   return (
     <div
-      onClick={onClick}
+      onClick={handleCardClick}
       className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-xl hover:border-orange-300 hover:-translate-y-1 transition-all duration-300 cursor-pointer"
     >
       <div className="flex items-start justify-between mb-4">
@@ -35,10 +107,22 @@ export function BestPracticeCard({ practice, onClick }: BestPracticeCardProps) {
             </span>
           )}
           {isStale && (
-            <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full flex items-center gap-1">
-              <AlertCircle className="w-3 h-3" />
-              Review recommended
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" />
+                Review recommended
+              </span>
+              {userCanReview && (
+                <button
+                  onClick={handleQuickReview}
+                  className="text-xs bg-emerald-600 text-white px-3 py-1 rounded-full flex items-center gap-1 hover:bg-emerald-700 transition-colors font-medium"
+                  title="Quick Review"
+                >
+                  <FileCheck className="w-3 h-3" />
+                  Review
+                </button>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -80,6 +164,33 @@ export function BestPracticeCard({ practice, onClick }: BestPracticeCardProps) {
           </span>
         ))}
       </div>
+
+      <div className="mt-4 pt-4 border-t border-gray-100">
+        <button
+          onClick={handleEndorse}
+          className={`flex items-center gap-1 text-xs transition-colors ${
+            hasEndorsed
+              ? "text-orange-600 font-medium"
+              : "text-gray-500 hover:text-orange-600"
+          }`}
+        >
+          <ThumbsUp className={cn("w-3.5 h-3.5", hasEndorsed && "fill-orange-600")} />
+          {endorsementCount} endorsed
+        </button>
+      </div>
+      
+      {/* Quick Review Modal */}
+      {knowledgeItem && (
+        <QuickReviewModal
+          isOpen={showReviewModal}
+          onClose={() => setShowReviewModal(false)}
+          itemId={itemId}
+          itemTitle={practice.title}
+          lastReviewed={latestReviewDate || knowledgeItem.lastReviewed || ""}
+          onReviewSubmitted={handleReviewSubmitted}
+          onOpenDetailedReview={handleOpenDetailedReview}
+        />
+      )}
     </div>
   );
 }
