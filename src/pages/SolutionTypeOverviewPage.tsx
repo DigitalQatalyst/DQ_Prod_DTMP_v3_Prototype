@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   ChevronRight, ArrowLeft, ArrowRight, Layers, Monitor, Building2,
@@ -9,6 +10,8 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { SolutionSpecCard } from "@/components/cards/SolutionSpecCard";
+import { LoginModal } from "@/components/learningCenter/LoginModal";
+import { isUserAuthenticated } from "@/data/sessionAuth";
 
 // ── Per-type static content ───────────────────────────────────────────────────
 
@@ -150,6 +153,10 @@ export function SolutionTypeOverviewPage() {
   const { solutionType } = useParams<{ solutionType: string }>();
   const navigate = useNavigate();
 
+  // Auth-gate state — must be declared before any early returns
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [pendingServiceName, setPendingServiceName] = useState("");
+
   const type = solutionType?.toUpperCase() as SolutionType | undefined;
   const meta = type ? TYPE_META[type] : undefined;
 
@@ -171,6 +178,15 @@ export function SolutionTypeOverviewPage() {
       </div>
     );
   }
+
+  const handleMakeRequest = (serviceName: string) => {
+    if (!isUserAuthenticated()) {
+      setPendingServiceName(serviceName);
+      setShowLoginModal(true);
+      return;
+    }
+    navigate("/marketplaces/solution-specs/request", { state: { serviceName } });
+  };
 
   const Icon = meta.icon;
   const totalDiagrams   = typeSpecs.reduce((s, sp) => s + sp.diagramCount, 0);
@@ -250,7 +266,7 @@ export function SolutionTypeOverviewPage() {
                 Need a custom {meta.fullName} blueprint tailored to your organisation? Submit a specification request.
               </p>
               <Button
-                onClick={() => navigate("/marketplaces/solution-specs/request", { state: { serviceName: meta.fullName } })}
+                onClick={() => handleMakeRequest(meta.fullName)}
                 className={`w-full ${meta.colorClasses.button} ${meta.colorClasses.buttonHover} text-white font-semibold`}
               >
                 Make a Request
@@ -365,7 +381,7 @@ export function SolutionTypeOverviewPage() {
               Browse All Types
             </Button>
             <Button
-              onClick={() => navigate("/marketplaces/solution-specs/request", { state: { serviceName: meta.fullName } })}
+              onClick={() => handleMakeRequest(meta.fullName)}
               className={`${meta.colorClasses.button} ${meta.colorClasses.buttonHover} text-white font-semibold`}
             >
               Make a Request
@@ -374,6 +390,22 @@ export function SolutionTypeOverviewPage() {
           </div>
         </div>
       </section>
+
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        context={{
+          marketplace: "solution-specs",
+          tab: "specs",
+          cardId: type ?? "",
+          serviceName: pendingServiceName,
+          action: "Make Request",
+        }}
+        onLoginSuccess={() => {
+          setShowLoginModal(false);
+          navigate("/marketplaces/solution-specs/request", { state: { serviceName: pendingServiceName } });
+        }}
+      />
 
       <Footer />
     </div>

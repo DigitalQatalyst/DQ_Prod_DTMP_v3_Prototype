@@ -1,8 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { useSearchParams, Link, useNavigate } from "react-router-dom";
 import {
-  ChevronRight, FileX, Layout, Layers, Monitor, Building2,
-  BarChart3, ShieldCheck, FileText, GitBranch, ArrowRight,
+  ChevronRight, FileX, Search, X, HelpCircle,
 } from "lucide-react";
 import { solutionSpecs, SolutionType } from "@/data/blueprints/solutionSpecs";
 import { solutionSpecsFiltersKC } from "@/data/blueprints/filters";
@@ -10,48 +9,7 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { TypeTabs } from "@/components/shared/TypeTabs";
 import { FilterPanel, MobileFilterButton } from "@/components/learningCenter/FilterPanel";
-import { SearchBar } from "@/components/learningCenter/SearchBar";
 import { SolutionSpecCard } from "@/components/cards/SolutionSpecCard";
-
-// ── Solution type display metadata ───────────────────────────────────────────
-
-const solutionTypeDetails: Record<SolutionType, {
-  fullName: string;
-  description: string;
-  icon: React.ElementType;
-  colorClasses: { bg: string; text: string; border: string; badge: string };
-}> = {
-  DBP: {
-    fullName: "Digital Business Platform",
-    description: "Integration, microservices, API management, and event-driven architectures for seamless digital operations.",
-    icon: Layers,
-    colorClasses: { bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200", badge: "bg-blue-100 text-blue-700" },
-  },
-  DXP: {
-    fullName: "Digital Experience Platform",
-    description: "Customer journeys, personalisation, omnichannel experiences, and mobile-first architectures.",
-    icon: Monitor,
-    colorClasses: { bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-200", badge: "bg-purple-100 text-purple-700" },
-  },
-  DWS: {
-    fullName: "Digital Workplace Solution",
-    description: "Collaboration platforms, productivity tooling, knowledge management, and employee experience design.",
-    icon: Building2,
-    colorClasses: { bg: "bg-green-50", text: "text-green-700", border: "border-green-200", badge: "bg-green-100 text-green-700" },
-  },
-  DIA: {
-    fullName: "Digital Intelligence & Analytics",
-    description: "Data platforms, AI/ML pipelines, real-time analytics, and governance frameworks for data-driven decisions.",
-    icon: BarChart3,
-    colorClasses: { bg: "bg-orange-50", text: "text-orange-700", border: "border-orange-200", badge: "bg-orange-100 text-orange-700" },
-  },
-  SDO: {
-    fullName: "Secure Digital Operations",
-    description: "Security architecture, identity management, zero-trust frameworks, and operational resilience patterns.",
-    icon: ShieldCheck,
-    colorClasses: { bg: "bg-red-50", text: "text-red-700", border: "border-red-200", badge: "bg-red-100 text-red-700" },
-  },
-};
 
 // ── Page component ────────────────────────────────────────────────────────────
 
@@ -72,11 +30,6 @@ export function SolutionSpecsPage() {
     return counts;
   }, []);
 
-  const heroStats = useMemo(() => ({
-    total: solutionSpecs.length,
-    totalDiagrams: solutionSpecs.reduce((sum, s) => sum + s.diagramCount, 0),
-  }), []);
-
   // ── Filtered results ────────────────────────────────────────────────────────
   const filteredSpecs = useMemo(() => {
     let results = solutionSpecs;
@@ -91,7 +44,6 @@ export function SolutionSpecsPage() {
     if (scopeFilters?.length) results = results.filter((s) => scopeFilters.some((f) => f.toLowerCase() === s.scope));
     const maturityFilters = selectedFilters.maturityLevel;
     if (maturityFilters?.length) results = results.filter((s) => maturityFilters.some((f) => f.toLowerCase() === s.maturityLevel));
-    if (selectedFilters.hasDiagrams?.includes("Yes")) results = results.filter((s) => s.diagramCount > 0);
     const complexityFilters = selectedFilters.complexity;
     if (complexityFilters?.length) results = results.filter((s) => complexityFilters.some((f) => f.toLowerCase() === s.complexity));
     const techStackFilters = selectedFilters.technologyStack;
@@ -138,10 +90,10 @@ export function SolutionSpecsPage() {
     <div className="min-h-screen bg-background">
       <Header />
 
-      {/* ── KC-style Hero (Design phase / purple) ───────────────────────────── */}
-      <section className="bg-gradient-to-b from-purple-50 to-white py-8 lg:py-12">
+      {/* ── Hero with integrated search ──────────────────────────────────────── */}
+      <section className="bg-gradient-to-b from-purple-50 to-white py-8 lg:py-10">
         <div className="max-w-7xl mx-auto px-4">
-          <nav className="flex items-center text-sm text-muted-foreground mb-4">
+          <nav className="flex items-center text-sm text-muted-foreground mb-6">
             <Link to="/" className="hover:text-foreground transition-colors">Home</Link>
             <ChevronRight className="w-4 h-4 mx-2" />
             <Link to="/marketplaces" className="hover:text-foreground transition-colors">Marketplaces</Link>
@@ -149,94 +101,66 @@ export function SolutionSpecsPage() {
             <span className="font-medium text-foreground">Solution Specs</span>
           </nav>
 
-          <span className="inline-block bg-phase-design-bg text-phase-design px-3 py-1 rounded-full text-xs font-semibold uppercase mb-3">
-            Design
-          </span>
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+            {/* Left — title, description, search, count */}
+            <div className="flex-1 max-w-2xl">
+              <h1 className="text-3xl lg:text-4xl font-bold text-primary-navy mb-3">
+                Solution Specs
+              </h1>
+              <p className="text-base text-muted-foreground mb-5">
+                Browse DEWA's blueprint-led solution specifications across the Digital Business
+                Platform streams. Find comprehensive architecture designs, component specifications,
+                and implementation guidance contextualized to DEWA divisions and programmes.
+              </p>
 
-          <h1 className="text-3xl lg:text-4xl font-bold text-primary-navy mb-3">
-            DTMP Solution Specs
-          </h1>
-          <p className="text-base lg:text-lg text-muted-foreground max-w-3xl mb-4">
-            Browse and request solution blueprints, reference architectures, and implementation
-            specifications across five solution types. Each spec includes architecture diagrams,
-            component breakdowns, and delivery guidance for your digital transformation initiatives.
-          </p>
+              {/* Search input */}
+              <div className="flex items-center gap-3 bg-white border border-gray-300 rounded-lg px-4 py-3 focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-100 transition-all">
+                <Search className="w-4 h-4 text-gray-400 flex-shrink-0" aria-hidden="true" />
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search DEWA solution specs..."
+                  className="flex-1 bg-transparent border-0 outline-none text-gray-900 placeholder:text-gray-400 text-sm focus:outline-none"
+                  aria-label="Search DEWA solution specs"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                    aria-label="Clear search"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
 
-          <div className="flex flex-wrap gap-6 text-sm text-muted-foreground">
-            <span className="flex items-center gap-2">
-              <Layout className="w-4 h-4" />
-              {heroStats.total} Solution Specifications
-            </span>
-            <span className="flex items-center gap-2">
-              <GitBranch className="w-4 h-4" />
-              {heroStats.totalDiagrams} Architecture Diagrams
-            </span>
-            <span className="flex items-center gap-2">
-              <FileText className="w-4 h-4" />
-              5 Solution Types
-            </span>
+              {/* Item count */}
+              <p className="text-sm text-muted-foreground mt-3">
+                Showing{" "}
+                <span className="font-medium text-foreground">{filteredSpecs.length}</span>{" "}
+                item{filteredSpecs.length !== 1 ? "s" : ""}
+                {activeFilterCount > 0 && (
+                  <span className="ml-1 text-orange-600">
+                    ({activeFilterCount} filter{activeFilterCount !== 1 ? "s" : ""} active)
+                  </span>
+                )}
+              </p>
+            </div>
+
+            {/* Right — CTA */}
+            <div className="flex-shrink-0 lg:pt-2">
+              <button
+                onClick={() => navigate("/marketplaces/solution-specs/request")}
+                className="flex items-center gap-2 text-orange-600 hover:text-orange-700 border border-orange-200 hover:border-orange-400 bg-white rounded-full px-4 py-2 text-sm font-medium transition-all hover:shadow-sm"
+              >
+                <HelpCircle className="w-4 h-4 flex-shrink-0" />
+                Can't find the spec you need?
+              </button>
+            </div>
           </div>
         </div>
       </section>
-
-      {/* ── Solution Type Service Cards ──────────────────────────────────────── */}
-      <section className="bg-white border-b border-gray-200 py-8">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="mb-5">
-            <h2 className="text-lg font-semibold text-gray-900">Browse by Solution Type</h2>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              Select a type to explore its specifications and make a request
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            {(Object.keys(solutionTypeDetails) as SolutionType[]).map((type) => {
-              const detail = solutionTypeDetails[type];
-              const Icon = detail.icon;
-              const count = typeCounts[type];
-              return (
-                <button
-                  key={type}
-                  onClick={() => navigate(`/marketplaces/solution-specs/type/${type}`)}
-                  className="group text-left rounded-xl border-2 border-gray-200 bg-white p-4 transition-all duration-200 hover:shadow-md hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2"
-                  aria-label={`Explore ${detail.fullName}`}
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center bg-gray-100 group-hover:${detail.colorClasses.bg} transition-colors`}>
-                      <Icon className="w-5 h-5 text-gray-500" />
-                    </div>
-                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
-                      {type}
-                    </span>
-                  </div>
-
-                  <p className="text-sm font-semibold text-gray-900 mb-1 leading-tight">
-                    {detail.fullName}
-                  </p>
-                  <p className="text-xs text-gray-500 leading-relaxed mb-3 line-clamp-3">
-                    {detail.description}
-                  </p>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-400">{count} spec{count !== 1 ? "s" : ""}</span>
-                    <span className="text-xs font-medium text-gray-400 group-hover:text-orange-600 flex items-center gap-1 transition-colors">
-                      Explore
-                      <ArrowRight className="w-3 h-3" />
-                    </span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Search Bar ──────────────────────────────────────────────────────── */}
-      <SearchBar
-        value={searchQuery}
-        onChange={setSearchQuery}
-        placeholder="Search solution specs by title, description, or technology tag..."
-      />
 
       {/* ── Type Tabs ───────────────────────────────────────────────────────── */}
       <TypeTabs activeType={activeType} onTypeChange={handleTypeChange} typeCounts={typeCounts} />
@@ -253,20 +177,6 @@ export function SolutionSpecsPage() {
         />
 
         <main className="flex-1 min-w-0">
-          {/* Result count toolbar */}
-          <div className="bg-gray-50 border-b border-gray-200 px-4 lg:px-8 py-3 flex items-center">
-            <p className="text-sm text-muted-foreground">
-              Showing{" "}
-              <span className="font-semibold text-foreground">{filteredSpecs.length}</span>{" "}
-              solution spec{filteredSpecs.length !== 1 ? "s" : ""}
-              {activeFilterCount > 0 && (
-                <span className="ml-1 text-orange-600">
-                  ({activeFilterCount} filter{activeFilterCount !== 1 ? "s" : ""} active)
-                </span>
-              )}
-            </p>
-          </div>
-
           {/* Cards grid */}
           <div className="px-4 lg:px-8 py-6">
             {filteredSpecs.length > 0 ? (

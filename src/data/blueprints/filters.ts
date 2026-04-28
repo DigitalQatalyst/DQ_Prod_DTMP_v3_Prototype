@@ -32,12 +32,7 @@ export const solutionSpecsFilters: FilterConfig[] = [
       { value: 'reference', label: 'Reference' }
     ]
   },
-  {
-    key: 'hasDiagrams',
-    label: 'Has Diagrams',
-    type: 'checkbox',
-    options: [{ value: 'true', label: 'Yes' }]
-  },
+
   {
     key: 'complexity',
     label: 'Complexity',
@@ -71,7 +66,6 @@ export const solutionSpecsFilters: FilterConfig[] = [
 export const solutionSpecsFiltersKC: Record<string, string[]> = {
   scope: ['Enterprise', 'Departmental', 'Project'],
   maturityLevel: ['Conceptual', 'Proven', 'Reference'],
-  hasDiagrams: ['Yes'],
   complexity: ['Simple', 'Moderate', 'Complex', 'Expert'],
   technologyStack: [
     'Cloud-Native', 'Multi-Cloud', 'Hybrid', 'Kubernetes',
