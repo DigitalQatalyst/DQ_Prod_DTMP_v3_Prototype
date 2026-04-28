@@ -1222,6 +1222,26 @@ export const updateInitiativeProgress = (initiativeId: string, progress: number)
   return updated;
 };
 
+// ── Update — Initiative Name ─────────────────────────────────────────────────
+
+export const updateInitiativeName = (initiativeId: string, name: string): Initiative | null => {
+  const store = readStore();
+  const trimmed = name.trim();
+  if (!trimmed) return null;
+
+  let updated: Initiative | null = null;
+  const now = new Date().toISOString();
+  const nextInitiatives = store.initiatives.map((i) => {
+    if (i.id !== initiativeId) return i;
+    const entry = makeActivityEntry(`Initiative renamed to ${trimmed}`, "Status Change");
+    updated = { ...i, name: trimmed, updatedAt: now, activity: [entry, ...(i.activity ?? [])] };
+    return updated;
+  });
+
+  writeStore({ ...store, initiatives: nextInitiatives });
+  return updated;
+};
+
 // ── Update — Initiative Status ────────────────────────────────────────────────
 
 export const updateInitiativeStatus = (initiativeId: string, status: InitiativeStatus): Initiative | null => {

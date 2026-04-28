@@ -1,8 +1,8 @@
 import { useState } from "react";
 import {
-  X, ChevronRight, AlertTriangle, CheckCircle2, Clock, TrendingUp,
+  X, AlertTriangle, CheckCircle2, Clock, TrendingUp,
   DollarSign, Users, FileText, Activity, Flag, Shield, Zap,
-  ChevronDown, ChevronUp, BarChart2, Edit3, ExternalLink,
+  ChevronDown, ChevronUp, BarChart2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,9 @@ import {
   getProjects,
   updateMilestoneStatus,
   updateProjectRAG,
+  updateRiskStatus,
+  resolveBlocker,
+  updateBlockerEscalation,
   type MilestoneStatus,
   type RAGStatus,
 } from "@/data/shared/lifecyclePortfolioStore";
@@ -50,6 +53,26 @@ const MILESTONE_COLORS: Record<MilestoneStatus, string> = {
   Delayed: "text-red-600 bg-red-50",
 };
 
+const SEV_COLORS: Record<string, string> = {
+  Critical: "bg-red-100 text-red-700",
+  High: "bg-orange-100 text-orange-700",
+  Medium: "bg-amber-100 text-amber-700",
+  Low: "bg-slate-100 text-slate-600",
+};
+
+const ESC_COLORS: Record<string, string> = {
+  "Not Escalated": "bg-slate-100 text-slate-600",
+  "Escalated to TO": "bg-amber-100 text-amber-700",
+  "Escalated to Division Head": "bg-red-100 text-red-700",
+};
+
+const RISK_STATUS_COLORS: Record<string, string> = {
+  Open: "text-red-600",
+  Mitigated: "text-teal-600",
+  Accepted: "text-amber-600",
+  Closed: "text-slate-400",
+};
+
 const formatBudget = (n: number | null): string => {
   if (n === null) return "TBC";
   if (n >= 1_000_000) return `AED ${(n / 1_000_000).toFixed(1)}M`;
@@ -61,6 +84,12 @@ const daysUntil = (dateStr: string): number => {
   const diff = new Date(dateStr).getTime() - Date.now();
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 };
+
+const fmtDate = (dateStr: string): string =>
+  new Date(dateStr).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+
+const fmtMonthYear = (dateStr: string): string =>
+  new Date(dateStr).toLocaleDateString("en-GB", { month: "short", year: "numeric" });
 
 // ── Section nav ────────────────────────────────────────────────────────────────
 
@@ -96,6 +125,15 @@ function HealthPanel({ initiative, projects }: { initiative: Initiative; project
   const overallRAG: RAGStatus =
     initiative.status === "At Risk" ? "Red" : redCount > 0 ? "Red" : amberCount > 0 ? "Amber" : "Green";
 
+  // Health narrative
+  const narrativeParts: string[] = [];
+  if (overallRAG === "Green") narrativeParts.push("This initiative is currently on track.");
+  else if (overallRAG === "Amber") narrativeParts.push("This initiative requires attention — one or more projects are at amber health.");
+  else narrativeParts.push("This initiative is at risk and requires immediate intervention.");
+  if (days < 0) narrativeParts.push(`The target date has passed by ${Math.abs(days)} days.`);
+  else if (days < 60) narrativeParts.push(`The target date is ${days} days away — final delivery phase underway.`);
+  if (spentPct > 80) narrativeParts.push(`Budget utilisation is at ${spentPct}% — monitor remaining spend closely.`);
+
   return (
     <div className="space-y-5">
       {/* RAG + status */}
@@ -104,9 +142,15 @@ function HealthPanel({ initiative, projects }: { initiative: Initiative; project
           <span className={`w-2.5 h-2.5 rounded-full ${RAG_DOT[overallRAG]}`} />
           <span className="font-semibold text-sm">{overallRAG} — Overall Health</span>
         </div>
-        <span className={`px-3 py-1.5 rounded-lg text-sm font-medium ${STATUS_COLORS[initiative.status]}`}>
+        <span className={`px-3 py-1.5 rounded-lg text-sm font-medium ${STATUS_COLORS[initiative.status] ?? "bg-slate-100 text-slate-600"}`}>
           {initiative.status}
         </span>
+      </div>
+
+      {/* Health narrative */}
+      <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+        <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-1">Programme Health Summary</p>
+        <p className="text-sm text-slate-700 leading-relaxed">{narrativeParts.join(" ")}</p>
       </div>
 
       {/* Key metrics grid */}
@@ -135,21 +179,16 @@ function HealthPanel({ initiative, projects }: { initiative: Initiative; project
         </div>
       </div>
 
-      {/* Description */}
-      <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
-        <p className="text-sm text-slate-700 leading-relaxed">{initiative.description}</p>
-      </div>
-
       {/* Project RAG summary */}
       {projects.length > 0 && (
         <div className="flex items-center gap-3 flex-wrap">
           <span className="text-xs text-slate-500 font-medium">{projects.length} projects:</span>
-          {["Green", "Amber", "Red"].map((rag) => {
+          {(["Green", "Amber", "Red"] as RAGStatus[]).map((rag) => {
             const count = projects.filter((p) => p.rag === rag).length;
             if (count === 0) return null;
             return (
-              <span key={rag} className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border ${RAG_COLORS[rag as RAGStatus]}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${RAG_DOT[rag as RAGStatus]}`} />
+              <span key={rag} className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border ${RAG_COLORS[rag]}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${RAG_DOT[rag]}`} />
                 {count} {rag}
               </span>
             );
@@ -262,6 +301,7 @@ function ProjectsPanel({
 function BudgetPanel({ initiative, projects }: { initiative: Initiative; projects: Project[] }) {
   const totalBudget = initiative.budget ?? 0;
   const totalSpent = initiative.budgetSpent;
+  const remaining = totalBudget - totalSpent;
   const committed = projects.reduce(
     (sum, p) => sum + Math.max(0, p.budget - p.budgetSpent),
     0
@@ -279,7 +319,7 @@ function BudgetPanel({ initiative, projects }: { initiative: Initiative; project
         {[
           { label: "Total Allocated", value: formatBudget(totalBudget), color: "text-slate-900" },
           { label: "Spent", value: formatBudget(totalSpent), color: "text-slate-900" },
-          { label: "Forecast to Complete", value: formatBudget(forecastToComplete), color: "text-slate-900" },
+          { label: "Remaining", value: formatBudget(remaining), color: remaining < 0 ? "text-red-600" : "text-slate-900" },
           { label: "Variance", value: formatBudget(variance), color: variance < 0 ? "text-red-600" : "text-green-600" },
         ].map(({ label, value, color }) => (
           <div key={label} className="bg-slate-50 rounded-xl p-3 border border-slate-200">
@@ -345,7 +385,6 @@ function MilestonesPanel({
   isOwner: boolean;
   onRefresh: () => void;
 }) {
-  // Aggregate milestones across all projects
   const allMilestones: (Milestone & { projectName: string; projectId: string })[] = projects.flatMap((p) =>
     p.milestones.map((m) => ({ ...m, projectName: p.name, projectId: p.id }))
   );
@@ -355,37 +394,58 @@ function MilestonesPanel({
     onRefresh();
   };
 
+  const ALL_STATUSES: MilestoneStatus[] = ["Not Started", "In Progress", "Complete", "Delayed"];
+
   return (
     <div className="space-y-3">
-      {allMilestones.map((ms) => (
-        <div key={ms.id} className="border border-slate-200 rounded-xl p-3">
-          <div className="flex items-start gap-3">
-            <span className={`px-2 py-0.5 rounded text-xs font-medium flex-shrink-0 ${MILESTONE_COLORS[ms.status]}`}>
-              {ms.status}
-            </span>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-slate-800">{ms.name}</p>
-              <p className="text-xs text-slate-500">{ms.projectName} · Due {ms.dueDate}</p>
-              {ms.owner && <p className="text-xs text-slate-400">Owner: {ms.owner}</p>}
-            </div>
-            {isOwner && ms.status !== "Complete" && (
-              <button
-                onClick={() => handleStatusChange(ms.projectId, ms.id, "Complete")}
-                className="text-xs text-teal-600 hover:text-teal-800 font-medium flex-shrink-0 px-2 py-1 rounded hover:bg-teal-50 transition-colors"
-              >
-                Mark Complete
-              </button>
-            )}
-          </div>
+      {allMilestones.length === 0 ? (
+        <div className="text-center py-10 text-slate-500">
+          <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+          <p className="text-sm">No milestones linked to this initiative yet.</p>
         </div>
-      ))}
+      ) : (
+        allMilestones.map((ms) => (
+          <div key={ms.id} className="border border-slate-200 rounded-xl p-3">
+            <div className="flex items-start gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-800">{ms.name}</p>
+                <p className="text-xs text-slate-500">{ms.projectName} · Due {fmtDate(ms.dueDate)}</p>
+                {ms.owner && <p className="text-xs text-slate-400">Owner: {ms.owner}</p>}
+              </div>
+              {isOwner ? (
+                <select
+                  value={ms.status}
+                  onChange={(e) => handleStatusChange(ms.projectId, ms.id, e.target.value as MilestoneStatus)}
+                  className={`text-xs font-medium px-2 py-1 rounded border flex-shrink-0 cursor-pointer focus:outline-none ${MILESTONE_COLORS[ms.status]}`}
+                >
+                  {ALL_STATUSES.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              ) : (
+                <span className={`px-2 py-0.5 rounded text-xs font-medium flex-shrink-0 ${MILESTONE_COLORS[ms.status]}`}>
+                  {ms.status}
+                </span>
+              )}
+            </div>
+          </div>
+        ))
+      )}
     </div>
   );
 }
 
-function RisksPanel({ projects }: { projects: Project[] }) {
+function RisksPanel({
+  projects,
+  isOwner,
+  onRefresh,
+}: {
+  projects: Project[];
+  isOwner: boolean;
+  onRefresh: () => void;
+}) {
   const allRisks = projects.flatMap((p) =>
-    p.risks.map((r) => ({ ...r, projectName: p.name }))
+    p.risks.map((r) => ({ ...r, projectName: p.name, projectId: p.id }))
   );
 
   const SEV_ORDER = ["Critical", "High", "Medium", "Low"];
@@ -393,11 +453,11 @@ function RisksPanel({ projects }: { projects: Project[] }) {
     (a, b) => SEV_ORDER.indexOf(a.severity) - SEV_ORDER.indexOf(b.severity)
   );
 
-  const SEV_COLORS: Record<string, string> = {
-    Critical: "bg-red-100 text-red-700",
-    High: "bg-orange-100 text-orange-700",
-    Medium: "bg-amber-100 text-amber-700",
-    Low: "bg-slate-100 text-slate-600",
+  const RISK_STATUSES = ["Open", "Mitigated", "Accepted", "Closed"] as const;
+
+  const handleStatusChange = (projectId: string, riskId: string, status: typeof RISK_STATUSES[number]) => {
+    updateRiskStatus(projectId, riskId, status);
+    onRefresh();
   };
 
   if (sorted.length === 0) {
@@ -428,10 +488,23 @@ function RisksPanel({ projects }: { projects: Project[] }) {
                 <span>Owner: {risk.owner}</span>
                 <span>·</span>
                 <span>Due: {risk.mitigationDueDate}</span>
-                <span>·</span>
-                <span className={risk.status === "Open" ? "text-red-500" : "text-green-600"}>{risk.status}</span>
               </div>
             </div>
+            {isOwner ? (
+              <select
+                value={risk.status}
+                onChange={(e) => handleStatusChange(risk.projectId, risk.id, e.target.value as typeof RISK_STATUSES[number])}
+                className={`text-xs font-medium px-2 py-1 rounded border flex-shrink-0 cursor-pointer focus:outline-none bg-white ${RISK_STATUS_COLORS[risk.status]}`}
+              >
+                {RISK_STATUSES.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            ) : (
+              <span className={`text-xs font-medium flex-shrink-0 ${RISK_STATUS_COLORS[risk.status]}`}>
+                {risk.status}
+              </span>
+            )}
           </div>
         </div>
       ))}
@@ -439,10 +512,37 @@ function RisksPanel({ projects }: { projects: Project[] }) {
   );
 }
 
-function BlockersPanel({ projects, isOwner }: { projects: Project[]; isOwner: boolean }) {
+function BlockersPanel({
+  projects,
+  isOwner,
+  onRefresh,
+}: {
+  projects: Project[];
+  isOwner: boolean;
+  onRefresh: () => void;
+}) {
   const allBlockers = projects.flatMap((p) =>
-    p.blockers.filter((b) => !b.resolved).map((b) => ({ ...b, projectName: p.name }))
+    p.blockers.filter((b) => !b.resolved).map((b) => ({ ...b, projectName: p.name, projectId: p.id }))
   );
+
+  const [escalateConfirm, setEscalateConfirm] = useState<string | null>(null);
+  const [resolveOpen, setResolveOpen] = useState<string | null>(null);
+  const [resolveNotes, setResolveNotes] = useState<Record<string, string>>({});
+
+  const handleEscalate = (projectId: string, blockerId: string) => {
+    updateBlockerEscalation(projectId, blockerId, "Escalated to TO");
+    setEscalateConfirm(null);
+    onRefresh();
+  };
+
+  const handleResolve = (projectId: string, blockerId: string) => {
+    const note = resolveNotes[blockerId] ?? "";
+    if (!note.trim()) return;
+    resolveBlocker(projectId, blockerId, note.trim());
+    setResolveOpen(null);
+    setResolveNotes((prev) => { const next = { ...prev }; delete next[blockerId]; return next; });
+    onRefresh();
+  };
 
   if (allBlockers.length === 0) {
     return (
@@ -453,16 +553,10 @@ function BlockersPanel({ projects, isOwner }: { projects: Project[]; isOwner: bo
     );
   }
 
-  const ESC_COLORS: Record<string, string> = {
-    "Not Escalated": "bg-slate-100 text-slate-600",
-    "Escalated to TO": "bg-amber-100 text-amber-700",
-    "Escalated to Division Head": "bg-red-100 text-red-700",
-  };
-
   return (
     <div className="space-y-3">
       {allBlockers.map((blocker) => (
-        <div key={blocker.id} className="border border-amber-200 rounded-xl p-4 bg-amber-50/50">
+        <div key={blocker.id} className="border border-amber-200 rounded-xl p-4 bg-amber-50/50 space-y-3">
           <div className="flex items-start gap-3">
             <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
@@ -474,6 +568,77 @@ function BlockersPanel({ projects, isOwner }: { projects: Project[]; isOwner: bo
               </span>
             </div>
           </div>
+
+          {isOwner && (
+            <div className="space-y-2 pl-7">
+              {/* Escalate to TO */}
+              {blocker.escalationStatus === "Not Escalated" && escalateConfirm !== blocker.id && (
+                <button
+                  onClick={() => setEscalateConfirm(blocker.id)}
+                  className="text-xs font-medium text-amber-700 hover:text-amber-900 border border-amber-300 rounded px-3 py-1.5 hover:bg-amber-100 transition-colors"
+                >
+                  Escalate to TO
+                </button>
+              )}
+              {escalateConfirm === blocker.id && (
+                <div className="bg-amber-100 border border-amber-300 rounded-lg p-3 space-y-2">
+                  <p className="text-xs font-semibold text-amber-800">Confirm escalation to Transformation Office?</p>
+                  <p className="text-xs text-amber-700">This blocker will be flagged for TO review and logged in the activity trail.</p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleEscalate(blocker.projectId, blocker.id)}
+                      className="text-xs font-semibold text-white bg-amber-600 hover:bg-amber-700 rounded px-3 py-1.5 transition-colors"
+                    >
+                      Confirm
+                    </button>
+                    <button
+                      onClick={() => setEscalateConfirm(null)}
+                      className="text-xs font-medium text-slate-600 hover:text-slate-800 border border-slate-300 rounded px-3 py-1.5 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Resolve */}
+              {resolveOpen !== blocker.id && (
+                <button
+                  onClick={() => setResolveOpen(blocker.id)}
+                  className="text-xs font-medium text-teal-700 hover:text-teal-900 border border-teal-300 rounded px-3 py-1.5 hover:bg-teal-50 transition-colors"
+                >
+                  Resolve
+                </button>
+              )}
+              {resolveOpen === blocker.id && (
+                <div className="bg-teal-50 border border-teal-200 rounded-lg p-3 space-y-2">
+                  <p className="text-xs font-semibold text-teal-800">Resolution note (required)</p>
+                  <textarea
+                    value={resolveNotes[blocker.id] ?? ""}
+                    onChange={(e) => setResolveNotes((prev) => ({ ...prev, [blocker.id]: e.target.value }))}
+                    placeholder="Describe how this blocker was resolved..."
+                    rows={3}
+                    className="w-full text-xs border border-teal-200 rounded-lg p-2 focus:outline-none focus:ring-1 focus:ring-teal-400 resize-none bg-white"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleResolve(blocker.projectId, blocker.id)}
+                      disabled={!(resolveNotes[blocker.id] ?? "").trim()}
+                      className="text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 disabled:opacity-40 disabled:cursor-not-allowed rounded px-3 py-1.5 transition-colors"
+                    >
+                      Mark Resolved
+                    </button>
+                    <button
+                      onClick={() => { setResolveOpen(null); setResolveNotes((prev) => { const next = { ...prev }; delete next[blocker.id]; return next; }); }}
+                      className="text-xs font-medium text-slate-600 hover:text-slate-800 border border-slate-300 rounded px-3 py-1.5 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       ))}
     </div>
@@ -521,24 +686,24 @@ function TeamPanel({ initiative, projects }: { initiative: Initiative; projects:
 }
 
 function ActivityPanel({ initiative }: { initiative: Initiative }) {
-  const events = [
-    { time: initiative.updatedAt, actor: "System", action: "Initiative data last updated", note: "" },
-    { time: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), actor: initiative.owner, action: "Progress updated", note: `${initiative.progress}% complete` },
-    { time: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), actor: "TO Team", action: "EA alignment score updated", note: `${initiative.eaAlignmentScore ?? "TBD"}%` },
-    { time: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), actor: "System", action: "Initiative status", note: initiative.status },
-  ];
+  const events = initiative.activity.length > 0
+    ? [...initiative.activity].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    : [
+        { id: "sys-1", timestamp: initiative.updatedAt, actor: "System", action: "Initiative data last updated", type: "Status Change" as const },
+        { id: "sys-2", timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), actor: "TO Team", action: `EA alignment score: ${initiative.eaAlignmentScore ?? "TBD"}%`, type: "Status Change" as const },
+        { id: "sys-3", timestamp: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), actor: "System", action: `Initiative status: ${initiative.status}`, type: "Status Change" as const },
+      ];
 
   return (
     <div className="space-y-1">
-      {events.map((event, i) => (
-        <div key={i} className="flex gap-3 py-2.5 border-b border-slate-100 last:border-0">
+      {events.map((event) => (
+        <div key={event.id} className="flex gap-3 py-2.5 border-b border-slate-100 last:border-0">
           <div className="w-1.5 h-1.5 rounded-full bg-teal-400 flex-shrink-0 mt-1.5" />
           <div className="flex-1 min-w-0">
             <p className="text-xs text-slate-700">
               <span className="font-medium">{event.actor}</span> · {event.action}
-              {event.note && <span className="text-slate-500"> — {event.note}</span>}
             </p>
-            <p className="text-xs text-slate-400">{new Date(event.time).toLocaleDateString()}</p>
+            <p className="text-xs text-slate-400">{new Date(event.timestamp).toLocaleDateString()}</p>
           </div>
         </div>
       ))}
@@ -566,6 +731,13 @@ export function SeeInsightsDrawer({ initiative, role, onClose, onChangeRole }: P
 
   // ── General Staff — lightweight ──────────────────────────────────────────────
   if (role === "general-staff") {
+    // Derive planned start (~18 months before target) and forecast end
+    const targetMs = new Date(initiative.targetDate).getTime();
+    const plannedStart = fmtMonthYear(new Date(targetMs - 18 * 30 * 24 * 60 * 60 * 1000).toISOString());
+    const plannedEnd = fmtMonthYear(initiative.targetDate);
+    const forecastMs = initiative.status === "At Risk" ? targetMs + 90 * 24 * 60 * 60 * 1000 : null;
+    const forecastEnd = forecastMs ? fmtMonthYear(new Date(forecastMs).toISOString()) : null;
+
     return (
       <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm">
         <div className="bg-white w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl shadow-2xl">
@@ -578,32 +750,45 @@ export function SeeInsightsDrawer({ initiative, role, onClose, onChangeRole }: P
               <X className="w-5 h-5" />
             </button>
           </div>
-          <div className="p-6 space-y-4">
-            <div className="flex items-center gap-3 flex-wrap">
-              <span className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${STATUS_COLORS[initiative.status]}`}>
+          <div className="p-6 space-y-5">
+            {/* Large progress number */}
+            <div className="flex flex-col items-center py-4 bg-slate-50 rounded-xl border border-slate-200">
+              <p className="text-6xl font-black text-slate-900 leading-none">{initiative.progress}%</p>
+              <p className="text-sm text-slate-500 mt-2">Overall Completion</p>
+              <Progress value={initiative.progress} className="mt-3 h-2 w-full max-w-xs" />
+            </div>
+
+            {/* Status */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${STATUS_COLORS[initiative.status] ?? "bg-slate-100 text-slate-600"}`}>
                 {initiative.status}
               </span>
               <span className="text-sm text-slate-500">{initiative.division}</span>
             </div>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-600">Progress</span>
-                <span className="font-semibold text-slate-900">{initiative.progress}%</span>
-              </div>
-              <Progress value={initiative.progress} className="h-2" />
+
+            {/* Date range */}
+            <div className="bg-slate-50 rounded-xl border border-slate-200 px-4 py-3 space-y-1">
+              <p className="text-xs text-slate-500 font-medium">Planned Timeline</p>
+              <p className="text-sm font-semibold text-slate-900">{plannedStart} → {plannedEnd}</p>
+              {forecastEnd && (
+                <p className="text-xs text-amber-700 font-medium mt-1">
+                  Forecast: {forecastEnd}
+                </p>
+              )}
             </div>
+
+            {/* Owner + division */}
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
-                <p className="text-slate-500 text-xs">Target Completion</p>
-                <p className="font-medium text-slate-900">{initiative.targetDate}</p>
+                <p className="text-slate-500 text-xs">Division</p>
+                <p className="font-medium text-slate-900">{initiative.division}</p>
               </div>
               <div>
-                <p className="text-slate-500 text-xs">Days Remaining</p>
-                <p className={`font-medium ${days < 0 ? "text-red-600" : "text-slate-900"}`}>
-                  {days < 0 ? "Overdue" : `${days} days`}
-                </p>
+                <p className="text-slate-500 text-xs">Owner</p>
+                <p className="font-medium text-slate-900">{initiative.owner}</p>
               </div>
             </div>
+
             <button
               onClick={onChangeRole}
               className="w-full text-center text-xs text-teal-600 hover:text-teal-800 py-2"
@@ -618,8 +803,13 @@ export function SeeInsightsDrawer({ initiative, role, onClose, onChangeRole }: P
 
   // ── Senior Stakeholder — executive summary ───────────────────────────────────
   if (role === "senior-stakeholder") {
-    const redProjects = projects.filter((p) => p.rag === "Red");
-    const topRisks = projects.flatMap((p) => p.risks).filter((r) => r.severity === "Critical" || r.severity === "High").slice(0, 3);
+    const openBlockerCount = projects.flatMap((p) => p.blockers).filter((b) => !b.resolved).length;
+    const allMilestones = projects.flatMap((p) => p.milestones.map((m) => ({ ...m, projectName: p.name })));
+    const top3Milestones = [...allMilestones]
+      .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+      .slice(0, 3);
+    const totalBudget = initiative.budget ?? 0;
+    const remaining = totalBudget - initiative.budgetSpent;
 
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
@@ -665,9 +855,27 @@ export function SeeInsightsDrawer({ initiative, role, onClose, onChangeRole }: P
                 <p className="text-xl font-bold text-slate-900">{initiative.eaAlignmentScore ?? "TBD"}%</p>
               </div>
               <div className="bg-slate-50 rounded-xl p-3 border border-slate-200">
-                <p className="text-xs text-slate-500">Budget</p>
-                <p className="text-lg font-bold text-slate-900">{formatBudget(initiative.budget)}</p>
-                <p className="text-xs text-slate-400">{formatBudget(initiative.budgetSpent)} spent</p>
+                <p className="text-xs text-slate-500">Open Blockers</p>
+                <p className={`text-xl font-bold ${openBlockerCount > 0 ? "text-amber-600" : "text-slate-900"}`}>
+                  {openBlockerCount}
+                </p>
+              </div>
+            </div>
+
+            {/* Budget: Total / Spent / Remaining only */}
+            <div>
+              <p className="text-sm font-semibold text-slate-700 mb-2">Budget at a Glance</p>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { label: "Total", value: formatBudget(initiative.budget) },
+                  { label: "Spent", value: formatBudget(initiative.budgetSpent) },
+                  { label: "Remaining", value: formatBudget(remaining), highlight: remaining < 0 },
+                ].map(({ label, value, highlight }) => (
+                  <div key={label} className="bg-slate-50 rounded-xl p-3 border border-slate-200">
+                    <p className="text-xs text-slate-500">{label}</p>
+                    <p className={`text-base font-bold ${highlight ? "text-red-600" : "text-slate-900"}`}>{value}</p>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -685,31 +893,20 @@ export function SeeInsightsDrawer({ initiative, role, onClose, onChangeRole }: P
               </div>
             </div>
 
-            {/* Top risks */}
-            {topRisks.length > 0 && (
+            {/* Top 3 milestones by due date — read-only */}
+            {top3Milestones.length > 0 && (
               <div>
-                <p className="text-sm font-semibold text-slate-700 mb-2">Top Risks</p>
+                <p className="text-sm font-semibold text-slate-700 mb-2">Upcoming Milestones</p>
                 <div className="space-y-2">
-                  {topRisks.map((risk) => (
-                    <div key={risk.id} className="flex gap-3 p-3 bg-red-50 border border-red-100 rounded-lg">
-                      <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-medium text-slate-900">{risk.title}</p>
-                        <p className="text-xs text-slate-600">{risk.impact}</p>
-                      </div>
+                  {top3Milestones.map((ms) => (
+                    <div key={ms.id} className="flex items-center gap-3 p-2.5 border border-slate-200 rounded-lg">
+                      <span className={`px-1.5 py-0.5 rounded text-xs font-medium flex-shrink-0 ${MILESTONE_COLORS[ms.status]}`}>
+                        {ms.status}
+                      </span>
+                      <span className="text-sm text-slate-700 truncate flex-1">{ms.name}</span>
+                      <span className="text-xs text-slate-400 flex-shrink-0">{fmtDate(ms.dueDate)}</span>
                     </div>
                   ))}
-                </div>
-              </div>
-            )}
-
-            {/* At-risk projects callout */}
-            {redProjects.length > 0 && (
-              <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex gap-3">
-                <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-semibold text-red-700">{redProjects.length} project(s) are Red</p>
-                  <p className="text-xs text-red-600 mt-0.5">Immediate attention required from Initiative Owner.</p>
                 </div>
               </div>
             )}
@@ -779,10 +976,10 @@ export function SeeInsightsDrawer({ initiative, role, onClose, onChangeRole }: P
               <MilestonesPanel initiative={initiative} projects={projects} isOwner={isOwner} onRefresh={refresh} />
             )}
             {activeSection === "risks" && (
-              <RisksPanel projects={projects} />
+              <RisksPanel projects={projects} isOwner={isOwner} onRefresh={refresh} />
             )}
             {activeSection === "blockers" && (
-              <BlockersPanel projects={projects} isOwner={isOwner} />
+              <BlockersPanel projects={projects} isOwner={isOwner} onRefresh={refresh} />
             )}
             {activeSection === "team" && (
               <TeamPanel initiative={initiative} projects={projects} />

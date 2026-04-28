@@ -23,7 +23,6 @@ const exploreGroups = [
     items: [
       { icon: GraduationCap, name: "Transformation Methodology & Learning", desc: "Courses, learning tracks, and EA literacy pathways", path: "/marketplaces/learning" },
       { icon: BookOpen, name: "Knowledge & Best Practices", desc: "Standards, governance references, and published architecture outputs", path: "/marketplaces/knowledge" },
-      { icon: ArrowRight, name: "A-E Methodology", desc: "Reference path from strategy and assets to governed deployment", path: "/methodology" },
     ],
   },
   {

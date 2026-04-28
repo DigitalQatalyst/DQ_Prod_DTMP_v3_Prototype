@@ -48,7 +48,15 @@
       "Bash(xargs grep:*)",
       "Bash(find 'C:\\\\Users\\\\Wangare\\\\Desktop\\\\DEWA Prototype\\\\DQ_Prod_DTMP_v3_DEWA_Prototype/src' -type f -name *ortfolio* -o -type f -name *PM*)",
       "Bash(git -C 'C:\\\\Users\\\\Wangare\\\\Desktop\\\\DEWA Prototype\\\\DQ_Prod_DTMP_v3_DEWA_Prototype\\\\.claude\\\\worktrees\\\\agent-a48a0210' status)",
-      "Bash(git -C \"C:\\\\Users\\\\Wangare\\\\Desktop\\\\DEWA Prototype\\\\DQ_Prod_DTMP_v3_DEWA_Prototype\\\\.claude\\\\worktrees\\\\agent-a48a0210\" diff --stat HEAD)"
+      "Bash(git -C \"C:\\\\Users\\\\Wangare\\\\Desktop\\\\DEWA Prototype\\\\DQ_Prod_DTMP_v3_DEWA_Prototype\\\\.claude\\\\worktrees\\\\agent-a48a0210\" diff --stat HEAD)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(node -e ':*)",
+      "Bash(npx vite:*)",
+      "Bash(node -e \"const fs=require\\('fs'\\);const c=fs.readFileSync\\('src/data/divisions/divisionalLandingData.ts','utf8'\\);const idx=c.indexOf\\('name: \\\\\\\\\\\\\\\\\\\\\"'\\);console.log\\('backslash-quote at:',idx\\);const count=\\(c.match\\(/name: \\\\\\\\\\\\\\\\\\\\\"/g\\)||[]\\).length;console.log\\('count:',count\\);\")",
+      "Bash(node -e \"const fs=require\\('fs'\\);const buf=fs.readFileSync\\('src/data/divisions/divisionalLandingData.ts'\\);const s=buf.toString\\('utf8'\\);const lines=s.split\\('\\\\n'\\);const l94=lines[93];console.log\\('Line 94 bytes around name:'\\);const idx=l94.indexOf\\('name:'\\);if\\(idx>=0\\){const chunk=l94.slice\\(idx,idx+60\\);console.log\\(JSON.stringify\\(chunk\\)\\);}\")",
+      "Bash(git push *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }
