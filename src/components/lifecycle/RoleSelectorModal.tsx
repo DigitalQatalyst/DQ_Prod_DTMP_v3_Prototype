@@ -12,6 +12,7 @@ import {
 interface Props {
   onClose: () => void;
   onRoleSelected: (role: LifecycleInsightsRole) => void;
+  currentRole?: LifecycleInsightsRole | null;
 }
 
 const ROLE_ORDER: LifecycleInsightsRole[] = [
@@ -38,7 +39,7 @@ const ROLE_ICON_BG: Record<LifecycleInsightsRole, string> = {
   "general-staff": "bg-slate-200 text-slate-600",
 };
 
-export function RoleSelectorModal({ onClose, onRoleSelected }: Props) {
+export function RoleSelectorModal({ onClose, onRoleSelected, currentRole }: Props) {
   const [hoveredRole, setHoveredRole] = useState<LifecycleInsightsRole | null>(null);
 
   const handleSelect = (role: LifecycleInsightsRole) => {
@@ -69,6 +70,7 @@ export function RoleSelectorModal({ onClose, onRoleSelected }: Props) {
         <div className="p-6 space-y-3">
           {ROLE_ORDER.map((role) => {
             const account = getDemoAccount(role);
+            const isCurrent = currentRole === role;
             return (
               <button
                 key={role}
@@ -76,7 +78,7 @@ export function RoleSelectorModal({ onClose, onRoleSelected }: Props) {
                 onMouseEnter={() => setHoveredRole(role)}
                 onMouseLeave={() => setHoveredRole(null)}
                 className={`w-full text-left rounded-xl border-2 p-4 transition-all duration-150 flex items-start gap-4 ${
-                  hoveredRole === role ? ROLE_ACCENT[role] : "border-slate-200 bg-white hover:border-slate-300"
+                  isCurrent ? ROLE_ACCENT[role] : hoveredRole === role ? ROLE_ACCENT[role] : "border-slate-200 bg-white hover:border-slate-300"
                 }`}
               >
                 <div className={`rounded-lg p-2 flex-shrink-0 ${ROLE_ICON_BG[role]}`}>
@@ -84,9 +86,16 @@ export function RoleSelectorModal({ onClose, onRoleSelected }: Props) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-semibold text-slate-900 text-sm">
-                      {LIFECYCLE_ROLE_LABELS[role]}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-slate-900 text-sm">
+                        {LIFECYCLE_ROLE_LABELS[role]}
+                      </span>
+                      {isCurrent && (
+                        <span className="text-xs px-1.5 py-0.5 rounded font-medium bg-orange-100 text-orange-700">
+                          Current
+                        </span>
+                      )}
+                    </div>
                     <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
                   </div>
                   <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">

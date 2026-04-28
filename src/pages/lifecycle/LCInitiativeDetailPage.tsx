@@ -275,7 +275,16 @@ export default function LCInitiativeDetailPage() {
   };
 
   // ── Tab state ───────────────────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState<"overview" | "projects" | "applications" | "compliance" | "products" | "retirement">("overview");
+  const VALID_TABS = ["overview", "projects", "applications", "compliance", "products", "retirement"] as const;
+  type DetailTab = typeof VALID_TABS[number];
+  const [activeTab, setActiveTab] = useState<DetailTab>(() => {
+    const hash = window.location.hash.replace("#", "");
+    return (VALID_TABS as readonly string[]).includes(hash) ? (hash as DetailTab) : "overview";
+  });
+  const handleTabChange = (tab: DetailTab) => {
+    setActiveTab(tab);
+    window.history.replaceState(null, "", `#${tab}`);
+  };
 
   // ── Derived data ────────────────────────────────────────────────────────────
   const allProjects = useMemo(() => getProjects(), []);
@@ -463,7 +472,7 @@ export default function LCInitiativeDetailPage() {
                 ).map(({ id, label, icon: Icon }) => (
                   <button
                     key={id}
-                    onClick={() => setActiveTab(id)}
+                    onClick={() => handleTabChange(id)}
                     className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
                       activeTab === id
                         ? "border-orange-500 text-orange-600"
@@ -735,6 +744,7 @@ export default function LCInitiativeDetailPage() {
         <RoleSelectorModal
           onClose={() => setRoleModalOpen(false)}
           onRoleSelected={handleRoleSelected}
+          currentRole={drawerRole}
         />,
         document.body
       )}

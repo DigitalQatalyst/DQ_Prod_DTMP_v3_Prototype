@@ -277,6 +277,11 @@ export default function LifecycleManagementPage() {
   };
 
   useEffect(() => {
+    document.title = "Initiative & Programme Portfolio — DEWA DTMP";
+    return () => { document.title = "DEWA DTMP"; };
+  }, []);
+
+  useEffect(() => {
     const divisionParam = searchParams.get("division");
     const priorityParam = searchParams.get("priority");
     const statusParam = searchParams.get("status");
@@ -880,7 +885,9 @@ export default function LifecycleManagementPage() {
                       <>
                         <h3 className="text-lg font-semibold text-gray-900 mb-2">No initiatives match your filters</h3>
                         <p className="text-gray-600 mb-4">Reset the current filters to restore the full portfolio.</p>
-                        <Button variant="outline" onClick={clearFilters}>Reset filters</Button>
+                        <Button variant="outline" onClick={clearFilters}>
+                          Reset {activeFilterCount} filter{activeFilterCount !== 1 ? "s" : ""}
+                        </Button>
                       </>
                     )}
                   </div>
@@ -1206,6 +1213,7 @@ export default function LifecycleManagementPage() {
         <RoleSelectorModal
           onClose={() => setRoleModalOpen(false)}
           onRoleSelected={handleRoleSelected}
+          currentRole={drawerRole}
         />,
         document.body
       )}
