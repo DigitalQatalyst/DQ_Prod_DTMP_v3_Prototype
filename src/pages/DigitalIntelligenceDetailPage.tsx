@@ -235,12 +235,7 @@ export default function DigitalIntelligenceDetailPage() {
           Business Value
         </h2>
         <ul className="space-y-3">
-          {[
-            "Reduce decision-making time with actionable insights",
-            "Identify risks and opportunities before they materialize",
-            "Optimize resource allocation and costs",
-            "Enable continuous improvement through data-driven insights",
-          ].map((item, index) => (
+          {(service.businessValue || []).map((item, index) => (
             <li key={index} className="flex items-start gap-3">
               <CheckCircle2 className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
               <span className="text-gray-700">{item}</span>
@@ -506,25 +501,14 @@ export default function DigitalIntelligenceDetailPage() {
         <div className="bg-gradient-to-r from-[#0B1437] to-[#1a2555] text-white">
           <div className="max-w-7xl mx-auto px-4 pt-6 pb-10">
             {/* Breadcrumb */}
-            <nav
-              aria-label="Breadcrumb"
-              className="flex items-center gap-2 text-sm text-gray-300 mb-6 flex-wrap"
-            >
-              <button onClick={() => navigate("/")} className="hover:text-white transition-colors">
-                Home
-              </button>
-              <ChevronRight size={14} aria-hidden="true" className="text-gray-500" />
-              <button onClick={() => navigate("/marketplaces")} className="hover:text-white transition-colors">
-                Marketplaces
-              </button>
-              <ChevronRight size={14} aria-hidden="true" className="text-gray-500" />
-              <button onClick={() => navigate("/marketplaces/digital-intelligence")} className="hover:text-white transition-colors">
-                Digital Intelligence
-              </button>
-              <ChevronRight size={14} aria-hidden="true" className="text-gray-500" />
-              <span className="text-white font-medium" aria-current="page">
-                {service.title}
-              </span>
+            <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-sm text-gray-300 mb-6 flex-wrap">
+              <Link to="/" className="hover:text-white transition-colors">Home</Link>
+              <ChevronRight size={14} className="text-gray-500" />
+              <Link to="/marketplaces" className="hover:text-white transition-colors">Marketplaces</Link>
+              <ChevronRight size={14} className="text-gray-500" />
+              <Link to="/marketplaces/digital-intelligence" className="hover:text-white transition-colors">Digital Intelligence</Link>
+              <ChevronRight size={14} className="text-gray-500" />
+              <span className="text-white font-medium">{service.title}</span>
             </nav>
 
             {/* Back Button */}

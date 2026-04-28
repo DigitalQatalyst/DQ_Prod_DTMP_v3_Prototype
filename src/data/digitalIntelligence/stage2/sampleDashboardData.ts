@@ -303,6 +303,29 @@ export const sampleDashboardData: Record<string, DashboardData> = {
       { timestamp: '2026-02-17', value: 42, label: 'Day 6' },
       { timestamp: '2026-02-18', value: 51, label: 'Day 7' }
     ],
+    widgetData: {
+      'component-risk': [
+        { name: 'Database Servers', value: 35 },
+        { name: 'Storage Arrays', value: 28 },
+        { name: 'Network Equipment', value: 18 },
+        { name: 'Application Servers', value: 12 },
+        { name: 'Backup Systems', value: 7 }
+      ],
+      'maintenance-schedule': [
+        { name: 'DB-Primary-01', value: 5, label: 'Feb 14, 2:00 AM' },
+        { name: 'Storage-Array-02', value: 12, label: 'Feb 18, 3:00 AM' },
+        { name: 'App-Server-05', value: 18, label: 'Feb 25, 1:00 AM' },
+        { name: 'Network-Switch-03', value: 22, label: 'Mar 2, 2:00 AM' },
+        { name: 'Backup-System-01', value: 28, label: 'Mar 8, 3:00 AM' }
+      ],
+      'health-dimensions': [
+        { name: 'CPU Health', value: 72 },
+        { name: 'Memory Health', value: 68 },
+        { name: 'Disk I/O', value: 55 },
+        { name: 'Network', value: 82 },
+        { name: 'Temperature', value: 48 }
+      ]
+    },
     metrics: [
       {
         id: 'high-risk-systems',
@@ -334,6 +357,25 @@ export const sampleDashboardData: Record<string, DashboardData> = {
         value: '$45K',
         trend: 'up',
         trendLabel: 'By preventing failures',
+        severity: 'success'
+      },
+      {
+        id: 'mtbf',
+        label: 'Mean Time Between Failures',
+        value: '847',
+        unit: 'hours',
+        trend: 'up',
+        trendValue: 12,
+        trendLabel: '+12% vs last quarter',
+        severity: 'success'
+      },
+      {
+        id: 'prediction-accuracy',
+        label: 'Prediction Accuracy',
+        value: '88%',
+        trend: 'up',
+        trendValue: 3,
+        trendLabel: '+3% improvement',
         severity: 'success'
       }
     ],
@@ -1492,10 +1534,44 @@ export const sampleDashboardData: Record<string, DashboardData> = {
       { timestamp: '2026-01-01', value: 71, label: 'Jan 2026' },
       { timestamp: '2026-02-01', value: 74, label: 'Feb 2026' }
     ],
+    widgetData: {
+      'readiness-radar': [
+        { name: 'Leadership & Vision', value: 82 },
+        { name: 'Culture & Change', value: 52 },
+        { name: 'Technology', value: 78 },
+        { name: 'Data Governance', value: 48 },
+        { name: 'Talent & Skills', value: 71 }
+      ],
+      'readiness-trend': [
+        { name: 'Sep 2025', value: 58 },
+        { name: 'Oct 2025', value: 62 },
+        { name: 'Nov 2025', value: 65 },
+        { name: 'Dec 2025', value: 68 },
+        { name: 'Jan 2026', value: 71 },
+        { name: 'Feb 2026', value: 74 }
+      ],
+      'gap-analysis': [
+        { name: 'Leadership & Vision', value: 3 },
+        { name: 'Technology', value: 2 },
+        { name: 'Talent & Skills', value: 9 },
+        { name: 'Culture & Change', value: 18 },
+        { name: 'Data Governance', value: 27 }
+      ],
+      'risk-dist': [
+        { name: 'Process Gaps', value: 35 },
+        { name: 'Skills Shortage', value: 28 },
+        { name: 'Cultural Resistance', value: 22 },
+        { name: 'Technology Debt', value: 10 },
+        { name: 'Budget Constraints', value: 5 }
+      ]
+    },
     metrics: [
       { id: 'readiness-score', label: 'Readiness Score', value: 74, unit: 'out of 100', trend: 'up', trendValue: 4.2, trendLabel: '+4.2% vs last month', severity: 'success' },
       { id: 'blockers', label: 'Active Blockers', value: 5, trend: 'down', trendValue: -2, trendLabel: '2 fewer than last month', severity: 'warning' },
-      { id: 'enablers-met', label: 'Enablers Met', value: '18/24', trend: 'up', trendValue: 3, trendLabel: '3 new enablers met', severity: 'success' }
+      { id: 'enablers-met', label: 'Enablers Met', value: '18/24', trend: 'up', trendValue: 3, trendLabel: '3 new enablers met', severity: 'success' },
+      { id: 'critical-dimensions', label: 'Critical Dimensions', value: 2, unit: 'below threshold', trend: 'stable', trendLabel: 'Requires attention', severity: 'error' },
+      { id: 'improvement-velocity', label: 'Improvement Velocity', value: '+3.5', unit: 'points/month', trend: 'up', trendValue: 12, trendLabel: '+12% acceleration', severity: 'success' },
+      { id: 'target-timeline', label: 'Target Achievement', value: 'Apr 2026', trend: 'up', trendLabel: 'On track for 80-point goal', severity: 'info' }
     ],
     insights: [
       { id: 'trs-insight-001', type: 'alert', severity: 'medium', title: 'Change Management Capacity at Risk', description: 'Change management readiness dimension scored 52/100, well below the 70-point threshold. Only 3 of 8 change agents are certified.', confidence: 89, actionable: true, suggestedAction: 'Fast-track change management certification for 5 additional agents. Target completion by end of Q1 2026.' },
