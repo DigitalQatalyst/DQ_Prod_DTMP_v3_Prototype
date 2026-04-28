@@ -274,6 +274,9 @@ export default function LCInitiativeDetailPage() {
     setDrawerOpen(true);
   };
 
+  // ── Tab state ───────────────────────────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState<"overview" | "projects" | "applications" | "compliance" | "products" | "retirement">("overview");
+
   // ── Derived data ────────────────────────────────────────────────────────────
   const allProjects = useMemo(() => getProjects(), []);
   const initiativeProjects = useMemo(
@@ -443,20 +446,48 @@ export default function LCInitiativeDetailPage() {
       <div className="max-w-7xl mx-auto px-4 py-8">
           <div className="flex flex-col lg:flex-row gap-8">
 
-            {/* ── Left: tab content ──────────────────────────────────────── */}
-            <div className="flex-1 min-w-0 space-y-8">
+            {/* ── Left: tabbed content ───────────────────────────────────── */}
+            <div className="flex-1 min-w-0">
 
-              {/* Overview */}
-              <section className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold text-foreground mb-3">Initiative Overview</h2>
-                <p className="text-base text-muted-foreground leading-relaxed">{initiative.description}</p>
+              {/* Tab nav */}
+              <div className="flex gap-1 border-b border-gray-200 mb-6 overflow-x-auto">
+                {(
+                  [
+                    { id: "overview", label: "Overview", icon: Activity },
+                    { id: "projects", label: "Projects", icon: FolderKanban },
+                    { id: "applications", label: "Applications", icon: Server },
+                    { id: "compliance", label: "Compliance", icon: ShieldCheck },
+                    { id: "products", label: "Products", icon: Package },
+                    { id: "retirement", label: "Retirement", icon: Archive },
+                  ] as const
+                ).map(({ id, label, icon: Icon }) => (
+                  <button
+                    key={id}
+                    onClick={() => setActiveTab(id)}
+                    className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                      activeTab === id
+                        ? "border-orange-500 text-orange-600"
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    {label}
+                  </button>
+                ))}
               </div>
 
-              <AIInitiativeRecommender initiative={initiative} />
+              {/* Overview */}
+              {activeTab === "overview" && (
+                <section className="space-y-6">
+                  <div>
+                    <h2 className="text-2xl font-bold text-foreground mb-3">Initiative Overview</h2>
+                    <p className="text-base text-muted-foreground leading-relaxed">{initiative.description}</p>
+                  </div>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                <Metric label="Owner" value={initiative.owner} />
+                  <AIInitiativeRecommender initiative={initiative} />
+
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                    <Metric label="Owner" value={initiative.owner} />
                     <Metric label="Division" value={initiative.division} />
                     <Metric label="Budget" value={fmtBudget(initiative.budget)} />
                     <Metric label="Target Date" value={initiative.targetDate} />
@@ -473,123 +504,124 @@ export default function LCInitiativeDetailPage() {
                       <Progress value={initiative.progress} className="h-2" />
                     </div>
                   )}
-
-              </section>
-
-              <Separator />
+                </section>
+              )}
 
               {/* Projects */}
-              <section className="space-y-4">
-                <h2 className="text-2xl font-bold text-foreground mb-5">Linked Projects</h2>
-                <div className="space-y-4">
-                  {initiativeProjects.length === 0 ? (
-                    <EmptyState icon={FolderKanban} message="No projects linked to this initiative yet." />
-                  ) : (
-                    initiativeProjects.map((p) => <ProjectCard key={p.id} project={p} />)
-                  )}
-                </div>
-              </section>
-
-              <Separator />
+              {activeTab === "projects" && (
+                <section className="space-y-4">
+                  <h2 className="text-2xl font-bold text-foreground mb-5">Linked Projects</h2>
+                  <div className="space-y-4">
+                    {initiativeProjects.length === 0 ? (
+                      <EmptyState icon={FolderKanban} message="No projects linked to this initiative yet." />
+                    ) : (
+                      initiativeProjects.map((p) => <ProjectCard key={p.id} project={p} />)
+                    )}
+                  </div>
+                </section>
+              )}
 
               {/* Applications */}
-              <section className="space-y-3">
-                <h2 className="text-2xl font-bold text-foreground mb-5">Applications in Scope</h2>
-                <div className="space-y-3">
-                  {applications.map((app, i) => (
-                    <div key={i} className="bg-white border border-gray-200 rounded-xl p-4 space-y-2">
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <div className="flex items-center gap-2">
-                          <Server className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                          <span className="text-sm font-semibold text-gray-900">{app.name}</span>
+              {activeTab === "applications" && (
+                <section className="space-y-3">
+                  <h2 className="text-2xl font-bold text-foreground mb-5">Applications in Scope</h2>
+                  <div className="space-y-3">
+                    {applications.map((app, i) => (
+                      <div key={i} className="bg-white border border-gray-200 rounded-xl p-4 space-y-2">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <Server className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                            <span className="text-sm font-semibold text-gray-900">{app.name}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{app.type}</span>
+                            <Badge className={`${APP_STATUS_BADGE[app.status]} border text-xs`}>{app.status}</Badge>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{app.type}</span>
-                          <Badge className={`${APP_STATUS_BADGE[app.status]} border text-xs`}>{app.status}</Badge>
-                        </div>
+                        <p className="text-xs text-gray-500">{app.note}</p>
+                        <p className="text-xs text-gray-400">Owner: {app.owner}</p>
                       </div>
-                      <p className="text-xs text-gray-500">{app.note}</p>
-                      <p className="text-xs text-gray-400">Owner: {app.owner}</p>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              <Separator />
+                    ))}
+                  </div>
+                </section>
+              )}
 
               {/* Compliance */}
-              <section className="space-y-3">
-                <h2 className="text-2xl font-bold text-foreground mb-5">Compliance & Governance</h2>
-                <div className="space-y-3">
-                  {complianceChecks.map((check, i) => (
-                    <div key={i} className="bg-white border border-gray-200 rounded-xl p-4 space-y-2">
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <div className="flex items-center gap-2">
-                          <ShieldCheck className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                          <span className="text-sm font-semibold text-gray-900">{check.framework}</span>
+              {activeTab === "compliance" && (
+                <section className="space-y-3">
+                  <h2 className="text-2xl font-bold text-foreground mb-5">Compliance & Governance</h2>
+                  <div className="space-y-3">
+                    {complianceChecks.map((check, i) => (
+                      <div key={i} className="bg-white border border-gray-200 rounded-xl p-4 space-y-2">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <ShieldCheck className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                            <span className="text-sm font-semibold text-gray-900">{check.framework}</span>
+                          </div>
+                          <Badge className={`${COMPLIANCE_BADGE[check.status]} border text-xs`}>
+                            {check.status === "Passed" && <CheckCircle className="w-3 h-3 mr-1 inline" />}
+                            {check.status === "Action Required" && <AlertTriangle className="w-3 h-3 mr-1 inline" />}
+                            {check.status === "In Review" && <Clock className="w-3 h-3 mr-1 inline" />}
+                            {check.status}
+                          </Badge>
                         </div>
-                        <Badge className={`${COMPLIANCE_BADGE[check.status]} border text-xs`}>
-                          {check.status === "Passed" && <CheckCircle className="w-3 h-3 mr-1 inline" />}
-                          {check.status === "Action Required" && <AlertTriangle className="w-3 h-3 mr-1 inline" />}
-                          {check.status === "In Review" && <Clock className="w-3 h-3 mr-1 inline" />}
-                          {check.status}
-                        </Badge>
+                        <p className="text-xs text-gray-500">{check.note}</p>
+                        <p className="text-xs text-gray-400">Due: {check.dueDate}</p>
                       </div>
-                      <p className="text-xs text-gray-500">{check.note}</p>
-                      <p className="text-xs text-gray-400">Due: {check.dueDate}</p>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              <Separator />
+                    ))}
+                  </div>
+                </section>
+              )}
 
               {/* Products */}
-              <section className="space-y-3">
-                <h2 className="text-2xl font-bold text-foreground mb-5">Products & Capabilities</h2>
-                <div className="space-y-3">
-                  {products.map((prod, i) => (
-                    <div key={i} className="bg-white border border-gray-200 rounded-xl p-4 space-y-2">
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <div className="flex items-center gap-2">
-                          <Package className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                          <span className="text-sm font-semibold text-gray-900">{prod.name}</span>
+              {activeTab === "products" && (
+                <section className="space-y-3">
+                  <h2 className="text-2xl font-bold text-foreground mb-5">Products & Capabilities</h2>
+                  <div className="space-y-3">
+                    {products.map((prod, i) => (
+                      <div key={i} className="bg-white border border-gray-200 rounded-xl p-4 space-y-2">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <Package className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                            <span className="text-sm font-semibold text-gray-900">{prod.name}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{prod.type}</span>
+                            <Badge className={`${PRODUCT_STATUS_BADGE[prod.status]} border text-xs`}>{prod.status}</Badge>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{prod.type}</span>
-                          <Badge className={`${PRODUCT_STATUS_BADGE[prod.status]} border text-xs`}>{prod.status}</Badge>
-                        </div>
+                        <p className="text-xs text-gray-400">Owner: {prod.owner} · Expected: {prod.expectedDate}</p>
                       </div>
-                      <p className="text-xs text-gray-400">Owner: {prod.owner} · Expected: {prod.expectedDate}</p>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              <Separator />
+                    ))}
+                  </div>
+                </section>
+              )}
 
               {/* Retirement */}
-              <section className="space-y-3">
-                <h2 className="text-2xl font-bold text-foreground mb-5">Asset Retirement Plan</h2>
-                <div className="space-y-3">
-                  {retirements.map((ret, i) => (
-                    <div key={i} className="bg-white border border-gray-200 rounded-xl p-4 space-y-2">
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <div className="flex items-center gap-2">
-                          <Archive className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                          <span className="text-sm font-semibold text-gray-900">{ret.assetName}</span>
+              {activeTab === "retirement" && (
+                <section className="space-y-3">
+                  <h2 className="text-2xl font-bold text-foreground mb-5">Asset Retirement Plan</h2>
+                  <div className="space-y-3">
+                    {retirements.map((ret, i) => (
+                      <div key={i} className="bg-white border border-gray-200 rounded-xl p-4 space-y-2">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <Archive className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                            <span className="text-sm font-semibold text-gray-900">{ret.assetName}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{ret.assetType}</span>
+                            <Badge className={`${RETIREMENT_STATUS_BADGE[ret.status]} border text-xs`}>{ret.status}</Badge>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{ret.assetType}</span>
-                          <Badge className={`${RETIREMENT_STATUS_BADGE[ret.status]} border text-xs`}>{ret.status}</Badge>
-                        </div>
+                        <p className="text-xs text-gray-600">{ret.reason}</p>
+                        <p className="text-xs text-gray-400">Owner: {ret.owner} · Target: {ret.targetDate}</p>
                       </div>
-                      <p className="text-xs text-gray-600">{ret.reason}</p>
-                      <p className="text-xs text-gray-400">Owner: {ret.owner} · Target: {ret.targetDate}</p>
-                    </div>
-                  ))}
-                </div>
-              </section>
+                    ))}
+                  </div>
+                </section>
+              )}
+
             </div>
 
             {/* ── Right sidebar ──────────────────────────────────────────── */}
