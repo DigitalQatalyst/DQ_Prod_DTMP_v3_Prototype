@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   ChevronRight,
@@ -67,6 +67,20 @@ import {
 import {
   type PMRole,
 } from "@/data/shared/portfolioRole";
+import { getInitiatives, computeInitiativeRAG, type InitiativeType } from "@/data/shared/lifecyclePortfolioStore";
+
+const TAB_INITIATIVE_TYPES: Record<string, InitiativeType[]> = {
+  "it-asset-portfolio": ["Architecture Remediation", "Application Modernisation", "Technology Rationalisation", "Security Uplift", "EA Maturity Improvement"],
+  "ot-asset-portfolio": ["IT/OT Convergence", "Net-Zero Technology"],
+  "data-digital-portfolio": ["AI Deployment", "Data Platform", "DXP Programme"],
+  "project-portfolio": ["Platform Deployment", "DWS Modernisation"],
+};
+
+const RAG_DOT: Record<string, string> = {
+  Green: "bg-green-500",
+  Amber: "bg-amber-400",
+  Red: "bg-red-500",
+};
 
 type AnyCard = ITCard | OADCard | OTNewCard | DataDigitalCard | ProjectCard | InitiativeCard | RationalisationCard | GovernanceCard;
 
@@ -411,6 +425,14 @@ const PortfolioDetailPage = () => {
   const divGradient = DIVISION_GRADIENT[division] || DIVISION_GRADIENT["All Divisions"];
   const showInitiateCTA = needsInitiative(card, tab);
   const relationships = resolveRelationships(card, tab);
+
+  const gapInitiatives = useMemo(() => {
+    const types = TAB_INITIATIVE_TYPES[tab] ?? [];
+    return getInitiatives()
+      .filter((i) => types.includes(i.type) && ["Active", "At Risk", "Scoping"].includes(i.status))
+      .sort((a, b) => (b.eaAlignmentScore ?? -1) - (a.eaAlignmentScore ?? -1))
+      .slice(0, 3);
+  }, [tab]);
 
   const isEA = true;
 
@@ -843,6 +865,43 @@ const PortfolioDetailPage = () => {
                       This asset is already governed under an active Digital DEWA 2035 initiative. Use the Linked Assets tab to navigate to the parent initiative.
                     </p>
                   </div>
+                </div>
+              )}
+
+              {/* Initiatives addressing this gap */}
+              {showInitiateCTA && (
+                <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-gray-900">Initiatives Addressing This Gap</h3>
+                    <span className="text-xs text-gray-400">{gapInitiatives.length} found in portfolio</span>
+                  </div>
+                  {gapInitiatives.length === 0 ? (
+                    <p className="text-sm text-gray-500">No active initiatives currently cover this capability domain. Use the form below to raise one.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {gapInitiatives.map((ini) => {
+                        const rag = computeInitiativeRAG(ini);
+                        return (
+                          <div key={ini.id} className="flex items-center justify-between gap-3 rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${RAG_DOT[rag] ?? "bg-gray-400"}`} />
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-gray-900 truncate">{ini.name}</p>
+                                <p className="text-xs text-gray-500">{ini.type} · {ini.division} · {ini.progress}% progress</p>
+                              </div>
+                            </div>
+                            <Link
+                              to={`/marketplaces/initiative-portfolio/initiative/${ini.id}`}
+                              className="flex-shrink-0 text-xs font-medium text-orange-600 hover:text-orange-800 flex items-center gap-1"
+                            >
+                              View
+                              <ExternalLink className="w-3 h-3" />
+                            </Link>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
 
