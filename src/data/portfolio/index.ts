@@ -1,3 +1,5 @@
+import { systemAssets, getSystemAssetStats, type SystemAsset } from "@/data/shared/assets";
+
 // Portfolio Management Services Data
 export const applicationPortfolio = [
   {
@@ -378,3 +380,6 @@ export * from "./requestState";
 
 // Export data alignment utilities
 export * from "./dataAlignment";
+
+// Export shared system assets for Portfolio Management
+export { systemAssets, getSystemAssetStats, type SystemAsset };
