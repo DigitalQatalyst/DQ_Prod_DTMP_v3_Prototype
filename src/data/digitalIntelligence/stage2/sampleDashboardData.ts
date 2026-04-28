@@ -11,6 +11,35 @@ export const sampleDashboardData: Record<string, DashboardData> = {
       { timestamp: '2026-02-12', value: 39, label: 'Sprint 4' },
       { timestamp: '2026-02-26', value: 35, label: 'Sprint 5' }
     ],
+    widgetData: {
+      'velocity-trend': [
+        { name: 'Sprint 1', value: 38 },
+        { name: 'Sprint 2', value: 42 },
+        { name: 'Sprint 3', value: 45 },
+        { name: 'Sprint 4', value: 39 },
+        { name: 'Sprint 5', value: 35 }
+      ],
+      'team-comparison': [
+        { name: 'Team Alpha', value: 42 },
+        { name: 'Team Beta', value: 38 },
+        { name: 'Team Gamma', value: 35 },
+        { name: 'Team Delta', value: 40 }
+      ],
+      'throughput-area': [
+        { name: 'Week 1', value: 12 },
+        { name: 'Week 2', value: 15 },
+        { name: 'Week 3', value: 14 },
+        { name: 'Week 4', value: 18 },
+        { name: 'Week 5', value: 16 },
+        { name: 'Week 6', value: 13 }
+      ],
+      'work-split': [
+        { name: 'Features', value: 45 },
+        { name: 'Bug Fixes', value: 25 },
+        { name: 'Technical Debt', value: 20 },
+        { name: 'Support', value: 10 }
+      ]
+    },
     metrics: [
       {
         id: 'current-velocity',
@@ -48,6 +77,23 @@ export const sampleDashboardData: Record<string, DashboardData> = {
         trendValue: -15,
         trendLabel: '2 members on leave',
         severity: 'warning'
+      },
+      {
+        id: 'velocity-stability',
+        label: 'Velocity Stability',
+        value: '82%',
+        trend: 'up',
+        trendValue: 5,
+        trendLabel: 'Improving consistency',
+        severity: 'success'
+      },
+      {
+        id: 'sprint-commitment',
+        label: 'Sprint Commitment Accuracy',
+        value: '88%',
+        trend: 'stable',
+        trendLabel: 'Stories completed vs planned',
+        severity: 'success'
       }
     ],
     insights: [

@@ -462,12 +462,15 @@ const featuredDashboardConfigs: Record<string, any> = {
       { id: 'current-velocity', type: 'metric', title: 'Current Sprint Velocity', description: 'Story points completed', position: { row: 1, col: 1, width: 1, height: 1 } },
       { id: 'avg-velocity', type: 'metric', title: 'Average Velocity', description: '5 sprint average', position: { row: 1, col: 2, width: 1, height: 1 } },
       { id: 'predicted-next', type: 'metric', title: 'Predicted Next Sprint', description: 'AI forecast', position: { row: 1, col: 3, width: 1, height: 1 } },
-      { id: 'velocity-trend', type: 'chart', chartType: 'line', title: 'Velocity Trend', description: 'Sprint-over-sprint velocity tracking', position: { row: 2, col: 1, width: 2, height: 1 } },
-      { id: 'team-comparison', type: 'chart', chartType: 'bar', title: 'Team Velocity', description: 'Velocity comparison across teams', position: { row: 2, col: 3, width: 1, height: 1 } },
-      { id: 'throughput-area', type: 'chart', chartType: 'area', title: 'Throughput Trend', description: 'Items completed per week with rolling average', position: { row: 3, col: 1, width: 2, height: 1 } },
-      { id: 'work-split', type: 'chart', chartType: 'donut', title: 'Work Type Split', description: 'Features, bugs, tech debt, support', position: { row: 3, col: 3, width: 1, height: 1 } },
-      { id: 'ai-insights', type: 'insight', title: 'Velocity Intelligence', description: 'Sprint predictions and bottleneck analysis', position: { row: 4, col: 1, width: 2, height: 1 } },
-      { id: 'forecast-table', type: 'table', title: 'Sprint Forecast', description: 'Upcoming sprint predictions with confidence intervals', position: { row: 4, col: 3, width: 1, height: 1 } }
+      { id: 'team-capacity', type: 'metric', title: 'Team Capacity', description: 'Current team availability', position: { row: 2, col: 1, width: 1, height: 1 } },
+      { id: 'velocity-stability', type: 'metric', title: 'Velocity Stability', description: 'Consistency measure', position: { row: 2, col: 2, width: 1, height: 1 } },
+      { id: 'sprint-commitment', type: 'metric', title: 'Sprint Commitment Accuracy', description: 'Completed vs planned', position: { row: 2, col: 3, width: 1, height: 1 } },
+      { id: 'velocity-trend', type: 'chart', chartType: 'line', title: 'Velocity Trend', description: 'Sprint-over-sprint velocity tracking', position: { row: 3, col: 1, width: 2, height: 1 } },
+      { id: 'team-comparison', type: 'chart', chartType: 'bar', title: 'Team Velocity', description: 'Velocity comparison across teams', position: { row: 3, col: 3, width: 1, height: 1 } },
+      { id: 'throughput-area', type: 'chart', chartType: 'area', title: 'Throughput Trend', description: 'Items completed per week with rolling average', position: { row: 4, col: 1, width: 2, height: 1 } },
+      { id: 'work-split', type: 'chart', chartType: 'donut', title: 'Work Type Split', description: 'Features, bugs, tech debt, support', position: { row: 4, col: 3, width: 1, height: 1 } },
+      { id: 'ai-insights', type: 'insight', title: 'Velocity Intelligence', description: 'Sprint predictions and bottleneck analysis', position: { row: 5, col: 1, width: 2, height: 1 } },
+      { id: 'forecast-table', type: 'table', title: 'Sprint Forecast', description: 'Upcoming sprint predictions with confidence intervals', position: { row: 5, col: 3, width: 1, height: 1 } }
     ],
     filters: [
       { id: 'dateRange', label: 'Date Range', type: 'daterange', defaultValue: 'last-90-days' },
