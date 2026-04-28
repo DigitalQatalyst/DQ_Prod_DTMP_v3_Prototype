@@ -1270,6 +1270,7 @@ function BlockersTabContent({
 
     if (actionDialog.type === "escalate-to") {
       updateBlockerEscalation(actionDialog.projectId, actionDialog.blocker.id, "Escalated to TO");
+      window.dispatchEvent(new StorageEvent("storage", { key: "dtmp.lifecyclePortfolio" }));
       refreshRows();
       toast({
         title: "Blocker escalated",
@@ -1281,6 +1282,7 @@ function BlockersTabContent({
 
     if (actionDialog.type === "escalate-division") {
       updateBlockerEscalation(actionDialog.projectId, actionDialog.blocker.id, "Escalated to Division Head");
+      window.dispatchEvent(new StorageEvent("storage", { key: "dtmp.lifecyclePortfolio" }));
       refreshRows();
       toast({
         title: "Blocker escalated",
@@ -1790,7 +1792,7 @@ function MilestonesTabContent({
                   <div className={delayedPastDue ? "font-semibold text-red-600" : "text-slate-700"}>
                     {fmtDate(milestone.dueDate)}
                   </div>
-                  <div className="text-slate-600">{milestone.owner ?? ""}</div>
+                  <div className="text-slate-600">{milestone.owner || "Unassigned"}</div>
                 </div>
               );
             })}
@@ -1838,7 +1840,7 @@ function ProjectsTabContent({
             .map((project) => {
               const openBlockers = project.blockers.filter((blocker) => !blocker.resolved).length;
               const openRisks = project.risks.filter((risk) => risk.status === "Open").length;
-              const targetPast = new Date(project.targetDate).getTime() < now;
+              const targetPast = new Date(project.targetDate).getTime() < now && project.progress < 100;
 
               return (
                 <Card key={project.id} className="border-slate-200">
