@@ -85,7 +85,9 @@ function ChartWidget({ widget, data }: { widget: WidgetType; data: DashboardData
       const shouldShowPercentage = widget.id.includes('risk') || 
                                    widget.id.includes('health') || 
                                    widget.id.includes('component') ||
-                                   widget.id.includes('dimensions');
+                                   widget.id.includes('dimensions') ||
+                                   widget.id.includes('perf') ||
+                                   widget.id.includes('profile');
       
       const displayValue = shouldShowPercentage ? `${value}%` : value;
       const displayLabel = dataPoint?.label || label;

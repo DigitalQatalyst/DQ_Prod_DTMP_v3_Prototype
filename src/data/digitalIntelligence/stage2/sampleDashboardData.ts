@@ -746,6 +746,31 @@ export const sampleDashboardData: Record<string, DashboardData> = {
       { timestamp: '2026-02-19', value: 172, label: 'Feb 19' },
       { timestamp: '2026-02-23', value: 165, label: 'Feb 23' }
     ],
+    widgetData: {
+      'latency-trend': [
+        { name: 'Jan 25', value: 142, p50: 142, p95: 285, p99: 420 },
+        { name: 'Jan 30', value: 138, p50: 138, p95: 278, p99: 405 },
+        { name: 'Feb 4', value: 155, p50: 155, p95: 310, p99: 465 },
+        { name: 'Feb 9', value: 161, p50: 161, p95: 322, p99: 485 },
+        { name: 'Feb 14', value: 148, p50: 148, p95: 296, p99: 445 },
+        { name: 'Feb 19', value: 172, p50: 172, p95: 344, p99: 515 },
+        { name: 'Feb 23', value: 165, p50: 165, p95: 330, p99: 495 }
+      ],
+      'bottleneck-ranking': [
+        { name: 'Payment Service', value: 290 },
+        { name: 'Order Processing', value: 210 },
+        { name: 'Notification Hub', value: 125 },
+        { name: 'Catalog API', value: 95 },
+        { name: 'User Auth', value: 58 }
+      ],
+      'perf-radar': [
+        { name: 'Latency', value: 72 },
+        { name: 'Throughput', value: 85 },
+        { name: 'Error Rate', value: 92 },
+        { name: 'Saturation', value: 68 },
+        { name: 'Availability', value: 98 }
+      ]
+    },
     metrics: [
       {
         id: 'avg-response',
