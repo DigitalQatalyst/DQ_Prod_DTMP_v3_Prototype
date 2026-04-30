@@ -3,6 +3,8 @@ import { X, CheckCircle, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { submitQuickReview } from "@/data/knowledgeCenter/reviewState";
 import { getSessionUser } from "@/data/sessionAuth";
+import { DetailedReviewForm } from "@/components/knowledgeCenter/DetailedReviewForm";
+import { toast } from "@/components/ui/sonner";
 
 interface QuickReviewModalProps {
   isOpen: boolean;
@@ -11,7 +13,6 @@ interface QuickReviewModalProps {
   itemTitle: string;
   lastReviewed: string;
   onReviewSubmitted: () => void;
-  onOpenDetailedReview: () => void;
 }
 
 export function QuickReviewModal({
@@ -21,9 +22,9 @@ export function QuickReviewModal({
   itemTitle,
   lastReviewed,
   onReviewSubmitted,
-  onOpenDetailedReview,
 }: QuickReviewModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showDetailedForm, setShowDetailedForm] = useState(false);
   const sessionUser = getSessionUser();
 
   if (!isOpen) return null;
@@ -37,16 +38,20 @@ export function QuickReviewModal({
     setIsSubmitting(true);
     
     try {
-      // Submit quick review
       submitQuickReview(itemId, sessionUser.email, sessionUser.name);
       
-      // Notify parent component
-      onReviewSubmitted();
+      toast.success("Review submitted! Content marked as current.", {
+        description: "The staleness indicator has been removed.",
+        duration: 4000,
+      });
       
-      // Close modal
+      onReviewSubmitted();
       onClose();
     } catch (error) {
       console.error("Failed to submit review:", error);
+      toast.error("Failed to submit review", {
+        description: "Please try again or contact support if the issue persists.",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -55,8 +60,18 @@ export function QuickReviewModal({
   const handleNeedsReview = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    setShowDetailedForm(true);
+  };
+
+  const handleDetailedFormClose = () => {
+    setShowDetailedForm(false);
     onClose();
-    onOpenDetailedReview();
+  };
+
+  const handleDetailedReviewSubmitted = () => {
+    setShowDetailedForm(false);
+    onReviewSubmitted();
+    onClose();
   };
 
   const formatDate = (dateString: string) => {
@@ -72,19 +87,29 @@ export function QuickReviewModal({
     })} (${diffDays} days ago)`;
   };
 
+  if (showDetailedForm) {
+    return (
+      <DetailedReviewForm
+        isOpen={showDetailedForm}
+        onClose={handleDetailedFormClose}
+        itemId={itemId}
+        itemTitle={itemTitle}
+        lastReviewed={lastReviewed}
+        onReviewSubmitted={handleDetailedReviewSubmitted}
+      />
+    );
+  }
+
   return (
     <>
-      {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/50 z-50"
         onClick={onClose}
       />
 
-      {/* Modal */}
       <div 
         className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-xl shadow-2xl z-[60] p-6"
       >
-        {/* Header */}
         <div className="flex items-start justify-between mb-4">
           <div>
             <h2 className="text-xl font-bold text-gray-900">Review Content</h2>
@@ -98,7 +123,6 @@ export function QuickReviewModal({
           </button>
         </div>
 
-        {/* Content Info */}
         <div className="mb-6 p-4 bg-gray-50 rounded-lg">
           <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">
             {itemTitle}
@@ -108,9 +132,7 @@ export function QuickReviewModal({
           </p>
         </div>
 
-        {/* Quick Actions */}
         <div className="space-y-3 mb-6">
-          {/* Option 1: Still Accurate */}
           <div className="border-2 border-green-200 rounded-lg p-4 hover:border-green-300 transition-colors relative">
             <div className="flex items-start gap-3 mb-3">
               <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
@@ -134,7 +156,6 @@ export function QuickReviewModal({
             </button>
           </div>
 
-          {/* Option 2: Needs Updates */}
           <div className="border-2 border-amber-200 rounded-lg p-4 hover:border-amber-300 transition-colors relative">
             <div className="flex items-start gap-3 mb-3">
               <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
@@ -158,7 +179,6 @@ export function QuickReviewModal({
           </div>
         </div>
 
-        {/* Footer */}
         <div className="flex justify-end">
           <Button
             onClick={onClose}
