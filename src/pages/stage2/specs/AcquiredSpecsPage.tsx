@@ -92,17 +92,29 @@ function maturityBadge(level: SolutionSpec['maturityLevel']) {
 }
 
 function triggerDownload(name: string, url: string) {
-  if (url && url !== '#') { window.open(url, '_blank'); return; }
+  // Simulate download with a more realistic implementation
+  const fileName = name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+  const fileType = name.includes('ZIP') ? 'zip' : 'pdf';
+  
+  // Create a simple content for demonstration
+  const content = `This is a simulated download of ${name}.\n\nDocument Type: ${fileType.toUpperCase()}\nGenerated: ${new Date().toLocaleString()}\n\nThis would normally contain the actual document content.`;
+  
+  const blob = new Blob([content], { type: 'text/plain' });
+  const downloadUrl = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = 'data:text/plain,demo';
-  a.download = name;
+  a.href = downloadUrl;
+  a.download = `${fileName}.${fileType}`;
+  document.body.appendChild(a);
   a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(downloadUrl);
 }
 
 // ── Detail view ───────────────────────────────────────────────────────────
 function DetailView({ spec, onBack }: { spec: SolutionSpec; onBack: () => void }) {
   const navigate = useNavigate();
   const docs = buildDocs(spec);
+  const [showDocuments, setShowDocuments] = useState(true);
 
   return (
     <div>
@@ -160,47 +172,49 @@ function DetailView({ spec, onBack }: { spec: SolutionSpec; onBack: () => void }
         </h3>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100 overflow-hidden">
-        {docs.map((doc, i) => (
-          <div key={i} className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors group">
-            {/* Orange document icon */}
-            <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 bg-orange-100 text-orange-500">
-              <FileText className="w-5 h-5" />
-            </div>
+      {showDocuments && (
+        <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100 overflow-hidden mb-6">
+          {docs.map((doc, i) => (
+            <div key={i} className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors group">
+              {/* Orange document icon */}
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 bg-orange-100 text-orange-500">
+                <FileText className="w-5 h-5" />
+              </div>
 
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-900 truncate">{doc.name}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{doc.description}</p>
-            </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-900 truncate">{doc.name}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{doc.description}</p>
+              </div>
 
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <button
-                onClick={() => window.open(doc.url !== '#' ? doc.url : undefined, '_blank')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 border border-gray-200 transition-all"
-              >
-                <Eye className="w-3.5 h-3.5" />
-                View
-              </button>
-              <button
-                onClick={() => triggerDownload(doc.name, doc.url)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-orange-600 hover:text-orange-700 hover:bg-orange-50 border border-orange-200 transition-all"
-              >
-                <Download className="w-3.5 h-3.5" />
-                Download
-              </button>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  onClick={() => navigate(`/stage2/specs/document/${spec.id}/${encodeURIComponent(doc.name)}`)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 border border-gray-200 transition-all"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  View
+                </button>
+                <button
+                  onClick={() => triggerDownload(doc.name, doc.url)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-orange-600 hover:text-orange-700 hover:bg-orange-50 border border-orange-200 transition-all"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Download
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       <div className="mt-5 flex flex-wrap items-center gap-2">
         <button
-          onClick={() => window.open(docs[0]?.url !== '#' ? docs[0]?.url : undefined, '_blank')}
+          onClick={() => setShowDocuments(!showDocuments)}
           className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium text-gray-700 bg-white border border-gray-200 hover:border-orange-300 hover:text-orange-700 transition-all"
         >
           <FileText className="w-4 h-4" />
-          View Documents
-          <ChevronDown className="w-3.5 h-3.5" />
+          {showDocuments ? 'Hide Documents' : 'View Documents'}
+          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showDocuments ? 'rotate-180' : ''}`} />
         </button>
         <button
           onClick={() => navigate('/stage2')}
@@ -208,13 +222,6 @@ function DetailView({ spec, onBack }: { spec: SolutionSpec; onBack: () => void }
         >
           Begin in Solution Build
           <ArrowUpRight className="w-3.5 h-3.5" />
-        </button>
-        <button
-          onClick={() => docs.forEach((d) => triggerDownload(d.name, d.url))}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium text-gray-600 bg-white border border-gray-200 hover:border-gray-300 hover:text-gray-800 transition-all"
-        >
-          <Download className="w-4 h-4" />
-          Download All Blueprints
         </button>
       </div>
     </div>
@@ -255,15 +262,6 @@ function ListView({
             {specs.filter((s) => s.maturityLevel === 'reference').length} reference ·{' '}
             {specs.filter((s) => s.maturityLevel === 'proven').length} proven
           </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={() => specs.forEach((s) => buildDocs(s).forEach((d) => triggerDownload(d.name, d.url)))}
-            className="bg-orange-600 hover:bg-orange-700 text-white flex items-center gap-2"
-          >
-            <PackageOpen className="w-4 h-4" />
-            Download All Blueprints
-          </Button>
         </div>
       </div>
 

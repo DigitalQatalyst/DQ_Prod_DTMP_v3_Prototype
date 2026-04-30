@@ -40,6 +40,7 @@ import NotFound from "./pages/NotFound";
 import DigitalIntelligencePage from "./pages/DigitalIntelligencePage";
 import DigitalIntelligenceDetailPage from "./pages/DigitalIntelligenceDetailPage";
 import DigitalIntelligenceDashboardPage from "./pages/DigitalIntelligenceDashboardPage";
+import DocumentPreviewPage from "./pages/stage2/specs/DocumentPreviewPage";
 import { isUserAuthenticated } from "./data/sessionAuth";
 import { getSessionRole, isTOStage3Role } from "./data/sessionRole";
 
@@ -122,6 +123,7 @@ const App = () => (
             <Route path="/stage2/specs/my-requests" element={<Stage2AppPage />} />
             <Route path="/stage2/specs/my-requests/:requestId" element={<Stage2AppPage />} />
             <Route path="/stage2/specs/acquired-specs" element={<Stage2AppPage />} />
+            <Route path="/stage2/specs/document/:specId/:docName" element={<DocumentPreviewPage />} />
             <Route path="/stage2/specs/my-designs" element={<Stage2AppPage />} />
             <Route path="/stage2/specs/my-designs/:designId" element={<Stage2AppPage />} />
 
