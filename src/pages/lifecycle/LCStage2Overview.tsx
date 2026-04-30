@@ -37,11 +37,16 @@ import {
   LC_SERVICE_SLA,
   addLCRequest,
   getLCRequests,
+  getLCRequestsByInitiative,
+  type LCRequestStatus,
   type LCServiceRequest,
   type LCServiceType,
 } from "@/data/lifecycle/serviceRequestState";
 import {
+  type ActivityEntry,
+  type ActivityEntryType,
   type Blocker,
+  type BudgetHealth,
   computeInitiativeRAG,
   getBlockersByInitiativeId,
   getInitiativeById,
@@ -50,6 +55,7 @@ import {
   type Initiative,
   type MilestoneStatus,
   type Project,
+  type RAGStatus,
   type Risk,
   type InitiativeStatus,
   updateInitiativeBudgetSpent,
@@ -59,6 +65,9 @@ import {
   updateMilestoneStatus,
   updateBlockerEscalation,
   updateProjectBudgetSpent,
+  updateProjectBudgetHealth,
+  updateProjectProgress,
+  updateProjectRAG,
   updateRiskStatus,
   resolveBlocker,
 } from "@/data/shared/lifecyclePortfolioStore";
@@ -600,43 +609,446 @@ function WorkspaceOverview({
   );
 }
 
-function ProjectRoutePlaceholder({
+function ProjectDetailView({
   initiative,
   projectId,
 }: {
   initiative: Initiative | null;
-  projectId?: string;
+  projectId: string;
 }) {
   const navigate = useNavigate();
+  const [project, setProject] = useState<Project | null>(null);
+  const role = getLifecycleRole() ?? "initiative-owner";
+  const isOwner = role === "initiative-owner";
+  const now = Date.now();
+
+  // confirm dialog for RAG / budget health edits
+  const [ragDialog, setRagDialog] = useState<RAGStatus | null>(null);
+  const [bhDialog, setBhDialog] = useState<BudgetHealth | null>(null);
+  const [progressDraft, setProgressDraft] = useState("");
+  const [resolveDialog, setResolveDialog] = useState<{ projectId: string; blocker: Blocker } | null>(null);
+  const [resolvedNote, setResolvedNote] = useState("");
+  const [escalateDialog, setEscalateDialog] = useState<{
+    type: "to" | "division";
+    projectId: string;
+    blocker: Blocker;
+  } | null>(null);
+
+  const refresh = () => {
+    const p = getProjectsByInitiativeId(initiative?.id ?? "").find((x) => x.id === projectId) ?? null;
+    setProject(p);
+    if (p) setProgressDraft(String(p.progress));
+  };
+
+  useEffect(() => {
+    refresh();
+    window.addEventListener("storage", refresh);
+    return () => window.removeEventListener("storage", refresh);
+  }, [projectId, initiative?.id]);
+
+  if (!initiative || !project) {
+    return (
+      <div className="p-6 space-y-4">
+        <p className="text-sm text-slate-500">Project not found.</p>
+        <Button variant="outline" onClick={() => navigate(`/stage2/lifecycle-management/${initiative?.id ?? ""}`)}>
+          Back to Initiative
+        </Button>
+      </div>
+    );
+  }
+
+  const targetPast = new Date(project.targetDate).getTime() < now && project.progress < 100;
+  const remaining = project.budget > 0 ? Math.max(project.budget - project.budgetSpent, 0) : null;
+
+  const saveProgress = () => {
+    const next = Math.min(100, Math.max(0, Math.round(Number(progressDraft))));
+    if (!Number.isFinite(next)) return;
+    updateProjectProgress(project.id, next);
+    window.dispatchEvent(new StorageEvent("storage", { key: "dtmp.lifecycle.portfolioStore" }));
+    refresh();
+    toast({ title: "Progress updated", description: `Project progress set to ${next}%.` });
+  };
+
+  const confirmRag = () => {
+    if (!ragDialog) return;
+    updateProjectRAG(project.id, ragDialog);
+    window.dispatchEvent(new StorageEvent("storage", { key: "dtmp.lifecycle.portfolioStore" }));
+    refresh();
+    setRagDialog(null);
+    toast({ title: "RAG updated", description: `Project RAG set to ${ragDialog}.` });
+  };
+
+  const confirmBh = () => {
+    if (!bhDialog) return;
+    updateProjectBudgetHealth(project.id, bhDialog);
+    window.dispatchEvent(new StorageEvent("storage", { key: "dtmp.lifecycle.portfolioStore" }));
+    refresh();
+    setBhDialog(null);
+    toast({ title: "Budget health updated", description: `Budget health set to ${bhDialog}.` });
+  };
+
+  const submitEscalate = () => {
+    if (!escalateDialog) return;
+    const level = escalateDialog.type === "to" ? "Escalated to TO" : "Escalated to Division Head";
+    updateBlockerEscalation(escalateDialog.projectId, escalateDialog.blocker.id, level);
+    window.dispatchEvent(new StorageEvent("storage", { key: "dtmp.lifecyclePortfolio" }));
+    refresh();
+    setEscalateDialog(null);
+    toast({ title: "Blocker escalated", description: `Escalated to ${escalateDialog.type === "to" ? "Transformation Office" : "Division Head"}.` });
+  };
+
+  const submitResolve = () => {
+    if (!resolveDialog || !resolvedNote.trim()) {
+      toast({ title: "Resolution note required", description: "Describe how the blocker was resolved." });
+      return;
+    }
+    resolveBlocker(resolveDialog.projectId, resolveDialog.blocker.id, resolvedNote.trim());
+    window.dispatchEvent(new StorageEvent("storage", { key: "dtmp.lifecyclePortfolio" }));
+    refresh();
+    setResolveDialog(null);
+    setResolvedNote("");
+    toast({ title: "Blocker resolved" });
+  };
 
   return (
-    <div className="space-y-6 p-6">
-      <Card className="border-slate-200">
-        <CardContent className="p-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-orange-700">
-                Project Detail Route
-              </p>
-              <h1 className="text-3xl font-semibold text-slate-950">
-                {initiative?.name ?? "Lifecycle workspace route"}
-              </h1>
-              <p className="max-w-3xl text-sm text-slate-600">
-                Project-level routing is in place. The initiative cockpit shell is live, and project detail lands in a later Stage 2 task.
-              </p>
-            </div>
-            <Button variant="outline" onClick={() => navigate("/stage2/lifecycle-management")}>
-              Back to Workspace
-            </Button>
+    <div className="space-y-8 p-6">
+      {/* ── Header ── */}
+      <div className="space-y-5">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-orange-700">
+              Project Detail · {initiative.name}
+            </p>
+            <h1 className="text-3xl font-semibold text-slate-950">{project.name}</h1>
+            <p className="text-sm text-slate-500">{project.division} · PM: {project.pmName}</p>
           </div>
-        </CardContent>
-      </Card>
+          <Button variant="outline" onClick={() => navigate(`/stage2/lifecycle-management/${initiative.id}`)}>
+            ← Back to Initiative
+          </Button>
+        </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <RouteStatCard icon={<FolderKanban className="h-5 w-5 text-blue-700" />} label="Initiative Route" value={initiative?.id ?? "Unknown"} />
-        <RouteStatCard icon={<Briefcase className="h-5 w-5 text-emerald-700" />} label="Project Route" value={projectId ?? "Not selected"} />
-        <RouteStatCard icon={<RefreshCw className="h-5 w-5 text-orange-700" />} label="Next Task" value="S2-03 Overview Tab" />
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {/* RAG */}
+          <Card className="border-slate-200">
+            <CardContent className="p-5 space-y-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">RAG Status</p>
+              <Badge className={`border text-sm ${RAG_BADGE_CLASSES[project.rag]}`}>{project.rag}</Badge>
+              {isOwner && (
+                <div className="flex gap-2 flex-wrap">
+                  {(["Green", "Amber", "Red"] as RAGStatus[]).map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      disabled={r === project.rag}
+                      onClick={() => setRagDialog(r)}
+                      className={`rounded px-2 py-1 text-xs font-medium border transition ${r === project.rag ? "opacity-40 cursor-default" : "hover:opacity-80"} ${RAG_BADGE_CLASSES[r]}`}
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Target date */}
+          <Card className="border-slate-200">
+            <CardContent className="p-5 space-y-2">
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Target Date</p>
+              <p className={`text-xl font-semibold ${targetPast ? "text-red-600" : "text-slate-950"}`}>
+                {fmtDate(project.targetDate)}
+              </p>
+              {targetPast && <p className="text-xs text-red-500">Past due</p>}
+            </CardContent>
+          </Card>
+
+          {/* Progress */}
+          <Card className="border-slate-200">
+            <CardContent className="p-5 space-y-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Progress</p>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-semibold text-slate-950">{project.progress}%</span>
+                </div>
+                <div className="h-2 rounded-full bg-slate-100">
+                  <div
+                    className="h-2 rounded-full bg-orange-500 transition-all"
+                    style={{ width: `${project.progress}%` }}
+                  />
+                </div>
+              </div>
+              {isOwner && (
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={progressDraft}
+                    onChange={(e) => setProgressDraft(e.target.value)}
+                    className="h-8 w-20 rounded-md border border-slate-300 bg-white px-2 text-xs text-slate-900"
+                  />
+                  <Button variant="outline" size="sm" onClick={saveProgress}>Save</Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Budget health */}
+          <Card className="border-slate-200">
+            <CardContent className="p-5 space-y-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Budget Health</p>
+              <Badge className={`border text-sm ${BUDGET_HEALTH_BADGE_CLASSES[project.budgetHealth]}`}>
+                {project.budgetHealth}
+              </Badge>
+              {isOwner && (
+                <div className="flex gap-1.5 flex-wrap">
+                  {(["On Track", "At Risk", "Over Budget"] as BudgetHealth[]).map((bh) => (
+                    <button
+                      key={bh}
+                      type="button"
+                      disabled={bh === project.budgetHealth}
+                      onClick={() => setBhDialog(bh)}
+                      className={`rounded px-2 py-1 text-xs font-medium border transition ${bh === project.budgetHealth ? "opacity-40 cursor-default" : "hover:opacity-80"} ${BUDGET_HEALTH_BADGE_CLASSES[bh]}`}
+                    >
+                      {bh}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Budget strip */}
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="rounded-xl border border-slate-200 bg-white p-5">
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Total Budget</p>
+            <p className="mt-2 text-2xl font-semibold text-slate-950">{formatAed(project.budget)}</p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-5">
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Budget Spent</p>
+            <p className="mt-2 text-2xl font-semibold text-slate-950">{formatAed(project.budgetSpent)}</p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-5">
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Remaining</p>
+            <p className="mt-2 text-2xl font-semibold text-slate-950">{formatAed(remaining)}</p>
+          </div>
+        </div>
       </div>
+
+      {/* ── Milestones ── */}
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold text-slate-950">Milestones</h2>
+        {project.milestones.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-500">No milestones for this project.</div>
+        ) : (
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+            <div className="grid grid-cols-[2fr_1fr_1fr_1fr] gap-4 border-b border-slate-200 bg-slate-50 px-5 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">
+              <span>Milestone</span><span>Status</span><span>Due</span><span>Owner</span>
+            </div>
+            <div className="divide-y divide-slate-100">
+              {project.milestones.map((m) => {
+                const duePast = m.dueDate && new Date(m.dueDate).getTime() < now && m.status === "Delayed";
+                return (
+                  <div key={m.id} className="grid grid-cols-[2fr_1fr_1fr_1fr] gap-4 px-5 py-3.5 text-sm items-center">
+                    <span className="font-medium text-slate-900">{m.name}</span>
+                    <span>
+                      {isOwner ? (
+                        <Select value={m.status} onValueChange={(v) => { updateMilestoneStatus(project.id, m.id, v as MilestoneStatus); window.dispatchEvent(new StorageEvent("storage", { key: "dtmp.lifecyclePortfolio" })); refresh(); }}>
+                          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {(["Complete", "In Progress", "Not Started", "Delayed"] as MilestoneStatus[]).map((s) => (
+                              <SelectItem key={s} value={s}>{s}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Badge variant="outline" className="text-xs">{m.status}</Badge>
+                      )}
+                    </span>
+                    <span className={`text-sm ${duePast ? "text-red-600 font-medium" : "text-slate-600"}`}>
+                      {m.dueDate ? fmtDate(m.dueDate) : "—"}
+                    </span>
+                    <span className="text-slate-600 text-sm">{m.owner || "—"}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* ── Risks ── */}
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold text-slate-950">Risks</h2>
+        {project.risks.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-500">No risks recorded for this project.</div>
+        ) : (
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+            <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-3 border-b border-slate-200 bg-slate-50 px-5 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">
+              <span>Risk</span><span>Severity</span><span>Likelihood</span><span>Status</span><span>Owner</span>
+            </div>
+            <div className="divide-y divide-slate-100">
+              {project.risks.map((risk) => (
+                <div key={risk.id} className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-3 px-5 py-3.5 text-sm items-center">
+                  <div>
+                    <p className="font-medium text-slate-900">{risk.title}</p>
+                    {risk.mitigation && <p className="text-xs text-slate-500 mt-0.5 truncate">{risk.mitigation}</p>}
+                  </div>
+                  <Badge className={`border text-xs w-fit ${RISK_SEVERITY_BADGE_CLASSES[risk.severity]}`}>{risk.severity}</Badge>
+                  <span className="text-slate-600">{risk.likelihood}</span>
+                  <span>
+                    {isOwner ? (
+                      <Select value={risk.status} onValueChange={(v) => { updateRiskStatus(project.id, risk.id, v as Risk["status"]); window.dispatchEvent(new StorageEvent("storage", { key: "dtmp.lifecyclePortfolio" })); refresh(); }}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {(["Open", "Mitigated", "Accepted", "Closed"] as Risk["status"][]).map((s) => (
+                            <SelectItem key={s} value={s}>{s}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Badge variant="outline" className="text-xs">{risk.status}</Badge>
+                    )}
+                  </span>
+                  <span className="text-slate-600">{risk.owner || "—"}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* ── Blockers ── */}
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold text-slate-950">Blockers</h2>
+        {project.blockers.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-500">No blockers recorded for this project.</div>
+        ) : (
+          <div className="space-y-3">
+            {project.blockers.map((blocker) => (
+              <div key={blocker.id} className="rounded-xl border border-slate-200 bg-white p-5 space-y-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold text-slate-900 text-sm">{blocker.title}</span>
+                      <Badge
+                        className={`border text-xs ${
+                          blocker.escalationStatus === "Not Escalated"
+                            ? "bg-slate-100 text-slate-600 border-slate-200"
+                            : blocker.escalationStatus === "Escalated to TO"
+                            ? "bg-amber-100 text-amber-800 border-amber-200"
+                            : "bg-red-100 text-red-700 border-red-200"
+                        }`}
+                      >
+                        {blocker.escalationStatus}
+                      </Badge>
+                      {blocker.resolved && (
+                        <Badge className="border bg-green-100 text-green-700 border-green-200 text-xs">Resolved</Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      Raised by {blocker.raisedBy} · {fmtDate(blocker.dateRaised)}
+                    </p>
+                    {blocker.whatIsNeeded && (
+                      <p className="text-sm text-slate-700 mt-1">{blocker.whatIsNeeded}</p>
+                    )}
+                    {blocker.resolvedNote && (
+                      <p className="text-xs text-green-700 mt-1">Resolution: {blocker.resolvedNote}</p>
+                    )}
+                  </div>
+                  {isOwner && !blocker.resolved && (
+                    <div className="flex flex-wrap gap-2 shrink-0">
+                      {blocker.escalationStatus === "Not Escalated" && (
+                        <Button variant="outline" size="sm" onClick={() => setEscalateDialog({ type: "to", projectId: project.id, blocker })}>
+                          Escalate to TO
+                        </Button>
+                      )}
+                      {blocker.escalationStatus === "Escalated to TO" && (
+                        <Button variant="outline" size="sm" onClick={() => setEscalateDialog({ type: "division", projectId: project.id, blocker })}>
+                          Escalate to Division Head
+                        </Button>
+                      )}
+                      <Button variant="outline" size="sm" onClick={() => { setResolvedNote(blocker.resolvedNote ?? ""); setResolveDialog({ projectId: project.id, blocker }); }}>
+                        Resolve
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* ── RAG confirm dialog ── */}
+      <Dialog open={ragDialog !== null} onOpenChange={() => setRagDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm RAG Update</DialogTitle>
+            <DialogDescription>
+              Change project RAG to <strong>{ragDialog}</strong>? This will be logged in the initiative activity.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRagDialog(null)}>Cancel</Button>
+            <Button className="bg-orange-600 text-white hover:bg-orange-700" onClick={confirmRag}>Confirm</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Budget health confirm dialog ── */}
+      <Dialog open={bhDialog !== null} onOpenChange={() => setBhDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Budget Health Update</DialogTitle>
+            <DialogDescription>
+              Change budget health to <strong>{bhDialog}</strong>? This will be logged in the initiative activity.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBhDialog(null)}>Cancel</Button>
+            <Button className="bg-orange-600 text-white hover:bg-orange-700" onClick={confirmBh}>Confirm</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Escalate blocker dialog ── */}
+      <Dialog open={escalateDialog !== null} onOpenChange={() => setEscalateDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Escalate Blocker</DialogTitle>
+            <DialogDescription>
+              Escalate <strong>{escalateDialog?.blocker.title}</strong> to{" "}
+              {escalateDialog?.type === "to" ? "the Transformation Office" : "the Division Head"}?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEscalateDialog(null)}>Cancel</Button>
+            <Button className="bg-orange-600 text-white hover:bg-orange-700" onClick={submitEscalate}>Confirm</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Resolve blocker dialog ── */}
+      <Dialog open={resolveDialog !== null} onOpenChange={() => { setResolveDialog(null); setResolvedNote(""); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Resolve Blocker</DialogTitle>
+            <DialogDescription>Describe how <strong>{resolveDialog?.blocker.title}</strong> was resolved.</DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={resolvedNote}
+            onChange={(e) => setResolvedNote(e.target.value)}
+            placeholder="Resolution note…"
+            className="min-h-[100px]"
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setResolveDialog(null); setResolvedNote(""); }}>Cancel</Button>
+            <Button className="bg-orange-600 text-white hover:bg-orange-700" onClick={submitResolve}>Mark Resolved</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -894,6 +1306,10 @@ function InitiativeCockpitShell({
               <BlockersTabContent initiative={initiative} projects={projects} role={role} />
             ) : activeTab === "Budget" ? (
               <BudgetTabContent initiative={initiative} projects={projects} role={role} />
+            ) : activeTab === "Activity" ? (
+              <ActivityTabContent initiative={initiative} />
+            ) : activeTab === "Service Requests" ? (
+              <ServiceRequestsTabContent initiative={initiative} role={role} />
             ) : (
               <>
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -929,6 +1345,476 @@ function InitiativeCockpitShell({
           </CardContent>
         </Card>
       </section>
+    </div>
+  );
+}
+
+// ── Service Requests Tab ──────────────────────────────────────────────────────
+
+const SR_STATUS_BADGE: Record<LCRequestStatus, string> = {
+  Submitted: "bg-blue-100 text-blue-800 border-blue-200",
+  Assigned: "bg-purple-100 text-purple-800 border-purple-200",
+  "In Progress": "bg-amber-100 text-amber-800 border-amber-200",
+  Delivered: "bg-teal-100 text-teal-800 border-teal-200",
+  Completed: "bg-green-100 text-green-800 border-green-200",
+};
+
+const SR_PRIORITY_BADGE: Record<string, string> = {
+  Critical: "bg-red-100 text-red-800 border-red-200",
+  High: "bg-orange-100 text-orange-800 border-orange-200",
+  Medium: "bg-amber-100 text-amber-800 border-amber-200",
+  Low: "bg-slate-100 text-slate-600 border-slate-200",
+};
+
+const SR_STATUS_OPTIONS: Array<"All" | LCRequestStatus> = [
+  "All",
+  "Submitted",
+  "Assigned",
+  "In Progress",
+  "Delivered",
+  "Completed",
+];
+
+const NEW_REQUEST_SERVICES: LCServiceType[] = [...INITIATIVE_LEVEL_SERVICES];
+
+function fmtSlaDeadline(submittedAt: string, slaHours: number): { label: string; overdue: boolean } {
+  const deadline = new Date(new Date(submittedAt).getTime() + slaHours * 60 * 60 * 1000);
+  const overdue = deadline.getTime() < Date.now();
+  const day = String(deadline.getDate()).padStart(2, "0");
+  const month = deadline.toLocaleString("en-GB", { month: "short" });
+  const year = deadline.getFullYear();
+  return { label: `${day} ${month} ${year}`, overdue };
+}
+
+function daysAgo(iso: string): string {
+  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Yesterday";
+  return `${diff}d ago`;
+}
+
+function ServiceRequestsTabContent({
+  initiative,
+  role,
+}: {
+  initiative: Initiative;
+  role: LifecycleInsightsRole;
+}) {
+  const [requests, setRequests] = useState<LCServiceRequest[]>(() =>
+    getLCRequestsByInitiative(initiative.id)
+  );
+  const [statusFilter, setStatusFilter] = useState<"All" | LCRequestStatus>("All");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
+
+  // New request form state
+  const [newType, setNewType] = useState<LCServiceType>("Initiative Status Report");
+  const [newPriority, setNewPriority] = useState<"Critical" | "High" | "Medium" | "Low">("Medium");
+  const [newDescription, setNewDescription] = useState("");
+  const [newContext, setNewContext] = useState("");
+
+  const isOwner = role === "initiative-owner";
+  const account = getDemoAccount(role);
+
+  useEffect(() => {
+    const refresh = () => setRequests(getLCRequestsByInitiative(initiative.id));
+    window.addEventListener("storage", refresh);
+    return () => window.removeEventListener("storage", refresh);
+  }, [initiative.id]);
+
+  const filtered = useMemo(
+    () => (statusFilter === "All" ? requests : requests.filter((r) => r.status === statusFilter)),
+    [requests, statusFilter]
+  );
+
+  const slaDeadlineForNew = useMemo(() => {
+    const hours = LC_SERVICE_SLA[newType] ?? 120;
+    const deadline = new Date(Date.now() + hours * 60 * 60 * 1000);
+    const day = String(deadline.getDate()).padStart(2, "0");
+    const month = deadline.toLocaleString("en-GB", { month: "short" });
+    return `${day} ${month} ${deadline.getFullYear()}`;
+  }, [newType]);
+
+  const submitRequest = () => {
+    if (!newDescription.trim()) {
+      toast({ title: "Description required", description: "Please describe what you need and why." });
+      return;
+    }
+    addLCRequest({
+      serviceType: newType,
+      initiativeId: initiative.id,
+      initiativeName: initiative.name,
+      submittedBy: account.name,
+      submittedByRole: account.title,
+      status: "Submitted",
+      priority: newPriority,
+      notes: [newDescription.trim(), newContext.trim()].filter(Boolean).join("\n\n"),
+      slaHours: LC_SERVICE_SLA[newType] ?? 120,
+    });
+    window.dispatchEvent(new StorageEvent("storage", { key: "dtmp.lifecycle.serviceRequests" }));
+    setRequests(getLCRequestsByInitiative(initiative.id));
+    setShowForm(false);
+    setNewDescription("");
+    setNewContext("");
+    toast({ title: "Service request submitted", description: "Your request has been sent to the Transformation Office." });
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-orange-700">Service Requests</p>
+          <h2 className="mt-2 text-2xl font-semibold text-slate-950">Service Requests</h2>
+          <p className="mt-2 max-w-3xl text-sm text-slate-600">
+            Transformation Office service requests for {initiative.name}. Track status, SLA deadlines, and submit new requests.
+          </p>
+        </div>
+        {isOwner && (
+          <Button
+            className="bg-orange-600 text-white hover:bg-orange-700 w-fit"
+            onClick={() => setShowForm((v) => !v)}
+          >
+            {showForm ? "Cancel" : "+ New Request"}
+          </Button>
+        )}
+      </div>
+
+      {/* New request form */}
+      {showForm && isOwner && (
+        <div className="rounded-xl border border-orange-200 bg-orange-50 p-6 space-y-5">
+          <h3 className="text-base font-semibold text-slate-900">New Service Request</h3>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium uppercase tracking-wide text-slate-500">Service Type</label>
+              <Select value={newType} onValueChange={(v) => setNewType(v as LCServiceType)}>
+                <SelectTrigger className="bg-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {NEW_REQUEST_SERVICES.map((s) => (
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium uppercase tracking-wide text-slate-500">Priority</label>
+              <Select value={newPriority} onValueChange={(v) => setNewPriority(v as typeof newPriority)}>
+                <SelectTrigger className="bg-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(["Critical", "High", "Medium", "Low"] as const).map((p) => (
+                    <SelectItem key={p} value={p}>{p}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-orange-200 bg-white px-4 py-3 text-sm text-slate-700">
+            <span className="font-medium">SLA deadline:</span>{" "}
+            <span className="text-orange-700 font-semibold">{slaDeadlineForNew}</span>
+            <span className="text-slate-400 ml-2">({LC_SERVICE_SLA[newType]}h from submission)</span>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              Description <span className="text-red-500">*</span>
+            </label>
+            <Textarea
+              value={newDescription}
+              onChange={(e) => setNewDescription(e.target.value)}
+              placeholder="What do you need and why?"
+              className="min-h-[100px] bg-white"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium uppercase tracking-wide text-slate-500">Supporting Context (optional)</label>
+            <Textarea
+              value={newContext}
+              onChange={(e) => setNewContext(e.target.value)}
+              placeholder="Any additional context, constraints, or references."
+              className="min-h-[80px] bg-white"
+            />
+          </div>
+
+          <div className="flex gap-3">
+            <Button className="bg-orange-600 text-white hover:bg-orange-700" onClick={submitRequest}>
+              Submit Request
+            </Button>
+            <Button variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
+          </div>
+        </div>
+      )}
+
+      {/* Filter bar */}
+      <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center">
+        <div className="min-w-[220px]">
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Filter by status</p>
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as "All" | LCRequestStatus)}>
+            <SelectTrigger className="mt-2 bg-white">
+              <SelectValue placeholder="All statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              {SR_STATUS_OPTIONS.map((opt) => (
+                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="sm:ml-auto text-xs text-slate-500">
+          {filtered.length} {filtered.length === 1 ? "request" : "requests"} · {requests.length} total
+        </div>
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center">
+          <p className="text-sm font-medium text-slate-600">No service requests found.</p>
+          <p className="mt-1 text-xs text-slate-400">
+            {isOwner ? 'Use "+ New Request" above to submit one.' : "Service requests will appear here once submitted."}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map((req) => {
+            const sla = fmtSlaDeadline(req.submittedAt, req.slaHours);
+            const isExpanded = expandedId === req.id;
+            return (
+              <div
+                key={req.id}
+                className="rounded-xl border border-slate-200 bg-white overflow-hidden"
+              >
+                <button
+                  type="button"
+                  onClick={() => setExpandedId(isExpanded ? null : req.id)}
+                  className="w-full text-left px-5 py-4 hover:bg-slate-50 transition-colors"
+                >
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-4">
+                    <div className="flex-1 min-w-0 space-y-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-semibold text-sm text-slate-900">{req.serviceType}</span>
+                        <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${SR_STATUS_BADGE[req.status]}`}>
+                          {req.status}
+                        </span>
+                        <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${SR_PRIORITY_BADGE[req.priority]}`}>
+                          {req.priority}
+                        </span>
+                        {sla.overdue && req.status !== "Completed" && req.status !== "Delivered" && (
+                          <span className="inline-flex items-center rounded-full border border-red-200 bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                            SLA Overdue
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-3 text-xs text-slate-500">
+                        <span>Submitted {daysAgo(req.submittedAt)} by {req.submittedBy}</span>
+                        <span>·</span>
+                        <span className={sla.overdue && req.status !== "Completed" && req.status !== "Delivered" ? "text-red-600 font-medium" : ""}>
+                          SLA deadline: {sla.label}
+                        </span>
+                        <span>·</span>
+                        <span>Assignee: {req.assignedTo ?? "Unassigned"}</span>
+                      </div>
+                    </div>
+                    <span className="text-xs text-slate-400 shrink-0 mt-0.5">{isExpanded ? "▲ Hide" : "▼ View"}</span>
+                  </div>
+                </button>
+
+                {isExpanded && (
+                  <div className="border-t border-slate-100 px-5 py-4 bg-slate-50 space-y-4 text-sm">
+                    {req.notes && (
+                      <div>
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-500 mb-1">Description</p>
+                        <p className="text-slate-800 whitespace-pre-wrap leading-relaxed">{req.notes}</p>
+                      </div>
+                    )}
+                    {req.deliverableTitle && (
+                      <div>
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-500 mb-1">Deliverable</p>
+                        <p className="text-slate-800">{req.deliverableTitle}{req.deliverableFormat ? ` (${req.deliverableFormat})` : ""}</p>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs text-slate-600">
+                      <div><span className="font-medium">Request ID:</span> {req.id}</div>
+                      <div><span className="font-medium">SLA hours:</span> {req.slaHours}h</div>
+                      <div><span className="font-medium">Submitted:</span> {fmtActivityTimestamp(req.submittedAt)}</div>
+                      <div><span className="font-medium">Last updated:</span> {fmtActivityTimestamp(req.updatedAt)}</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Activity Tab ──────────────────────────────────────────────────────────────
+
+const ACTIVITY_TYPE_BADGE: Record<ActivityEntryType, string> = {
+  "Status Change": "bg-blue-100 text-blue-800 border-blue-200",
+  Milestone: "bg-green-100 text-green-800 border-green-200",
+  Risk: "bg-amber-100 text-amber-800 border-amber-200",
+  Blocker: "bg-red-100 text-red-800 border-red-200",
+  Budget: "bg-purple-100 text-purple-800 border-purple-200",
+  "Service Request": "bg-orange-100 text-orange-800 border-orange-200",
+  Submission: "bg-teal-100 text-teal-800 border-teal-200",
+};
+
+const ACTIVITY_TYPE_OPTIONS: Array<"All" | ActivityEntryType> = [
+  "All",
+  "Status Change",
+  "Milestone",
+  "Risk",
+  "Blocker",
+  "Budget",
+  "Service Request",
+  "Submission",
+];
+
+const PAGE_SIZE = 20;
+
+function fmtActivityTimestamp(iso: string): string {
+  const d = new Date(iso);
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = d.toLocaleString("en-GB", { month: "short" });
+  const year = d.getFullYear();
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${day} ${month} ${year} ${hh}:${mm}`;
+}
+
+function ActivityTabContent({ initiative }: { initiative: Initiative }) {
+  const [typeFilter, setTypeFilter] = useState<"All" | ActivityEntryType>("All");
+  const [page, setPage] = useState(1);
+  const [entries, setEntries] = useState<ActivityEntry[]>(() => [...(initiative.activity ?? [])]);
+
+  useEffect(() => {
+    setEntries([...(initiative.activity ?? [])]);
+  }, [initiative]);
+
+  useEffect(() => {
+    const refresh = () => {
+      const latest = getInitiativeById(initiative.id);
+      setEntries([...(latest?.activity ?? [])]);
+    };
+    window.addEventListener("storage", refresh);
+    return () => window.removeEventListener("storage", refresh);
+  }, [initiative.id]);
+
+  const filtered = useMemo(
+    () => (typeFilter === "All" ? entries : entries.filter((e) => e.type === typeFilter)),
+    [entries, typeFilter]
+  );
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pageSlice = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-orange-700">Activity</p>
+          <h2 className="mt-2 text-2xl font-semibold text-slate-950">Activity Log</h2>
+          <p className="mt-2 max-w-3xl text-sm text-slate-600">
+            Chronological record of all changes made to {initiative.name} — status updates, milestones, risks, blockers, budget, and service requests.
+          </p>
+        </div>
+        <Badge variant="outline" className="w-fit border-slate-200 text-slate-600">
+          {filtered.length} {filtered.length === 1 ? "entry" : "entries"}
+        </Badge>
+      </div>
+
+      {/* Filter bar */}
+      <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center">
+        <div className="min-w-[220px]">
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Filter by type</p>
+          <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v as "All" | ActivityEntryType); setPage(1); }}>
+            <SelectTrigger className="mt-2 bg-white">
+              <SelectValue placeholder="All types" />
+            </SelectTrigger>
+            <SelectContent>
+              {ACTIVITY_TYPE_OPTIONS.map((opt) => (
+                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="sm:ml-auto text-xs text-slate-500">
+          Sorted most recent first · {entries.length} total events
+        </div>
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center">
+          <p className="text-sm font-medium text-slate-600">No activity recorded yet.</p>
+          <p className="mt-1 text-xs text-slate-400">
+            Events are logged automatically when status, milestones, risks, blockers, budget, or service requests change.
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+            <div className="grid grid-cols-[160px_140px_1fr_130px] gap-4 border-b border-slate-200 bg-slate-50 px-5 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">
+              <span>Timestamp</span>
+              <span>Actor</span>
+              <span>Action</span>
+              <span>Type</span>
+            </div>
+            <div className="divide-y divide-slate-100">
+              {pageSlice.map((entry) => (
+                <div
+                  key={entry.id}
+                  className="grid grid-cols-[160px_140px_1fr_130px] gap-4 px-5 py-3.5 text-sm hover:bg-slate-50 transition-colors"
+                >
+                  <span className="font-mono text-xs text-slate-500 leading-relaxed pt-0.5">
+                    {fmtActivityTimestamp(entry.timestamp)}
+                  </span>
+                  <span className="text-slate-700 font-medium truncate">{entry.actor}</span>
+                  <span className="text-slate-800 leading-relaxed">{entry.action}</span>
+                  <span>
+                    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${ACTIVITY_TYPE_BADGE[entry.type]}`}>
+                      {entry.type}
+                    </span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-slate-50 px-5 py-3">
+              <span className="text-xs text-slate-500">
+                Page {safePage} of {totalPages} ({filtered.length} entries)
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={safePage <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={safePage >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -2163,7 +3049,7 @@ export default function LCStage2Overview() {
   if (initiativeId) {
     const initiative = getInitiativeById(initiativeId) ?? null;
     if (projectId) {
-      return <ProjectRoutePlaceholder initiative={initiative} projectId={projectId} />;
+      return <ProjectDetailView initiative={initiative} projectId={projectId} />;
     }
     return <InitiativeCockpitShell initiativeId={initiativeId} role={role} />;
   }

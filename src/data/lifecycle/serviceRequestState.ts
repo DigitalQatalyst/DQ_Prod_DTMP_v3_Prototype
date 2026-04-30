@@ -32,6 +32,13 @@ export type LCRequestStatus =
   | "Delivered"
   | "Completed";
 
+export interface ActionLogEntry {
+  id: string;
+  timestamp: string;
+  actor: string;
+  action: string;
+}
+
 export interface LCServiceRequest {
   id: string;
   serviceType: LCServiceType;
@@ -52,6 +59,8 @@ export interface LCServiceRequest {
   deliveredAt?: string;
   deliverableTitle?: string;
   deliverableFormat?: "PDF" | "PPTX" | "Word";
+  internalToNotes?: string;
+  actionLog?: ActionLogEntry[];
   slaHours: number;
   submittedAt: string;
   updatedAt: string;
@@ -162,6 +171,8 @@ export interface LCEscalation {
   toResponse?: string;
   status: EscalationStatus;
   resolvedNote?: string;
+  internalToNotes?: string;
+  actionLog?: ActionLogEntry[];
   updatedAt: string;
 }
 
@@ -224,14 +235,35 @@ export const updateLCRequestStatus = (
     deliverableTitle?: string;
     deliverableFormat?: "PDF" | "PPTX" | "Word";
     documentStudioId?: string;
+    actor?: string;
+    note?: string;
   }
 ): LCServiceRequest | null => {
   const requests = readRequests();
   let updated: LCServiceRequest | null = null;
   const now = new Date().toISOString();
+  const { actor, note, ...rest } = options ?? {};
+  const logEntry: ActionLogEntry = {
+    id: `log-${Date.now()}`,
+    timestamp: now,
+    actor: actor ?? "Transformation Office",
+    action: note ? `${status}: ${note}` : status,
+  };
   const next = requests.map((r) => {
     if (r.id !== requestId) return r;
-    updated = { ...r, status, updatedAt: now, ...options };
+    updated = { ...r, status, updatedAt: now, ...rest, actionLog: [...(r.actionLog ?? []), logEntry] };
+    return updated;
+  });
+  writeRequests(next);
+  return updated;
+};
+
+export const updateLCRequestNotes = (requestId: string, notes: string): LCServiceRequest | null => {
+  const requests = readRequests();
+  let updated: LCServiceRequest | null = null;
+  const next = requests.map((r) => {
+    if (r.id !== requestId) return r;
+    updated = { ...r, internalToNotes: notes, updatedAt: new Date().toISOString() };
     return updated;
   });
   writeRequests(next);
@@ -319,14 +351,33 @@ export const addEscalation = (data: Omit<LCEscalation, "id" | "updatedAt" | "sta
 export const updateEscalationStatus = (
   escalationId: string,
   status: EscalationStatus,
-  options?: { toResponse?: string; resolvedNote?: string }
+  options?: { toResponse?: string; resolvedNote?: string; actor?: string; note?: string }
 ): LCEscalation | null => {
   const escalations = readEscalations();
   let updated: LCEscalation | null = null;
   const now = new Date().toISOString();
+  const { actor, note, ...rest } = options ?? {};
+  const logEntry: ActionLogEntry = {
+    id: `log-${Date.now()}`,
+    timestamp: now,
+    actor: actor ?? "Transformation Office",
+    action: note ? `${status}: ${note}` : status,
+  };
   const next = escalations.map((e) => {
     if (e.id !== escalationId) return e;
-    updated = { ...e, status, updatedAt: now, ...options };
+    updated = { ...e, status, updatedAt: now, ...rest, actionLog: [...(e.actionLog ?? []), logEntry] };
+    return updated;
+  });
+  writeEscalations(next);
+  return updated;
+};
+
+export const updateEscalationNotes = (escalationId: string, notes: string): LCEscalation | null => {
+  const escalations = readEscalations();
+  let updated: LCEscalation | null = null;
+  const next = escalations.map((e) => {
+    if (e.id !== escalationId) return e;
+    updated = { ...e, internalToNotes: notes, updatedAt: new Date().toISOString() };
     return updated;
   });
   writeEscalations(next);

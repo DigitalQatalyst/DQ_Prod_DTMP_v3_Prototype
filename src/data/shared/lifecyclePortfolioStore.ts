@@ -136,6 +136,7 @@ export interface Initiative {
   projects: string[];
   fromPortfolio?: boolean;
   portfolioCardId?: string;
+  flaggedForEscalation?: boolean;
   updatedAt: string;
   activity: ActivityEntry[];
 }
@@ -1456,6 +1457,47 @@ export const addProject = (data: Omit<Project, "id" | "updatedAt">): Project => 
 export const resetStore = (): void => {
   if (!isBrowser) return;
   window.localStorage.removeItem(STORE_KEY);
+};
+
+export const setInitiativeFlagged = (initiativeId: string, flagged: boolean): Initiative | null => {
+  const store = readStore();
+  const idx = store.initiatives.findIndex((i) => i.id === initiativeId);
+  if (idx === -1) return null;
+  const entry: ActivityEntry = {
+    id: `act-${Date.now()}`,
+    timestamp: new Date().toISOString(),
+    actor: "Transformation Office",
+    action: flagged ? "Initiative flagged for senior TO escalation" : "Escalation flag removed",
+    type: "Status Change",
+  };
+  store.initiatives[idx] = {
+    ...store.initiatives[idx],
+    flaggedForEscalation: flagged,
+    updatedAt: new Date().toISOString(),
+    activity: [...store.initiatives[idx].activity, entry],
+  };
+  writeStore(store);
+  return store.initiatives[idx];
+};
+
+export const addInitiativeObservation = (initiativeId: string, note: string, actor: string): Initiative | null => {
+  const store = readStore();
+  const idx = store.initiatives.findIndex((i) => i.id === initiativeId);
+  if (idx === -1) return null;
+  const entry: ActivityEntry = {
+    id: `act-${Date.now()}`,
+    timestamp: new Date().toISOString(),
+    actor,
+    action: note,
+    type: "Status Change",
+  };
+  store.initiatives[idx] = {
+    ...store.initiatives[idx],
+    updatedAt: new Date().toISOString(),
+    activity: [...store.initiatives[idx].activity, entry],
+  };
+  writeStore(store);
+  return store.initiatives[idx];
 };
 
 // ── Derived helpers ───────────────────────────────────────────────────────────

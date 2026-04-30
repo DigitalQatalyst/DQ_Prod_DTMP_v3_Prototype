@@ -8,10 +8,13 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
+  Activity,
   AlertTriangle,
   BarChart3,
   CheckCircle2,
+  ChevronDown,
   ChevronRight,
+  ChevronUp,
   CircleSlash,
   ClipboardList,
   Clock,
@@ -23,6 +26,7 @@ import {
   Play,
   RefreshCw,
   ShieldAlert,
+  Sparkles,
   User,
   Zap,
 } from "lucide-react";
@@ -52,9 +56,19 @@ import { toast } from "@/hooks/use-toast";
 import Stage3Shell from "@/components/stage3/Stage3Shell";
 
 import {
+  addInitiativeObservation,
+  computeInitiativeRAG,
+  getAllBlockers,
+  getBlockersByInitiativeId,
+  getInitiativeById,
   getInitiatives,
+  getRisksByInitiativeId,
+  setInitiativeFlagged,
+  updateInitiativeStatus,
+  type Division,
   type Initiative,
   type InitiativeStatus,
+  type RAGStatus,
 } from "@/data/shared/lifecyclePortfolioStore";
 import { getAllActivityEvents } from "@/data/shared/activityEventStore";
 import {
@@ -71,7 +85,9 @@ import {
   getLCRequests,
   updateApprovalStatus,
   updateEscalationStatus,
+  updateEscalationNotes,
   updateLCRequestStatus,
+  updateLCRequestNotes,
   type ApprovalStatus,
   type EscalationSeverity,
   type EscalationStatus,
@@ -80,6 +96,7 @@ import {
   type LCRequestStatus,
   type LCServiceRequest,
 } from "@/data/lifecycle/serviceRequestState";
+import { getFrameworkByType } from "@/data/lifecycle/frameworkCards";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -111,6 +128,16 @@ function slaLabel(r: LCServiceRequest): string {
   const h = Math.floor(remaining / 3_600_000);
   const d = Math.floor(h / 24);
   return d > 0 ? `${d}d left` : `${h}h left`;
+}
+
+function slaStatus(r: LCServiceRequest): "On Track" | "At Risk" | "Breached" {
+  const submitted = new Date(r.submittedAt).getTime();
+  const deadline = submitted + r.slaHours * 3_600_000;
+  const atRisk = submitted + r.slaHours * 0.8 * 3_600_000;
+  const now = Date.now();
+  if (now >= deadline) return "Breached";
+  if (now >= atRisk) return "At Risk";
+  return "On Track";
 }
 
 function escalationAgeLabel(dateRaised: string): { label: string; className: string } {
@@ -149,7 +176,19 @@ const INITIATIVE_STATUS_BADGES: Record<InitiativeStatus, string> = {
   "At Risk": "bg-amber-100 text-amber-800 border-amber-200",
   "On Hold": "bg-slate-200 text-slate-600 border-slate-200",
   Completed: "bg-green-100 text-green-700 border-green-200",
+  Pending: "bg-sky-100 text-sky-700 border-sky-200",
+  "Clarification Requested": "bg-violet-100 text-violet-700 border-violet-200",
+  Rejected: "bg-red-100 text-red-700 border-red-200",
 };
+
+// ── TO Team (for assignment suggestions) ─────────────────────────────────────
+
+const TO_TEAM = [
+  "Eng. Khalid Al Rashidi",
+  "Eng. Sara Al Mansoori",
+  "Eng. Ahmed Al Zaabi",
+  "Dr. Fatima Al Mazrouei",
+];
 
 // ── Sidebar nav config ────────────────────────────────────────────────────────
 
@@ -237,10 +276,32 @@ export default function LCStage3Page() {
     };
   }, []);
 
-  const slaBreached = useMemo(
-    () => openServiceRequests.filter((r) => Date.now() > new Date(r.submittedAt).getTime() + r.slaHours * 3_600_000).length,
-    [openServiceRequests]
+  const slaStats = useMemo(() => {
+    let onTrack = 0, atRisk = 0, breached = 0;
+    const now = Date.now();
+    for (const r of openServiceRequests) {
+      const submitted = new Date(r.submittedAt).getTime();
+      const deadline = submitted + r.slaHours * 3_600_000;
+      const atRiskThreshold = submitted + r.slaHours * 0.8 * 3_600_000;
+      if (now >= deadline) breached++;
+      else if (now >= atRiskThreshold) atRisk++;
+      else onTrack++;
+    }
+    return { onTrack, atRisk, breached };
+  }, [openServiceRequests]);
+
+  const portfolioEscalationsCount = useMemo(
+    () => getAllBlockers().filter((b) => !b.resolved && b.escalationStatus !== "Not Escalated").length,
+    [initiatives]
   );
+
+  const activeProgrammesRAG = useMemo<Record<RAGStatus, number>>(() => {
+    const counts: Record<RAGStatus, number> = { Red: 0, Amber: 0, Green: 0 };
+    for (const ini of activeProgrammes) {
+      counts[computeInitiativeRAG(ini)]++;
+    }
+    return counts;
+  }, [activeProgrammes]);
 
   // ── Sidebar nav ───────────────────────────────────────────────────────────────
 
@@ -265,6 +326,10 @@ export default function LCStage3Page() {
   const submitApprovalAction = () => {
     if (!approvalModal) return;
     const { approval, action } = approvalModal;
+    if (action === "Rejected" && !approvalNote.trim()) {
+      toast({ title: "Rejection reason required", description: "Provide a reason before rejecting this initiative." });
+      return;
+    }
     updateApprovalStatus(approval.id, action, {
       toNotes: approvalNote.trim() || undefined,
       rejectionReason: action === "Rejected" ? approvalNote.trim() || undefined : undefined,
@@ -287,12 +352,18 @@ export default function LCStage3Page() {
     if (!reqModal) return;
     const { req, nextStatus } = reqModal;
     const isDeliver = nextStatus === "Delivered";
+    if (isDeliver && !reqNote.trim()) {
+      toast({ title: "Delivery note required", description: "Please enter a delivery note before marking as delivered.", variant: "destructive" });
+      return;
+    }
     updateLCRequestStatus(req.id, nextStatus, {
-      assignedTo: assignee || undefined,
+      assignedTo: nextStatus === "Assigned" ? (assignee || undefined) : undefined,
       deliveredAt: isDeliver ? new Date().toISOString() : undefined,
       deliverableTitle: isDeliver && deliverableTitle.trim() ? deliverableTitle.trim() : undefined,
       deliverableFormat: isDeliver ? deliverableFormat : undefined,
       documentStudioId: isDeliver && documentStudioId.trim() ? documentStudioId.trim() : undefined,
+      actor: assignee || "Transformation Office",
+      note: reqNote.trim() || undefined,
     });
     toast({ title: `Request ${nextStatus}`, description: `${req.serviceType} for ${req.initiativeName}` });
     setReqModal(null);
@@ -312,9 +383,15 @@ export default function LCStage3Page() {
   const submitEscAction = () => {
     if (!escModal) return;
     const { esc, action } = escModal;
+    if (action === "Resolved" && !escNote.trim()) {
+      toast({ title: "Resolution note required", description: "Please enter a resolution note before resolving.", variant: "destructive" });
+      return;
+    }
     updateEscalationStatus(esc.id, action, {
       toResponse: escNote.trim() || undefined,
       resolvedNote: action === "Resolved" ? escNote.trim() || undefined : undefined,
+      actor: "Transformation Office",
+      note: escNote.trim() || undefined,
     });
     toast({ title: `Escalation ${action}`, description: esc.title });
     setEscModal(null);
@@ -432,11 +509,15 @@ export default function LCStage3Page() {
         {activeView === "overview" && (
           <OverviewView
             pendingApprovals={pendingApprovals.length}
+            pendingApprovalsList={pendingApprovals}
             pendingGateApprovals={pendingGateApprovals.length}
             activeProgrammes={activeProgrammes.length}
+            activeProgrammesRAG={activeProgrammesRAG}
             openRequests={openServiceRequests.length}
+            requestsList={openServiceRequests}
             openEscalations={openEscalations.length}
-            slaBreached={slaBreached}
+            portfolioEscalationsCount={portfolioEscalationsCount}
+            slaStats={slaStats}
             completedInitiatives={completedInitiatives.length}
             onNavigate={goTo}
             recentActivity={recentActivity}
@@ -462,7 +543,7 @@ export default function LCStage3Page() {
 
         {/* ── ACTIVE PROGRAMMES ────────────────────────────────── */}
         {activeView === "active-programmes" && (
-          <ActiveProgrammesView initiatives={activeProgrammes} />
+          <ActiveProgrammesView initiatives={activeProgrammes} onRefresh={refresh} />
         )}
 
         {/* ── SERVICE REQUESTS ─────────────────────────────────── */}
@@ -483,7 +564,7 @@ export default function LCStage3Page() {
         {/* ── ESCALATIONS ──────────────────────────────────────── */}
         {activeView === "escalations" && (
           <EscalationsView
-            escalations={openEscalations}
+            escalations={escalations}
             onAction={(esc, action) => {
               setEscModal({ esc, action });
               setEscNote("");
@@ -587,6 +668,21 @@ export default function LCStage3Page() {
               {reqModal.nextStatus === "Delivered" && (
                 <>
                   <div>
+                    <label className="text-sm font-medium text-gray-700">
+                      Delivery note <span className="text-red-500">*</span>
+                    </label>
+                    <Textarea
+                      value={reqNote}
+                      onChange={(e) => setReqNote(e.target.value)}
+                      placeholder="Summarise what was delivered and any key decisions…"
+                      rows={3}
+                      className={!reqNote.trim() ? "border-red-300 focus:border-red-400" : ""}
+                    />
+                    {!reqNote.trim() && (
+                      <p className="text-xs text-red-500 mt-1">Required before marking as delivered.</p>
+                    )}
+                  </div>
+                  <div>
                     <label className="text-sm font-medium text-gray-700">Deliverable title</label>
                     <Input
                       value={deliverableTitle}
@@ -616,6 +712,18 @@ export default function LCStage3Page() {
                     />
                   </div>
                 </>
+              )}
+
+              {reqModal.nextStatus !== "Delivered" && (
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Note (optional)</label>
+                  <Textarea
+                    value={reqNote}
+                    onChange={(e) => setReqNote(e.target.value)}
+                    placeholder="Add a note for the action log…"
+                    rows={2}
+                  />
+                </div>
               )}
             </div>
           )}
@@ -679,7 +787,9 @@ export default function LCStage3Page() {
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-700">
-                  {escModal.action === "Resolved" ? "Resolution note" : "Response"}
+                  {escModal.action === "Resolved" ? (
+                    <>Resolution note <span className="text-red-500">*</span></>
+                  ) : "Response"}
                 </label>
                 <Textarea
                   value={escNote}
@@ -690,7 +800,11 @@ export default function LCStage3Page() {
                       : "Your response to the escalation…"
                   }
                   rows={3}
+                  className={escModal.action === "Resolved" && !escNote.trim() ? "border-red-300 focus:border-red-400" : ""}
                 />
+                {escModal.action === "Resolved" && !escNote.trim() && (
+                  <p className="text-xs text-red-500 mt-1">Required before resolving.</p>
+                )}
               </div>
             </div>
           )}
@@ -714,27 +828,100 @@ export default function LCStage3Page() {
 
 function OverviewView({
   pendingApprovals,
+  pendingApprovalsList,
   pendingGateApprovals,
   activeProgrammes,
+  activeProgrammesRAG,
   openRequests,
+  requestsList,
   openEscalations,
-  slaBreached,
+  portfolioEscalationsCount,
+  slaStats,
   completedInitiatives,
   onNavigate,
   recentActivity,
   benefitsSummary,
 }: {
   pendingApprovals: number;
+  pendingApprovalsList: InitiativeApprovalRequest[];
   pendingGateApprovals: number;
   activeProgrammes: number;
+  activeProgrammesRAG: Record<RAGStatus, number>;
   openRequests: number;
+  requestsList: LCServiceRequest[];
   openEscalations: number;
-  slaBreached: number;
+  portfolioEscalationsCount: number;
+  slaStats: { onTrack: number; atRisk: number; breached: number };
   completedInitiatives: number;
   onNavigate: (v: Stage3View) => void;
   recentActivity: Array<{ id: string; actor: string; action: string; timestamp: string; note?: string }>;
   benefitsSummary: { planned: number; realized: number; rate: number };
 }) {
+  const [copilotCollapsed, setCopilotCollapsed] = useState<boolean>(() =>
+    localStorage.getItem("dtmp.stage3.copilotCollapsed") === "true"
+  );
+
+  const toggleCopilot = () => {
+    const next = !copilotCollapsed;
+    setCopilotCollapsed(next);
+    localStorage.setItem("dtmp.stage3.copilotCollapsed", String(next));
+  };
+
+  // Queue summary
+  const oldestPending = useMemo(() => {
+    const all = pendingApprovalsList.map((a) => new Date(a.submittedAt).getTime());
+    if (all.length === 0) return null;
+    const oldest = Math.min(...all);
+    return Math.floor((Date.now() - oldest) / 86_400_000);
+  }, [pendingApprovalsList]);
+
+  const criticalEscalations = useMemo(
+    () => getAllBlockers().filter((b) => !b.resolved && b.escalationStatus !== "Not Escalated" && (b as { severity?: string }).severity === "Critical").length,
+    []
+  );
+
+  // SLA risk cards — top 3 most urgent (breached by most hours first, then at-risk closest to breach)
+  const slaRiskCards = useMemo(() => {
+    const now = Date.now();
+    return requestsList
+      .map((r) => {
+        const deadline = new Date(r.submittedAt).getTime() + r.slaHours * 3_600_000;
+        return { r, urgency: now - deadline }; // positive = breached, negative = time remaining
+      })
+      .sort((a, b) => b.urgency - a.urgency)
+      .slice(0, 3)
+      .filter(({ urgency }) => urgency > -(120 * 3_600_000)) // only at-risk (≤120h) or breached
+      .map(({ r, urgency }) => ({ r, urgency }));
+  }, [requestsList]);
+
+  // Assignment suggestions — suggest least-loaded TO member for each unassigned request
+  const assignmentSuggestions = useMemo(() => {
+    const workload: Record<string, number> = Object.fromEntries(TO_TEAM.map((m) => [m, 0]));
+    requestsList.forEach((r) => {
+      if (r.assignedTo && workload[r.assignedTo] !== undefined) workload[r.assignedTo]++;
+    });
+    return requestsList
+      .filter((r) => !r.assignedTo)
+      .slice(0, 4)
+      .map((r) => {
+        const suggested = TO_TEAM.reduce((min, m) => (workload[m] < workload[min] ? m : min), TO_TEAM[0]);
+        workload[suggested]++;
+        return { r, suggested };
+      });
+  }, [requestsList]);
+
+  // Pattern flags — ≥3 same serviceType from same division
+  const patternFlags = useMemo(() => {
+    const groups: Record<string, { serviceType: string; division: string; count: number }> = {};
+    for (const r of requestsList) {
+      const division = getInitiativeById(r.initiativeId)?.division ?? "Unknown";
+      const key = `${r.serviceType}||${division}`;
+      if (!groups[key]) groups[key] = { serviceType: r.serviceType, division, count: 0 };
+      groups[key].count++;
+    }
+    return Object.values(groups).filter((g) => g.count >= 3);
+  }, [requestsList]);
+
   return (
     <div className="space-y-6">
       <div>
@@ -744,33 +931,230 @@ function OverviewView({
         </p>
       </div>
 
-      {/* KPI grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        {[
-          { label: "Pending Approvals", value: pendingApprovals + pendingGateApprovals, icon: <Inbox className="w-5 h-5" />, color: "text-amber-600", bg: "bg-amber-50", view: "pending-approvals" as Stage3View, urgent: pendingApprovals + pendingGateApprovals > 0 },
-          { label: "Active Programmes", value: activeProgrammes, icon: <Play className="w-5 h-5" />, color: "text-teal-600", bg: "bg-teal-50", view: "active-programmes" as Stage3View, urgent: false },
-          { label: "Open Requests", value: openRequests, icon: <ClipboardList className="w-5 h-5" />, color: "text-blue-600", bg: "bg-blue-50", view: "service-requests" as Stage3View, urgent: false },
-          { label: "SLA Breached", value: slaBreached, icon: <Clock className="w-5 h-5" />, color: "text-red-600", bg: "bg-red-50", view: "service-requests" as Stage3View, urgent: slaBreached > 0 },
-          { label: "Escalations", value: openEscalations, icon: <ShieldAlert className="w-5 h-5" />, color: "text-red-600", bg: "bg-red-50", view: "escalations" as Stage3View, urgent: openEscalations > 0 },
-          { label: "Completed", value: completedInitiatives, icon: <CheckCircle2 className="w-5 h-5" />, color: "text-green-600", bg: "bg-green-50", view: "completed" as Stage3View, urgent: false },
-        ].map((kpi) => (
-          <button
-            key={kpi.label}
-            onClick={() => onNavigate(kpi.view)}
-            className={`group text-left p-4 bg-white border rounded-xl transition-all hover:shadow-md hover:-translate-y-0.5 ${kpi.urgent ? "border-red-200 ring-1 ring-red-100" : "border-gray-200"}`}
-          >
-            <div className={`w-9 h-9 ${kpi.bg} rounded-lg flex items-center justify-center mb-3 ${kpi.color}`}>
-              {kpi.icon}
+      {/* ── AI.06 T-Office Copilot ─────────────────────────────── */}
+      <div className="rounded-xl border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50">
+        <button
+          onClick={toggleCopilot}
+          className="w-full flex items-center justify-between px-5 py-3.5"
+        >
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-orange-600 flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-white" />
             </div>
-            <p className="text-2xl font-bold text-gray-900">{kpi.value}</p>
-            <p className="text-xs text-gray-500 mt-0.5 leading-tight">{kpi.label}</p>
-            {kpi.urgent && kpi.value > 0 && (
-              <p className="text-xs font-semibold text-red-600 mt-1 flex items-center gap-1">
-                <AlertTriangle className="w-3 h-3" /> Needs attention
+            <div className="text-left">
+              <p className="text-sm font-semibold text-orange-900">AI.06 T-Office Copilot</p>
+              <p className="text-xs text-orange-700">Live queue intelligence · Read only</p>
+            </div>
+          </div>
+          {copilotCollapsed
+            ? <ChevronDown className="w-4 h-4 text-orange-600" />
+            : <ChevronUp className="w-4 h-4 text-orange-600" />}
+        </button>
+
+        {!copilotCollapsed && (
+          <div className="px-5 pb-5 space-y-5 border-t border-orange-200">
+            {/* Queue summary */}
+            <div className="pt-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-orange-700 mb-1.5">Queue Summary</p>
+              <p className="text-sm text-slate-800 leading-relaxed">
+                <span className="font-semibold">{pendingApprovals + pendingGateApprovals}</span> initiative{pendingApprovals + pendingGateApprovals !== 1 ? "s" : ""} awaiting approval
+                {oldestPending !== null && <> — oldest submitted <span className="font-semibold">{oldestPending} day{oldestPending !== 1 ? "s" : ""}</span> ago</>}.{" "}
+                <span className="font-semibold">{openRequests}</span> service request{openRequests !== 1 ? "s" : ""} open:{" "}
+                <span className="text-green-700 font-medium">{slaStats.onTrack} on track</span>,{" "}
+                <span className="text-amber-700 font-medium">{slaStats.atRisk} at SLA risk</span>,{" "}
+                <span className="text-red-700 font-medium">{slaStats.breached} breached</span>.{" "}
+                <span className="font-semibold">{portfolioEscalationsCount}</span> open escalation{portfolioEscalationsCount !== 1 ? "s" : ""}
+                {criticalEscalations > 0 && <> — <span className="text-red-700 font-semibold">{criticalEscalations} critical</span></>}.
               </p>
+            </div>
+
+            {/* SLA risk cards */}
+            {slaRiskCards.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-orange-700 mb-2">SLA Risk Alerts</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {slaRiskCards.map(({ r, urgency }) => {
+                    const breached = urgency > 0;
+                    const hrs = Math.abs(Math.round(urgency / 3_600_000));
+                    return (
+                      <div
+                        key={r.id}
+                        className={`rounded-lg border p-3 ${breached ? "border-red-200 bg-red-50" : "border-amber-200 bg-amber-50"}`}
+                      >
+                        <p className={`text-xs font-semibold ${breached ? "text-red-700" : "text-amber-700"}`}>
+                          {breached ? `${hrs}h overdue` : `${hrs}h remaining`}
+                        </p>
+                        <p className="text-sm font-medium text-slate-900 mt-0.5 line-clamp-1">{r.serviceType}</p>
+                        <p className="text-xs text-slate-500 line-clamp-1">{r.initiativeName}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             )}
-          </button>
-        ))}
+
+            {/* Assignment suggestions */}
+            {assignmentSuggestions.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-orange-700 mb-2">Assignment Suggestions</p>
+                <div className="space-y-2">
+                  {assignmentSuggestions.map(({ r, suggested }) => (
+                    <div key={r.id} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-slate-900 line-clamp-1">{r.serviceType}</p>
+                        <p className="text-xs text-slate-500 line-clamp-1">{r.initiativeName}</p>
+                      </div>
+                      <div className="flex-shrink-0 text-right">
+                        <p className="text-xs text-slate-500">Suggested</p>
+                        <p className="text-xs font-semibold text-orange-700">{suggested}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Pattern flags */}
+            {patternFlags.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-orange-700 mb-2">Pattern Flags</p>
+                <div className="space-y-2">
+                  {patternFlags.map((flag, i) => (
+                    <div key={i} className="flex items-start gap-2 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2.5">
+                      <AlertTriangle className="w-3.5 h-3.5 text-violet-600 mt-0.5 flex-shrink-0" />
+                      <p className="text-xs text-violet-800">
+                        Multiple <span className="font-semibold">{flag.serviceType}</span> requests from <span className="font-semibold">{flag.division}</span> ({flag.count} open) — possible systemic gap.
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {slaRiskCards.length === 0 && assignmentSuggestions.length === 0 && patternFlags.length === 0 && (
+              <p className="text-xs text-slate-500 italic pt-1">No active alerts or suggestions at this time.</p>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* KPI grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {/* Pending Approvals */}
+        <button
+          onClick={() => onNavigate("pending-approvals")}
+          className={`group text-left p-4 bg-white border rounded-xl transition-all hover:shadow-md hover:-translate-y-0.5 ${pendingApprovals + pendingGateApprovals > 0 ? "border-amber-200 ring-1 ring-amber-100" : "border-gray-200"}`}
+        >
+          <div className="w-9 h-9 bg-amber-50 rounded-lg flex items-center justify-center mb-3 text-amber-600">
+            <Inbox className="w-5 h-5" />
+          </div>
+          <p className="text-2xl font-bold text-gray-900">{pendingApprovals + pendingGateApprovals}</p>
+          <p className="text-xs text-gray-500 mt-0.5 leading-tight">Pending Approvals</p>
+          {pendingApprovals + pendingGateApprovals > 0 && (
+            <p className="text-xs font-semibold text-amber-600 mt-1 flex items-center gap-1">
+              <AlertTriangle className="w-3 h-3" /> Needs attention
+            </p>
+          )}
+        </button>
+
+        {/* Active Programmes with RAG breakdown */}
+        <button
+          onClick={() => onNavigate("active-programmes")}
+          className="group text-left p-4 bg-white border border-gray-200 rounded-xl transition-all hover:shadow-md hover:-translate-y-0.5"
+        >
+          <div className="w-9 h-9 bg-teal-50 rounded-lg flex items-center justify-center mb-3 text-teal-600">
+            <Play className="w-5 h-5" />
+          </div>
+          <p className="text-2xl font-bold text-gray-900">{activeProgrammes}</p>
+          <p className="text-xs text-gray-500 mt-0.5 leading-tight">Active Programmes</p>
+          <div className="flex items-center gap-2 mt-2">
+            {activeProgrammesRAG.Red > 0 && (
+              <span className="flex items-center gap-1 text-xs font-semibold text-red-600">
+                <span className="w-2 h-2 rounded-full bg-red-500 inline-block" />{activeProgrammesRAG.Red}R
+              </span>
+            )}
+            {activeProgrammesRAG.Amber > 0 && (
+              <span className="flex items-center gap-1 text-xs font-semibold text-amber-600">
+                <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />{activeProgrammesRAG.Amber}A
+              </span>
+            )}
+            {activeProgrammesRAG.Green > 0 && (
+              <span className="flex items-center gap-1 text-xs font-semibold text-green-600">
+                <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />{activeProgrammesRAG.Green}G
+              </span>
+            )}
+          </div>
+        </button>
+
+        {/* Service Requests with SLA breakdown */}
+        <button
+          onClick={() => onNavigate("service-requests")}
+          className={`group text-left p-4 bg-white border rounded-xl transition-all hover:shadow-md hover:-translate-y-0.5 ${slaStats.breached > 0 ? "border-red-200 ring-1 ring-red-100" : slaStats.atRisk > 0 ? "border-amber-200 ring-1 ring-amber-100" : "border-gray-200"}`}
+        >
+          <div className="w-9 h-9 bg-blue-50 rounded-lg flex items-center justify-center mb-3 text-blue-600">
+            <ClipboardList className="w-5 h-5" />
+          </div>
+          <p className="text-2xl font-bold text-gray-900">{openRequests}</p>
+          <p className="text-xs text-gray-500 mt-0.5 leading-tight">Open Requests</p>
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-xs text-green-600 font-medium">{slaStats.onTrack} on track</span>
+            {slaStats.atRisk > 0 && <span className="text-xs text-amber-600 font-semibold">{slaStats.atRisk} at risk</span>}
+            {slaStats.breached > 0 && <span className="text-xs text-red-600 font-semibold">{slaStats.breached} breached</span>}
+          </div>
+        </button>
+
+        {/* Escalations — sourced from portfolio store blockers */}
+        <button
+          onClick={() => onNavigate("escalations")}
+          className={`group text-left p-4 bg-white border rounded-xl transition-all hover:shadow-md hover:-translate-y-0.5 ${portfolioEscalationsCount > 0 ? "border-red-200 ring-1 ring-red-100" : "border-gray-200"}`}
+        >
+          <div className="w-9 h-9 bg-red-50 rounded-lg flex items-center justify-center mb-3 text-red-600">
+            <ShieldAlert className="w-5 h-5" />
+          </div>
+          <p className="text-2xl font-bold text-gray-900">{portfolioEscalationsCount}</p>
+          <p className="text-xs text-gray-500 mt-0.5 leading-tight">Open Escalations</p>
+          {portfolioEscalationsCount > 0 && (
+            <p className="text-xs font-semibold text-red-600 mt-1 flex items-center gap-1">
+              <AlertTriangle className="w-3 h-3" /> Needs attention
+            </p>
+          )}
+        </button>
+      </div>
+
+      {/* Secondary KPIs */}
+      <div className="grid grid-cols-2 gap-4">
+        <button
+          onClick={() => onNavigate("completed")}
+          className="group text-left p-4 bg-white border border-gray-200 rounded-xl transition-all hover:shadow-md hover:-translate-y-0.5"
+        >
+          <div className="w-9 h-9 bg-green-50 rounded-lg flex items-center justify-center mb-3 text-green-600">
+            <CheckCircle2 className="w-5 h-5" />
+          </div>
+          <p className="text-2xl font-bold text-gray-900">{completedInitiatives}</p>
+          <p className="text-xs text-gray-500 mt-0.5 leading-tight">Completed Initiatives</p>
+        </button>
+        <div className="p-4 bg-white border border-gray-200 rounded-xl">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-9 h-9 bg-orange-50 rounded-lg flex items-center justify-center text-orange-600">
+              <Clock className="w-5 h-5" />
+            </div>
+            <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">SLA Status</p>
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div>
+              <p className="text-lg font-bold text-green-600">{slaStats.onTrack}</p>
+              <p className="text-xs text-gray-500">On Track</p>
+            </div>
+            <div>
+              <p className="text-lg font-bold text-amber-600">{slaStats.atRisk}</p>
+              <p className="text-xs text-gray-500">At Risk</p>
+            </div>
+            <div>
+              <p className="text-lg font-bold text-red-600">{slaStats.breached}</p>
+              <p className="text-xs text-gray-500">Breached</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Quick actions */}
@@ -809,19 +1193,22 @@ function OverviewView({
                 <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
                   <span>SLA Compliance</span>
                   <span className="font-semibold">
-                    {openRequests > 0 ? Math.round(((openRequests - slaBreached) / openRequests) * 100) : 100}%
+                    {openRequests > 0 ? Math.round((slaStats.onTrack / openRequests) * 100) : 100}%
                   </span>
                 </div>
                 <Progress
-                  value={openRequests > 0 ? ((openRequests - slaBreached) / openRequests) * 100 : 100}
+                  value={openRequests > 0 ? (slaStats.onTrack / openRequests) * 100 : 100}
                   className="h-2"
                 />
+                {slaStats.atRisk > 0 && (
+                  <p className="text-xs text-amber-600 mt-1">{slaStats.atRisk} request{slaStats.atRisk > 1 ? "s" : ""} approaching SLA deadline</p>
+                )}
               </div>
               <div>
                 <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
                   <span>Open Escalations</span>
-                  <span className={`font-semibold ${openEscalations > 0 ? "text-red-600" : "text-green-600"}`}>
-                    {openEscalations === 0 ? "None" : openEscalations}
+                  <span className={`font-semibold ${portfolioEscalationsCount > 0 ? "text-red-600" : "text-green-600"}`}>
+                    {portfolioEscalationsCount === 0 ? "None" : portfolioEscalationsCount}
                   </span>
                 </div>
               </div>
@@ -830,6 +1217,19 @@ function OverviewView({
                   <span>Approvals Pending</span>
                   <span className={`font-semibold ${pendingApprovals + pendingGateApprovals > 0 ? "text-amber-600" : "text-green-600"}`}>
                     {pendingApprovals + pendingGateApprovals === 0 ? "Clear" : pendingApprovals + pendingGateApprovals}
+                  </span>
+                </div>
+              </div>
+              <div>
+                <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
+                  <span>Programme RAG</span>
+                  <span className="flex items-center gap-1.5">
+                    {activeProgrammesRAG.Red > 0 && <span className="text-xs font-bold text-red-600">{activeProgrammesRAG.Red}R</span>}
+                    {activeProgrammesRAG.Amber > 0 && <span className="text-xs font-bold text-amber-600">{activeProgrammesRAG.Amber}A</span>}
+                    {activeProgrammesRAG.Green > 0 && <span className="text-xs font-bold text-green-600">{activeProgrammesRAG.Green}G</span>}
+                    {activeProgrammesRAG.Red === 0 && activeProgrammesRAG.Amber === 0 && activeProgrammesRAG.Green === 0 && (
+                      <span className="text-xs text-gray-400">—</span>
+                    )}
                   </span>
                 </div>
               </div>
@@ -884,6 +1284,8 @@ function OverviewView({
 
 // ── Pending Approvals View ─────────────────────────────────────────────────────
 
+const PRIORITY_RANK: Record<string, number> = { Critical: 0, High: 1, Medium: 2, Low: 3 };
+
 function PendingApprovalsView({
   approvals,
   onAction,
@@ -895,126 +1297,230 @@ function PendingApprovalsView({
   gateApprovals: ApprovalWorkflow[];
   onGateAction: (approval: ApprovalWorkflow, decision: "approved" | "rejected" | "conditional") => void;
 }) {
+  const [statusFilter, setStatusFilter] = useState<"All" | "Pending" | "Clarification Requested" | "Escalated">("All");
+  const [sortBy, setSortBy] = useState<"oldest" | "priority" | "division">("oldest");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const filtered = useMemo(() => {
+    let list = statusFilter === "All" ? approvals : approvals.filter((a) => a.status === statusFilter);
+    if (sortBy === "oldest") list = [...list].sort((a, b) => new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime());
+    else if (sortBy === "priority") list = [...list].sort((a, b) => (PRIORITY_RANK[a.priority] ?? 9) - (PRIORITY_RANK[b.priority] ?? 9));
+    else if (sortBy === "division") list = [...list].sort((a, b) => a.division.localeCompare(b.division));
+    return list;
+  }, [approvals, statusFilter, sortBy]);
+
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      {/* Header + controls */}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Pending Approvals</h1>
           <p className="text-sm text-gray-500 mt-0.5">Initiative requests awaiting TO review.</p>
         </div>
-        <Badge variant="outline" className="border-amber-200 text-amber-700 bg-amber-50">
-          {approvals.length} pending
-        </Badge>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+            <SelectTrigger className="h-8 w-48 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {(["All", "Pending", "Clarification Requested", "Escalated"] as const).map((s) => (
+                <SelectItem key={s} value={s}>{s === "All" ? "All statuses" : s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+            <SelectTrigger className="h-8 w-40 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="oldest">Oldest first</SelectItem>
+              <SelectItem value="priority">By priority</SelectItem>
+              <SelectItem value="division">By division</SelectItem>
+            </SelectContent>
+          </Select>
+          <Badge variant="outline" className="border-amber-200 text-amber-700 bg-amber-50">
+            {filtered.length} shown
+          </Badge>
+        </div>
       </div>
 
-      {approvals.length === 0 ? (
-        <EmptyState icon={<Inbox className="w-8 h-8 text-gray-300" />} message="No pending approvals" />
+      {filtered.length === 0 ? (
+        <EmptyState icon={<Inbox className="w-8 h-8 text-gray-300" />} message="No approvals match" />
       ) : (
         <div className="space-y-4">
-          {approvals.map((a) => (
-            <Card key={a.id} className="border-gray-200">
-              <CardContent className="p-5 space-y-4">
-                <div className="flex items-start justify-between gap-4 flex-wrap">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <Badge className={`text-xs border ${APPROVAL_STATUS_BADGES[a.status]}`}>{a.status}</Badge>
-                      <Badge variant="outline" className={`text-xs border ${a.priority === "Critical" ? "border-red-200 bg-red-50 text-red-700" : a.priority === "High" ? "border-orange-200 bg-orange-50 text-orange-700" : "border-gray-200 text-gray-700"}`}>
-                        {a.priority}
-                      </Badge>
-                      <Badge variant="outline" className={`text-xs border ${a.isExternal ? "border-blue-200 bg-blue-50 text-blue-700" : "border-teal-200 bg-teal-50 text-teal-700"}`}>
-                        {a.isExternal ? "External" : "Internal"}
-                      </Badge>
+          {filtered.map((a) => {
+            const isExpanded = expandedId === a.id;
+            const initiative = getInitiatives().find((i) => i.name === a.initiativeName);
+            const framework = getFrameworkByType(a.frameworkType);
+            const activityLog = initiative?.activity ?? [];
+
+            return (
+              <Card key={a.id} className="border-gray-200">
+                <CardContent className="p-5 space-y-4">
+                  {/* Card header */}
+                  <div className="flex items-start justify-between gap-4 flex-wrap">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <Badge className={`text-xs border ${APPROVAL_STATUS_BADGES[a.status]}`}>{a.status}</Badge>
+                        <Badge variant="outline" className={`text-xs border ${a.priority === "Critical" ? "border-red-200 bg-red-50 text-red-700" : a.priority === "High" ? "border-orange-200 bg-orange-50 text-orange-700" : "border-gray-200 text-gray-700"}`}>
+                          {a.priority}
+                        </Badge>
+                        <Badge variant="outline" className={`text-xs border ${a.isExternal ? "border-blue-200 bg-blue-50 text-blue-700" : "border-teal-200 bg-teal-50 text-teal-700"}`}>
+                          {a.isExternal ? "External" : "Internal"}
+                        </Badge>
+                      </div>
+                      <h3 className="text-base font-semibold text-gray-900">{a.initiativeName}</h3>
+                      <p className="text-sm text-gray-500">{a.frameworkType} · {a.division}</p>
                     </div>
-                    <h3 className="text-base font-semibold text-gray-900">{a.initiativeName}</h3>
-                    <p className="text-sm text-gray-500">{a.frameworkType} · {a.division}</p>
+                    <div className="flex items-start gap-3">
+                      <div className="text-right text-xs text-gray-400">
+                        <p>Submitted {fmtDate(a.submittedAt)}</p>
+                        <p>by {a.submittedBy}</p>
+                      </div>
+                      <button
+                        onClick={() => setExpandedId(isExpanded ? null : a.id)}
+                        className="flex items-center gap-1 text-xs text-orange-600 font-medium hover:text-orange-800 mt-0.5 flex-shrink-0"
+                      >
+                        {isExpanded ? <><ChevronUp className="w-3.5 h-3.5" /> Less</> : <><ChevronDown className="w-3.5 h-3.5" /> More detail</>}
+                      </button>
+                    </div>
                   </div>
-                  <div className="text-right text-xs text-gray-400 flex-shrink-0">
-                    <p>Submitted {fmtDate(a.submittedAt)}</p>
-                    <p>by {a.submittedBy}</p>
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-slate-50 border border-slate-100 rounded-lg p-3 space-y-1.5">
-                    <p className="text-xs font-semibold text-slate-500">Objective</p>
-                    <p className="text-sm text-slate-700">{a.objective}</p>
+                  {/* Summary fields — always visible */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-slate-50 border border-slate-100 rounded-lg p-3 space-y-1.5">
+                      <p className="text-xs font-semibold text-slate-500">Objective</p>
+                      <p className="text-sm text-slate-700">{a.objective}</p>
+                    </div>
+                    <div className="bg-slate-50 border border-slate-100 rounded-lg p-3 space-y-1.5">
+                      <p className="text-xs font-semibold text-slate-500">Scope</p>
+                      <p className="text-sm text-slate-700">{a.scope}</p>
+                    </div>
                   </div>
-                  <div className="bg-slate-50 border border-slate-100 rounded-lg p-3 space-y-1.5">
-                    <p className="text-xs font-semibold text-slate-500">Scope</p>
-                    <p className="text-sm text-slate-700">{a.scope}</p>
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                  <div>
-                    <p className="text-xs text-gray-400">Proposed Owner</p>
-                    <p className="font-medium text-gray-800">{a.proposedOwner}</p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                    <div><p className="text-xs text-gray-400">Proposed Owner</p><p className="font-medium text-gray-800">{a.proposedOwner}</p></div>
+                    <div><p className="text-xs text-gray-400">Key Stakeholders</p><p className="font-medium text-gray-800">{a.keyStakeholders}</p></div>
+                    <div><p className="text-xs text-gray-400">Target Start</p><p className="font-medium text-gray-800">{fmtDate(a.targetStartDate)}</p></div>
                   </div>
-                  <div>
-                    <p className="text-xs text-gray-400">Key Stakeholders</p>
-                    <p className="font-medium text-gray-800">{a.keyStakeholders}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-400">Target Start</p>
-                    <p className="font-medium text-gray-800">{fmtDate(a.targetStartDate)}</p>
-                  </div>
-                </div>
 
-                {a.estimatedBudget && (
-                  <div className="text-sm">
-                    <p className="text-xs text-gray-400">Estimated Budget</p>
-                    <p className="font-medium text-gray-800">{a.estimatedBudget}</p>
+                  {a.estimatedBudget && (
+                    <div className="text-sm">
+                      <p className="text-xs text-gray-400">Estimated Budget</p>
+                      <p className="font-medium text-gray-800">{a.estimatedBudget}</p>
+                    </div>
+                  )}
+
+                  {a.additionalContext && (
+                    <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
+                      <p className="text-xs font-semibold text-blue-600 mb-1">Additional context</p>
+                      <p className="text-sm text-blue-800">{a.additionalContext}</p>
+                    </div>
+                  )}
+
+                  {/* ── Expanded detail panels ── */}
+                  {isExpanded && (
+                    <div className="space-y-4 pt-1">
+                      <Separator />
+
+                      {/* 1. Portfolio context block */}
+                      {initiative?.fromPortfolio && (
+                        <div className="rounded-lg border border-violet-200 bg-violet-50 p-4 space-y-2">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-violet-700">Portfolio Context</p>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                            <div>
+                              <p className="text-xs text-violet-600">Source Asset Card</p>
+                              <p className="font-medium text-violet-900">{initiative.portfolioCardId}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-violet-600">Initiative Link</p>
+                              <p className="font-medium text-violet-900">Derived from portfolio gap</p>
+                            </div>
+                          </div>
+                          {a.contextFromPortfolio && (
+                            <div>
+                              <p className="text-xs text-violet-600 mb-1">Condition & Recommendation</p>
+                              <p className="text-sm text-violet-800">{a.contextFromPortfolio}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* 2. Framework detail panel */}
+                      {framework ? (
+                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-2">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Framework Detail</p>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                            <div>
+                              <p className="text-xs text-slate-500">Name</p>
+                              <p className="font-medium text-slate-900 line-clamp-2">{framework.type}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-slate-500">Type</p>
+                              <p className="font-medium text-slate-900">{framework.category}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-slate-500">Typical Duration</p>
+                              <p className="font-medium text-slate-900">{framework.typicalDuration}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-slate-500">Scope</p>
+                              <p className="font-medium text-slate-900">{framework.typicalScope}</p>
+                            </div>
+                          </div>
+                          <p className="text-xs text-slate-600 leading-relaxed">{framework.description}</p>
+                        </div>
+                      ) : (
+                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-600 mb-1">Framework Detail</p>
+                          <p className="text-sm text-slate-500">Framework type "{a.frameworkType}" — no card match found.</p>
+                        </div>
+                      )}
+
+                      {/* 3. Approval history */}
+                      <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-2">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Approval History</p>
+                        {activityLog.length === 0 ? (
+                          <p className="text-xs text-slate-400 italic">No activity recorded yet for this initiative.</p>
+                        ) : (
+                          <div className="space-y-2 max-h-48 overflow-y-auto">
+                            {[...activityLog].reverse().map((entry) => (
+                              <div key={entry.id} className="flex items-start gap-3 py-1.5 border-b border-slate-100 last:border-0">
+                                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0" />
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs text-slate-700">{entry.action}</p>
+                                  <p className="text-xs text-slate-400 mt-0.5">{entry.actor} · {fmtDate(entry.timestamp)}</p>
+                                </div>
+                                <Badge variant="outline" className="text-xs border-slate-200 text-slate-500 flex-shrink-0">{entry.type}</Badge>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <Separator />
+
+                  {/* Actions */}
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => onAction(a, "Approved")}>
+                      <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Approve
+                    </Button>
+                    <Button size="sm" variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50" onClick={() => onAction(a, "Clarification Requested")}>
+                      <MessageSquare className="w-3.5 h-3.5 mr-1" /> Request Clarification
+                    </Button>
+                    <Button size="sm" variant="outline" className="border-purple-200 text-purple-700 hover:bg-purple-50" onClick={() => onAction(a, "Escalated")}>
+                      <Flag className="w-3.5 h-3.5 mr-1" /> Escalate
+                    </Button>
+                    <Button size="sm" variant="outline" className="border-red-200 text-red-700 hover:bg-red-50" onClick={() => onAction(a, "Rejected")}>
+                      <CircleSlash className="w-3.5 h-3.5 mr-1" /> Reject
+                    </Button>
                   </div>
-                )}
-
-                {a.additionalContext && (
-                  <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
-                    <p className="text-xs font-semibold text-blue-600 mb-1">Additional context</p>
-                    <p className="text-sm text-blue-800">{a.additionalContext}</p>
-                  </div>
-                )}
-
-                <Separator />
-
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    size="sm"
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                    onClick={() => onAction(a, "Approved")}
-                  >
-                    <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Approve
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-blue-200 text-blue-700 hover:bg-blue-50"
-                    onClick={() => onAction(a, "Clarification Requested")}
-                  >
-                    <MessageSquare className="w-3.5 h-3.5 mr-1" /> Request Clarification
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-purple-200 text-purple-700 hover:bg-purple-50"
-                    onClick={() => onAction(a, "Escalated")}
-                  >
-                    <Flag className="w-3.5 h-3.5 mr-1" /> Escalate
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-red-200 text-red-700 hover:bg-red-50"
-                    onClick={() => onAction(a, "Rejected")}
-                  >
-                    <CircleSlash className="w-3.5 h-3.5 mr-1" /> Reject
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 
+      {/* Gate approvals */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
@@ -1046,15 +1552,9 @@ function PendingApprovalsView({
                     ) : null}
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => onGateAction(approval, "approved")}>
-                      Approve
-                    </Button>
-                    <Button size="sm" variant="outline" className="border-amber-200 text-amber-700 hover:bg-amber-50" onClick={() => onGateAction(approval, "conditional")}>
-                      Conditional
-                    </Button>
-                    <Button size="sm" variant="outline" className="border-red-200 text-red-700 hover:bg-red-50" onClick={() => onGateAction(approval, "rejected")}>
-                      Reject
-                    </Button>
+                    <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => onGateAction(approval, "approved")}>Approve</Button>
+                    <Button size="sm" variant="outline" className="border-amber-200 text-amber-700 hover:bg-amber-50" onClick={() => onGateAction(approval, "conditional")}>Conditional</Button>
+                    <Button size="sm" variant="outline" className="border-red-200 text-red-700 hover:bg-red-50" onClick={() => onGateAction(approval, "rejected")}>Reject</Button>
                   </div>
                 </CardContent>
               </Card>
@@ -1068,57 +1568,283 @@ function PendingApprovalsView({
 
 // ── Active Programmes View ────────────────────────────────────────────────────
 
-function ActiveProgrammesView({ initiatives }: { initiatives: Initiative[] }) {
+const SEVERITY_RANK: Record<string, number> = { Critical: 0, High: 1, Medium: 2, Low: 3 };
+
+function ActiveProgrammesView({ initiatives, onRefresh }: { initiatives: Initiative[]; onRefresh: () => void }) {
+  const [divisionFilter, setDivisionFilter] = useState<string>("All");
+  const [ragFilter, setRagFilter] = useState<"All" | RAGStatus>("All");
+  const [sortBy, setSortBy] = useState<"rag" | "division" | "targetDate">("rag");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  // TO action state per expanded initiative
+  const [statusAction, setStatusAction] = useState<InitiativeStatus | "">("");
+  const [statusNote, setStatusNote] = useState("");
+  const [observationText, setObservationText] = useState("");
+  const [showAuditTrail, setShowAuditTrail] = useState(false);
+
+  const divisions = useMemo(() => ["All", ...Array.from(new Set(initiatives.map((i) => i.division))).sort()], [initiatives]);
+
+  const filtered = useMemo(() => {
+    let list = initiatives;
+    if (divisionFilter !== "All") list = list.filter((i) => i.division === divisionFilter);
+    if (ragFilter !== "All") list = list.filter((i) => computeInitiativeRAG(i) === ragFilter);
+    if (sortBy === "rag") {
+      const rankMap: Record<RAGStatus, number> = { Red: 0, Amber: 1, Green: 2 };
+      list = [...list].sort((a, b) => rankMap[computeInitiativeRAG(a)] - rankMap[computeInitiativeRAG(b)]);
+    } else if (sortBy === "division") {
+      list = [...list].sort((a, b) => a.division.localeCompare(b.division));
+    } else {
+      list = [...list].sort((a, b) => new Date(a.targetDate).getTime() - new Date(b.targetDate).getTime());
+    }
+    return list;
+  }, [initiatives, divisionFilter, ragFilter, sortBy]);
+
+  const handleExpand = (id: string) => {
+    const next = expandedId === id ? null : id;
+    setExpandedId(next);
+    setStatusAction("");
+    setStatusNote("");
+    setObservationText("");
+    setShowAuditTrail(false);
+  };
+
+  const handleStatusUpdate = (ini: Initiative) => {
+    if (!statusAction) { toast({ title: "Select a status" }); return; }
+    if (!statusNote.trim()) { toast({ title: "TO note required", description: "Provide a note before updating the status." }); return; }
+    updateInitiativeStatus(ini.id, statusAction as InitiativeStatus);
+    addInitiativeObservation(ini.id, `Status updated to "${statusAction}". TO note: ${statusNote.trim()}`, "Transformation Office");
+    window.dispatchEvent(new StorageEvent("storage", { key: "dtmp.lifecycle.portfolioStore" }));
+    toast({ title: "Status updated", description: `${ini.name} → ${statusAction}` });
+    setStatusAction("");
+    setStatusNote("");
+    onRefresh();
+  };
+
+  const handleObservation = (ini: Initiative) => {
+    if (!observationText.trim()) { toast({ title: "Observation text required" }); return; }
+    addInitiativeObservation(ini.id, observationText.trim(), "Transformation Office");
+    window.dispatchEvent(new StorageEvent("storage", { key: "dtmp.lifecycle.portfolioStore" }));
+    toast({ title: "Observation recorded" });
+    setObservationText("");
+    onRefresh();
+  };
+
+  const handleFlag = (ini: Initiative) => {
+    const next = !ini.flaggedForEscalation;
+    setInitiativeFlagged(ini.id, next);
+    window.dispatchEvent(new StorageEvent("storage", { key: "dtmp.lifecycle.portfolioStore" }));
+    toast({ title: next ? "Flagged for escalation" : "Flag removed", description: ini.name });
+    onRefresh();
+  };
+
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      {/* Header + filters */}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Active Programmes</h1>
           <p className="text-sm text-gray-500 mt-0.5">All initiatives currently in delivery.</p>
         </div>
-        <Badge variant="outline">{initiatives.length} active</Badge>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Select value={divisionFilter} onValueChange={setDivisionFilter}>
+            <SelectTrigger className="h-8 w-44 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {divisions.map((d) => <SelectItem key={d} value={d}>{d === "All" ? "All divisions" : d}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={ragFilter} onValueChange={(v) => setRagFilter(v as typeof ragFilter)}>
+            <SelectTrigger className="h-8 w-36 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {(["All", "Red", "Amber", "Green"] as const).map((r) => <SelectItem key={r} value={r}>{r === "All" ? "All RAG" : r}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+            <SelectTrigger className="h-8 w-40 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="rag">RAG Red first</SelectItem>
+              <SelectItem value="division">By division</SelectItem>
+              <SelectItem value="targetDate">By target date</SelectItem>
+            </SelectContent>
+          </Select>
+          <Badge variant="outline">{filtered.length} shown</Badge>
+        </div>
       </div>
 
-      {initiatives.length === 0 ? (
-        <EmptyState icon={<Play className="w-8 h-8 text-gray-300" />} message="No active programmes" />
+      {filtered.length === 0 ? (
+        <EmptyState icon={<Play className="w-8 h-8 text-gray-300" />} message="No programmes match" />
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {initiatives.map((ini) => (
-            <Card key={ini.id} className={`border-gray-200 ${ini.status === "At Risk" ? "border-amber-200 bg-amber-50/30" : ""}`}>
-              <CardContent className="p-5 space-y-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-xs text-gray-400">{ini.division}</p>
-                    <h3 className="text-sm font-semibold text-gray-900 line-clamp-2">{ini.name}</h3>
-                  </div>
-                  <Badge className={`text-xs border flex-shrink-0 ${INITIATIVE_STATUS_BADGES[ini.status]}`}>
-                    {ini.status}
-                  </Badge>
-                </div>
+        <div className="space-y-4">
+          {filtered.map((ini) => {
+            const rag = computeInitiativeRAG(ini);
+            const isExpanded = expandedId === ini.id;
+            const risks = getRisksByInitiativeId(ini.id);
+            const blockers = getBlockersByInitiativeId(ini.id);
+            const openRisks = risks.filter((r) => r.status === "Open");
+            const openBlockers = blockers.filter((b) => !b.resolved);
+            const hasDivHeadEscalation = openBlockers.some((b) => b.escalationStatus === "Escalated to Division Head");
+            const topRisk = openRisks.sort((a, b) => (SEVERITY_RANK[a.severity] ?? 9) - (SEVERITY_RANK[b.severity] ?? 9))[0];
+            const ragDot: Record<RAGStatus, string> = { Red: "bg-red-500", Amber: "bg-amber-400", Green: "bg-green-500" };
 
-                <div className="flex items-center gap-3 text-xs text-gray-500">
-                  <span className="flex items-center gap-1"><User className="w-3 h-3" />{ini.owner ?? "Unassigned"}</span>
-                  <span className="flex items-center gap-1"><FileText className="w-3 h-3" />{ini.projects.length} projects</span>
-                  <span className="ml-auto font-medium text-gray-700">{fmtBudget(ini.budget)}</span>
-                </div>
-
-                {(ini.status === "Active" || ini.status === "At Risk") && (
-                  <div>
-                    <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-                      <span>Progress</span>
-                      <span className="font-medium text-gray-700">{ini.progress}%</span>
+            return (
+              <Card key={ini.id} className={`border-gray-200 ${rag === "Red" ? "border-red-200" : rag === "Amber" ? "border-amber-200" : ""}`}>
+                <CardContent className="p-5 space-y-3">
+                  {/* Card header */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${ragDot[rag]}`} />
+                        <p className="text-xs text-gray-400">{ini.division}</p>
+                        {ini.flaggedForEscalation && (
+                          <Badge className="text-xs border border-red-200 bg-red-50 text-red-700">Flagged</Badge>
+                        )}
+                      </div>
+                      <h3 className="text-sm font-semibold text-gray-900 line-clamp-2">{ini.name}</h3>
                     </div>
-                    <Progress value={ini.progress} className="h-1.5" />
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <Badge className={`text-xs border ${INITIATIVE_STATUS_BADGES[ini.status]}`}>{ini.status}</Badge>
+                      <button onClick={() => handleExpand(ini.id)} className="text-xs text-orange-600 font-medium hover:text-orange-800 flex items-center gap-0.5">
+                        {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
                   </div>
-                )}
 
-                <div className="flex items-center justify-between text-xs text-gray-400">
-                  <span>EA Alignment: {ini.eaAlignmentScore == null ? "Not Assessed" : `${ini.eaAlignmentScore}%`}</span>
-                  <span>Target: {ini.targetDate}</span>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  {/* Meta row */}
+                  <div className="flex items-center gap-3 text-xs text-gray-500">
+                    <span className="flex items-center gap-1"><User className="w-3 h-3" />{ini.owner ?? "Unassigned"}</span>
+                    <span className="flex items-center gap-1"><FileText className="w-3 h-3" />{ini.projects.length} projects</span>
+                    <span className="ml-auto font-medium text-gray-700">{fmtBudget(ini.budget)}</span>
+                  </div>
+
+                  {/* Progress */}
+                  {(ini.status === "Active" || ini.status === "At Risk") && (
+                    <div>
+                      <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                        <span>Progress</span><span className="font-medium text-gray-700">{ini.progress}%</span>
+                      </div>
+                      <Progress value={ini.progress} className="h-1.5" />
+                    </div>
+                  )}
+
+                  {/* Top risk + open blockers */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+                      <p className="text-xs text-slate-500 mb-0.5">Top Risk</p>
+                      {topRisk ? (
+                        <div className="flex items-center gap-1.5">
+                          <Badge className={`text-xs border ${ESCALATION_SEVERITY_BADGES[topRisk.severity as keyof typeof ESCALATION_SEVERITY_BADGES]}`}>{topRisk.severity}</Badge>
+                          <p className="text-xs font-medium text-slate-800 line-clamp-1">{topRisk.title}</p>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-slate-400">None</p>
+                      )}
+                    </div>
+                    <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+                      <p className="text-xs text-slate-500 mb-0.5">Open Blockers</p>
+                      <p className={`text-sm font-bold ${hasDivHeadEscalation ? "text-red-600" : openBlockers.length > 0 ? "text-amber-600" : "text-slate-700"}`}>
+                        {openBlockers.length}
+                        {hasDivHeadEscalation && <span className="text-xs font-normal ml-1 text-red-500">Div. Head escalated</span>}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-gray-400">
+                    <span>EA: {ini.eaAlignmentScore == null ? "Not Assessed" : `${ini.eaAlignmentScore}%`}</span>
+                    <span>Target: {ini.targetDate}</span>
+                  </div>
+
+                  {/* ── Expanded TO actions ── */}
+                  {isExpanded && (
+                    <div className="space-y-4 pt-2 border-t border-slate-200">
+
+                      {/* 1. Update initiative status */}
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Update Initiative Status</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <Select value={statusAction} onValueChange={(v) => setStatusAction(v as InitiativeStatus)}>
+                            <SelectTrigger className="h-8 text-xs bg-white"><SelectValue placeholder="Select new status…" /></SelectTrigger>
+                            <SelectContent>
+                              {(["Active", "Scoping", "At Risk", "On Hold", "Completed"] as InitiativeStatus[]).map((s) => (
+                                <SelectItem key={s} value={s}>{s}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Textarea
+                            value={statusNote}
+                            onChange={(e) => setStatusNote(e.target.value)}
+                            placeholder="TO note (required)…"
+                            className="text-xs min-h-[60px] bg-white"
+                          />
+                        </div>
+                        <Button size="sm" className="bg-orange-600 hover:bg-orange-700 text-white text-xs" onClick={() => handleStatusUpdate(ini)}>
+                          Update Status
+                        </Button>
+                      </div>
+
+                      {/* 2. Add TO observation */}
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Add TO Observation</p>
+                        <Textarea
+                          value={observationText}
+                          onChange={(e) => setObservationText(e.target.value)}
+                          placeholder="Record a TO observation or note for this initiative…"
+                          className="text-xs min-h-[60px] bg-white"
+                        />
+                        <Button size="sm" variant="outline" className="text-xs" onClick={() => handleObservation(ini)}>
+                          Save Observation
+                        </Button>
+                      </div>
+
+                      {/* 3. Flag for escalation */}
+                      <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                        <div>
+                          <p className="text-xs font-semibold text-slate-700">Flag for Escalation</p>
+                          <p className="text-xs text-slate-500">Mark this initiative for senior TO attention.</p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className={ini.flaggedForEscalation ? "border-red-200 text-red-700 hover:bg-red-50 text-xs" : "text-xs"}
+                          onClick={() => handleFlag(ini)}
+                        >
+                          <Flag className="w-3 h-3 mr-1" />
+                          {ini.flaggedForEscalation ? "Remove Flag" : "Flag"}
+                        </Button>
+                      </div>
+
+                      {/* 4. Audit trail */}
+                      <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-2">
+                        <button
+                          onClick={() => setShowAuditTrail((v) => !v)}
+                          className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 uppercase tracking-wide"
+                        >
+                          {showAuditTrail ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                          View Full Audit Trail ({ini.activity.length} entries)
+                        </button>
+                        {showAuditTrail && (
+                          <div className="space-y-2 max-h-64 overflow-y-auto mt-2">
+                            {ini.activity.length === 0 ? (
+                              <p className="text-xs text-slate-400 italic">No activity recorded yet.</p>
+                            ) : (
+                              [...ini.activity].reverse().map((entry) => (
+                                <div key={entry.id} className="flex items-start gap-3 py-1.5 border-b border-slate-100 last:border-0">
+                                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0" />
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-xs text-slate-700">{entry.action}</p>
+                                    <p className="text-xs text-slate-400 mt-0.5">{entry.actor} · {fmtDate(entry.timestamp)}</p>
+                                  </div>
+                                  <Badge variant="outline" className="text-xs border-slate-200 text-slate-500 flex-shrink-0">{entry.type}</Badge>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>
@@ -1135,17 +1861,44 @@ function ServiceRequestsView({
   onAction: (r: LCServiceRequest, next: LCRequestStatus) => void;
 }) {
   const [statusFilter, setStatusFilter] = useState<LCRequestStatus | "all">("all");
+  const [slaFilter, setSlaFilter] = useState<"All" | "On Track" | "At Risk" | "Breached">("All");
+  const [divisionFilter, setDivisionFilter] = useState("All");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [noteDraft, setNoteDraft] = useState<Record<string, string>>({});
+  const [noteSaving, setNoteSaving] = useState<string | null>(null);
+
+  const divisions = useMemo(() => {
+    const seen = new Set<string>();
+    requests.forEach((r) => {
+      const div = getInitiativeById(r.initiativeId)?.division;
+      if (div) seen.add(div);
+    });
+    return ["All", ...Array.from(seen).sort()];
+  }, [requests]);
 
   const filtered = useMemo(() => {
-    if (statusFilter === "all") return requests;
-    return requests.filter((r) => r.status === statusFilter);
-  }, [requests, statusFilter]);
+    return requests.filter((r) => {
+      if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      if (slaFilter !== "All" && slaStatus(r) !== slaFilter) return false;
+      if (divisionFilter !== "All") {
+        const div = getInitiativeById(r.initiativeId)?.division;
+        if (div !== divisionFilter) return false;
+      }
+      return true;
+    });
+  }, [requests, statusFilter, slaFilter, divisionFilter]);
 
   const nextStatusMap: Partial<Record<LCRequestStatus, { label: string; next: LCRequestStatus }>> = {
     Submitted: { label: "Assign", next: "Assigned" },
     Assigned: { label: "Start Work", next: "In Progress" },
     "In Progress": { label: "Deliver", next: "Delivered" },
     Delivered: { label: "Complete", next: "Completed" },
+  };
+
+  const saveNote = (reqId: string) => {
+    setNoteSaving(reqId);
+    updateLCRequestNotes(reqId, noteDraft[reqId] ?? "");
+    setTimeout(() => setNoteSaving(null), 800);
   };
 
   return (
@@ -1155,7 +1908,30 @@ function ServiceRequestsView({
           <h1 className="text-xl font-bold text-gray-900">Service Requests</h1>
           <p className="text-sm text-gray-500 mt-0.5">All open lifecycle service requests.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Division filter */}
+          <Select value={divisionFilter} onValueChange={setDivisionFilter}>
+            <SelectTrigger className="w-44 h-8 text-xs">
+              <SelectValue placeholder="All divisions" />
+            </SelectTrigger>
+            <SelectContent>
+              {divisions.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+            </SelectContent>
+          </Select>
+
+          {/* SLA status filter */}
+          <Select value={slaFilter} onValueChange={(v) => setSlaFilter(v as any)}>
+            <SelectTrigger className="w-36 h-8 text-xs">
+              <SelectValue placeholder="All SLA" />
+            </SelectTrigger>
+            <SelectContent>
+              {(["All", "On Track", "At Risk", "Breached"] as const).map((s) => (
+                <SelectItem key={s} value={s}>{s === "All" ? "All SLA" : s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Status filter */}
           <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
             <SelectTrigger className="w-40 h-8 text-xs">
               <SelectValue placeholder="All statuses" />
@@ -1167,6 +1943,7 @@ function ServiceRequestsView({
               ))}
             </SelectContent>
           </Select>
+
           <Badge variant="outline">{filtered.length} shown</Badge>
         </div>
       </div>
@@ -1177,21 +1954,25 @@ function ServiceRequestsView({
         <div className="space-y-3">
           {filtered.map((r) => {
             const action = nextStatusMap[r.status];
+            const sl = slaStatus(r);
+            const isAtRisk = sl === "At Risk" || sl === "Breached";
+            const isExpanded = expandedId === r.id;
+            const division = getInitiativeById(r.initiativeId)?.division;
+            const currentNote = noteDraft[r.id] ?? r.internalToNotes ?? "";
+
             return (
-              <Card key={r.id} className="border-gray-200">
-                <CardContent className="p-4">
+              <Card key={r.id} className={`border-gray-200 ${sl === "Breached" ? "border-red-200 bg-red-50/10" : sl === "At Risk" ? "border-amber-200 bg-amber-50/10" : ""}`}>
+                <CardContent className="p-4 space-y-3">
+                  {/* Header row */}
                   <div className="flex items-start justify-between gap-4 flex-wrap">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap mb-1">
                         <Badge className={`text-xs border ${STATUS_BADGES[r.status] ?? "bg-gray-100 text-gray-700 border-gray-200"}`}>
                           {r.status}
                         </Badge>
-                        <Badge className={`text-xs border ${slaClass(r)}`}>
-                          {slaLabel(r)}
-                        </Badge>
-                        <Badge variant="outline" className="text-xs border-gray-200 text-gray-600">
-                          {r.priority}
-                        </Badge>
+                        <Badge className={`text-xs border ${slaClass(r)}`}>{slaLabel(r)}</Badge>
+                        <Badge variant="outline" className="text-xs border-gray-200 text-gray-600">{r.priority}</Badge>
+                        {division && <Badge variant="outline" className="text-xs border-slate-200 text-slate-500">{division}</Badge>}
                       </div>
                       <p className="text-sm font-semibold text-gray-900">{r.serviceType}</p>
                       <p className="text-xs text-gray-500 mt-0.5">{r.initiativeName}{r.projectName ? ` · ${r.projectName}` : ""}</p>
@@ -1200,16 +1981,32 @@ function ServiceRequestsView({
                     <div className="text-right text-xs text-gray-400 flex-shrink-0">
                       <p>By {r.submittedBy}</p>
                       <p>{fmtDate(r.submittedAt)}</p>
-                      {r.assignedTo && <p className="text-teal-600 font-medium">→ {r.assignedTo}</p>}
+                      {r.assignedTo ? (
+                        <p className={`font-medium ${isAtRisk && r.assignedTo === "Unassigned" ? "text-red-600" : "text-teal-600"}`}>
+                          → {r.assignedTo}
+                        </p>
+                      ) : isAtRisk ? (
+                        <p className="font-medium text-red-600">Unassigned</p>
+                      ) : null}
                     </div>
                   </div>
 
                   {r.notes && (
-                    <p className="text-xs text-gray-600 mt-2 bg-gray-50 rounded p-2 border border-gray-100">{r.notes}</p>
+                    <p className="text-xs text-gray-600 bg-gray-50 rounded p-2 border border-gray-100">{r.notes}</p>
                   )}
 
-                  {action && (
-                    <div className="mt-3 flex justify-end">
+                  {/* Action + expand row */}
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-xs text-gray-500 hover:text-gray-700 h-7 px-2"
+                      onClick={() => setExpandedId(isExpanded ? null : r.id)}
+                    >
+                      {isExpanded ? <ChevronUp className="w-3.5 h-3.5 mr-1" /> : <ChevronDown className="w-3.5 h-3.5 mr-1" />}
+                      {isExpanded ? "Hide details" : "Notes & history"}
+                    </Button>
+                    {action && (
                       <Button
                         size="sm"
                         className="bg-orange-600 hover:bg-orange-700 text-white text-xs"
@@ -1218,6 +2015,57 @@ function ServiceRequestsView({
                         <RefreshCw className="w-3 h-3 mr-1" />
                         {action.label}
                       </Button>
+                    )}
+                  </div>
+
+                  {/* Expanded panel */}
+                  {isExpanded && (
+                    <div className="border-t border-gray-100 pt-3 space-y-4">
+                      {/* Internal TO notes */}
+                      <div>
+                        <p className="text-xs font-semibold text-slate-500 mb-1.5 flex items-center gap-1">
+                          <Activity className="w-3 h-3" /> Internal TO Notes
+                          <span className="text-slate-400 font-normal ml-1">(not visible to requestor)</span>
+                        </p>
+                        <Textarea
+                          value={currentNote}
+                          onChange={(e) => setNoteDraft((d) => ({ ...d, [r.id]: e.target.value }))}
+                          placeholder="Add internal notes for the TO team…"
+                          rows={3}
+                          className="text-xs"
+                        />
+                        <div className="flex justify-end mt-1.5">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs h-7"
+                            onClick={() => saveNote(r.id)}
+                            disabled={noteSaving === r.id}
+                          >
+                            {noteSaving === r.id ? "Saved ✓" : "Save note"}
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Action history */}
+                      {r.actionLog && r.actionLog.length > 0 && (
+                        <div>
+                          <p className="text-xs font-semibold text-slate-500 mb-1.5">Action History</p>
+                          <div className="space-y-1.5">
+                            {[...r.actionLog].reverse().map((entry) => (
+                              <div key={entry.id} className="flex items-start gap-2 text-xs">
+                                <span className="text-gray-400 tabular-nums flex-shrink-0">{fmtDate(entry.timestamp)}</span>
+                                <span className="text-teal-700 font-medium flex-shrink-0">{entry.actor}</span>
+                                <span className="text-gray-600">{entry.action}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {(!r.actionLog || r.actionLog.length === 0) && (
+                        <p className="text-xs text-gray-400 italic">No action history yet.</p>
+                      )}
                     </div>
                   )}
                 </CardContent>
@@ -1239,80 +2087,206 @@ function EscalationsView({
   escalations: LCEscalation[];
   onAction: (e: LCEscalation, action: EscalationStatus) => void;
 }) {
+  const [severityFilter, setSeverityFilter] = useState<EscalationSeverity | "All">("All");
+  const [statusFilter, setStatusFilter] = useState<EscalationStatus | "All">("All");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [noteDraft, setNoteDraft] = useState<Record<string, string>>({});
+  const [noteSaving, setNoteSaving] = useState<string | null>(null);
+
+  const openCount = useMemo(
+    () => escalations.filter((e) => e.status === "Open" || e.status === "Acknowledged").length,
+    [escalations]
+  );
+
+  const filtered = useMemo(() => {
+    return escalations.filter((e) => {
+      if (severityFilter !== "All" && e.severity !== severityFilter) return false;
+      if (statusFilter !== "All" && e.status !== statusFilter) return false;
+      return true;
+    });
+  }, [escalations, severityFilter, statusFilter]);
+
+  const saveNote = (escId: string) => {
+    setNoteSaving(escId);
+    updateEscalationNotes(escId, noteDraft[escId] ?? "");
+    setTimeout(() => setNoteSaving(null), 800);
+  };
+
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Escalations</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Open blockers, risks, and decisions requiring TO response.</p>
+          <p className="text-sm text-gray-500 mt-0.5">Blockers, risks, and decisions requiring TO response.</p>
         </div>
-        <Badge variant="outline" className={`${escalations.length > 0 ? "border-red-200 text-red-700 bg-red-50" : "border-gray-200 text-gray-500"}`}>
-          {escalations.length} open
-        </Badge>
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Severity filter */}
+          <Select value={severityFilter} onValueChange={(v) => setSeverityFilter(v as any)}>
+            <SelectTrigger className="w-36 h-8 text-xs">
+              <SelectValue placeholder="All severity" />
+            </SelectTrigger>
+            <SelectContent>
+              {(["All", "Critical", "High", "Medium", "Low"] as const).map((s) => (
+                <SelectItem key={s} value={s}>{s === "All" ? "All severity" : s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Status filter */}
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+            <SelectTrigger className="w-40 h-8 text-xs">
+              <SelectValue placeholder="All statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              {(["All", "Open", "Acknowledged", "Resolved", "Escalated Further"] as const).map((s) => (
+                <SelectItem key={s} value={s}>{s === "All" ? "All statuses" : s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Badge variant="outline" className={openCount > 0 ? "border-red-200 text-red-700 bg-red-50" : "border-gray-200 text-gray-500"}>
+            {openCount} open
+          </Badge>
+          <Badge variant="outline">{filtered.length} shown</Badge>
+        </div>
       </div>
 
-      {escalations.length === 0 ? (
-        <EmptyState icon={<ShieldAlert className="w-8 h-8 text-gray-300" />} message="No open escalations" />
+      {filtered.length === 0 ? (
+        <EmptyState icon={<ShieldAlert className="w-8 h-8 text-gray-300" />} message="No escalations match" />
       ) : (
         <div className="space-y-4">
-          {escalations.map((e) => (
-            <Card key={e.id} className={`border-gray-200 ${e.severity === "Critical" ? "border-red-200 bg-red-50/20" : e.severity === "High" ? "border-orange-200 bg-orange-50/10" : ""}`}>
-              <CardContent className="p-5 space-y-3">
-                {(() => {
-                  const age = escalationAgeLabel(e.dateRaised);
-                  return (
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <Badge className={`text-xs border ${ESCALATION_SEVERITY_BADGES[e.severity]}`}>{e.severity}</Badge>
-                      <Badge variant="outline" className="text-xs border-gray-200 text-gray-600">{e.type}</Badge>
-                      <Badge variant="outline" className="text-xs border-gray-200 text-gray-500">{e.status}</Badge>
+          {filtered.map((e) => {
+            const age = escalationAgeLabel(e.dateRaised);
+            const isExpanded = expandedId === e.id;
+            const isResolved = e.status === "Resolved" || e.status === "Escalated Further";
+            const currentNote = noteDraft[e.id] ?? e.internalToNotes ?? "";
+
+            return (
+              <Card key={e.id} className={`border-gray-200 ${e.severity === "Critical" ? "border-red-200 bg-red-50/20" : e.severity === "High" ? "border-orange-200 bg-orange-50/10" : ""}`}>
+                <CardContent className="p-5 space-y-3">
+                  {/* Header */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <Badge className={`text-xs border ${ESCALATION_SEVERITY_BADGES[e.severity]}`}>{e.severity}</Badge>
+                        <Badge variant="outline" className="text-xs border-gray-200 text-gray-600">{e.type}</Badge>
+                        <Badge variant="outline" className="text-xs border-gray-200 text-gray-500">{e.status}</Badge>
+                      </div>
+                      <h3 className="text-sm font-semibold text-gray-900">{e.title}</h3>
+                      <p className="text-xs text-gray-500">{e.initiativeName}{e.projectName ? ` · ${e.projectName}` : ""}</p>
                     </div>
-                    <h3 className="text-sm font-semibold text-gray-900">{e.title}</h3>
-                    <p className="text-xs text-gray-500">{e.initiativeName}{e.projectName ? ` · ${e.projectName}` : ""}</p>
+                    <div className="text-right text-xs text-gray-400 flex-shrink-0">
+                      <p>Raised by {e.raisedBy}</p>
+                      <p>{fmtDate(e.dateRaised)}</p>
+                      <p className={`font-medium ${age.className}`}>Days Open: {age.label}</p>
+                    </div>
                   </div>
-                  <div className="text-right text-xs text-gray-400 flex-shrink-0">
-                    <p>Raised by {e.raisedBy}</p>
-                    <p>{fmtDate(e.dateRaised)}</p>
-                    <p className={`font-medium ${age.className}`}>Days Open: {age.label}</p>
+
+                  <div className="bg-slate-50 border border-slate-100 rounded-lg p-3">
+                    <p className="text-xs font-semibold text-slate-500 mb-1">What is needed</p>
+                    <p className="text-sm text-slate-700">{e.whatIsNeeded}</p>
                   </div>
-                </div>
-                  );
-                })()}
 
-                <div className="bg-slate-50 border border-slate-100 rounded-lg p-3">
-                  <p className="text-xs font-semibold text-slate-500 mb-1">What is needed</p>
-                  <p className="text-sm text-slate-700">{e.whatIsNeeded}</p>
-                </div>
-
-                {e.toResponse && (
-                  <div className="bg-teal-50 border border-teal-100 rounded-lg p-3">
-                    <p className="text-xs font-semibold text-teal-600 mb-1">TO Response</p>
-                    <p className="text-sm text-teal-800">{e.toResponse}</p>
-                  </div>
-                )}
-
-                <Separator />
-
-                <div className="flex flex-wrap gap-2">
-                  {e.status === "Open" && (
-                    <Button size="sm" variant="outline" className="text-xs border-blue-200 text-blue-700 hover:bg-blue-50"
-                      onClick={() => onAction(e, "Acknowledged")}>
-                      Acknowledge
-                    </Button>
+                  {e.toResponse && (
+                    <div className="bg-teal-50 border border-teal-100 rounded-lg p-3">
+                      <p className="text-xs font-semibold text-teal-600 mb-1">TO Response</p>
+                      <p className="text-sm text-teal-800">{e.toResponse}</p>
+                    </div>
                   )}
-                  <Button size="sm" className="text-xs bg-green-600 hover:bg-green-700 text-white"
-                    onClick={() => onAction(e, "Resolved")}>
-                    <CheckCircle2 className="w-3 h-3 mr-1" /> Resolve
-                  </Button>
-                  <Button size="sm" variant="outline" className="text-xs border-purple-200 text-purple-700 hover:bg-purple-50"
-                    onClick={() => onAction(e, "Escalated Further")}>
-                    <Flag className="w-3 h-3 mr-1" /> Escalate Further
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+
+                  {e.resolvedNote && (
+                    <div className="bg-green-50 border border-green-100 rounded-lg p-3">
+                      <p className="text-xs font-semibold text-green-600 mb-1">Resolution</p>
+                      <p className="text-sm text-green-800">{e.resolvedNote}</p>
+                    </div>
+                  )}
+
+                  <Separator />
+
+                  {/* Actions + expand */}
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-xs text-gray-500 hover:text-gray-700 h-7 px-2"
+                      onClick={() => setExpandedId(isExpanded ? null : e.id)}
+                    >
+                      {isExpanded ? <ChevronUp className="w-3.5 h-3.5 mr-1" /> : <ChevronDown className="w-3.5 h-3.5 mr-1" />}
+                      {isExpanded ? "Hide details" : "Notes & history"}
+                    </Button>
+
+                    {!isResolved && (
+                      <div className="flex flex-wrap gap-2">
+                        {e.status === "Open" && (
+                          <Button size="sm" variant="outline" className="text-xs border-blue-200 text-blue-700 hover:bg-blue-50"
+                            onClick={() => onAction(e, "Acknowledged")}>
+                            Acknowledge
+                          </Button>
+                        )}
+                        <Button size="sm" className="text-xs bg-green-600 hover:bg-green-700 text-white"
+                          onClick={() => onAction(e, "Resolved")}>
+                          <CheckCircle2 className="w-3 h-3 mr-1" /> Resolve
+                        </Button>
+                        <Button size="sm" variant="outline" className="text-xs border-purple-200 text-purple-700 hover:bg-purple-50"
+                          onClick={() => onAction(e, "Escalated Further")}>
+                          <Flag className="w-3 h-3 mr-1" /> Escalate Further
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Expanded panel */}
+                  {isExpanded && (
+                    <div className="border-t border-gray-100 pt-3 space-y-4">
+                      {/* Internal TO notes */}
+                      <div>
+                        <p className="text-xs font-semibold text-slate-500 mb-1.5 flex items-center gap-1">
+                          <Activity className="w-3 h-3" /> Internal TO Notes
+                          <span className="text-slate-400 font-normal ml-1">(not visible to initiative owner)</span>
+                        </p>
+                        <Textarea
+                          value={currentNote}
+                          onChange={(ev) => setNoteDraft((d) => ({ ...d, [e.id]: ev.target.value }))}
+                          placeholder="Add internal notes for the TO team…"
+                          rows={3}
+                          className="text-xs"
+                        />
+                        <div className="flex justify-end mt-1.5">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs h-7"
+                            onClick={() => saveNote(e.id)}
+                            disabled={noteSaving === e.id}
+                          >
+                            {noteSaving === e.id ? "Saved ✓" : "Save note"}
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Action history */}
+                      {e.actionLog && e.actionLog.length > 0 ? (
+                        <div>
+                          <p className="text-xs font-semibold text-slate-500 mb-1.5">Action History</p>
+                          <div className="space-y-1.5">
+                            {[...e.actionLog].reverse().map((entry) => (
+                              <div key={entry.id} className="flex items-start gap-2 text-xs">
+                                <span className="text-gray-400 tabular-nums flex-shrink-0">{fmtDate(entry.timestamp)}</span>
+                                <span className="text-teal-700 font-medium flex-shrink-0">{entry.actor}</span>
+                                <span className="text-gray-600">{entry.action}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-400 italic">No action history yet.</p>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>
