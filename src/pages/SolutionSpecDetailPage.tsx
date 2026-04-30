@@ -41,7 +41,7 @@ import { isUserAuthenticated } from "@/data/sessionAuth";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 
-type DetailTab = "overview" | "architecture" | "implementation" | "documents" | "author";
+type DetailTab = "overview" | "architecture" | "implementation" | "author";
 
 const SOLUTION_TYPE_COLORS: Record<SolutionType, { bg: string; text: string; border: string }> = {
   DBP: { bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200" },
@@ -372,7 +372,6 @@ export function SolutionSpecDetailPage() {
                 { value: "overview", label: "Overview" },
                 { value: "architecture", label: "Architecture" },
                 { value: "implementation", label: "Implementation" },
-                { value: "documents", label: "Documents" },
                 { value: "author", label: "Author Info" },
               ].map((tab) => (
                 <TabsTrigger
@@ -540,52 +539,6 @@ export function SolutionSpecDetailPage() {
                         <li key={idx} className="flex items-start gap-3">
                           <Settings className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
                           <span className="text-muted-foreground">{c}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </TabsContent>
-
-              {/* DOCUMENTS TAB */}
-              <TabsContent value="documents" className="mt-0">
-                <div className="space-y-8">
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-4">Specification Documents</h2>
-                    <div className="grid gap-4">
-                      {[
-                        { name: `${spec.title} — Full Specification`, type: "PDF", size: "2.4 MB" },
-                        { name: "Architecture Diagram Pack", type: "ZIP", size: "8.1 MB" },
-                        { name: "Component Reference Guide", type: "PDF", size: "1.2 MB" },
-                        { name: "Implementation Checklist", type: "XLSX", size: "0.4 MB" },
-                      ].map((doc, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center gap-4 bg-gray-50 border border-gray-200 rounded-lg p-4"
-                        >
-                          <FileText className="w-8 h-8 text-gray-400 flex-shrink-0" />
-                          <div className="flex-1">
-                            <h4 className="text-sm font-semibold text-gray-900">{doc.name}</h4>
-                            <p className="text-xs text-muted-foreground">{doc.type} · {doc.size}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-4">Additional Resources</h3>
-                    <ul className="space-y-3">
-                      {[
-                        { name: "DTMP Architecture Standards", url: "#" },
-                        { name: "Solution Design Principles", url: "#" },
-                        { name: "Related Implementation Guides", url: "#" },
-                      ].map((r, idx) => (
-                        <li key={idx}>
-                          <a href={r.url} className="flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium">
-                            <ExternalLink className="w-4 h-4" />
-                            {r.name}
-                          </a>
                         </li>
                       ))}
                     </ul>

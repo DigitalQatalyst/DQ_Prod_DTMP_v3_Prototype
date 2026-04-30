@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ExternalLink, ArrowRight, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { getLiveSpecRequests, statusConfig, SpecRequest } from './SolutionSpecsOverview';
 
 type StatusFilter = SpecRequest['status'] | 'all';
@@ -38,18 +40,9 @@ export default function MyRequestsPage() {
   return (
     <div className="stage2-content p-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-1">My Requests</h1>
-          <p className="text-sm text-gray-500">Track and manage your solution spec requests</p>
-        </div>
-        <Button
-          onClick={() => navigate('/marketplaces/solution-specs')}
-          className="bg-orange-600 hover:bg-orange-700 text-white"
-        >
-          New Request
-          <ArrowRight className="w-4 h-4 ml-2" />
-        </Button>
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-gray-900 mb-1">My Requests</h1>
+        <p className="text-sm text-gray-500">Track and manage your solution spec requests</p>
       </div>
 
       {/* Search + Filter bar */}
@@ -66,26 +59,40 @@ export default function MyRequestsPage() {
           />
         </div>
 
-        {/* Status filter pills */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {STATUS_FILTERS.map((f) => (
-            <button
-              key={f.value}
-              onClick={() => setActiveFilter(f.value)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                activeFilter === f.value
-                  ? 'bg-orange-600 text-white'
-                  : 'bg-white border border-gray-200 text-gray-600 hover:border-orange-300 hover:text-orange-600'
-              }`}
-            >
-              {f.label}
-              {f.value !== 'all' && (
-                <span className={`ml-1.5 ${activeFilter === f.value ? 'text-orange-200' : 'text-gray-400'}`}>
-                  {allRequests.filter((r) => r.status === f.value).length}
-                </span>
-              )}
-            </button>
-          ))}
+        {/* Status filter dropdown */}
+        <div className="flex items-center gap-3">
+          <label htmlFor="status-filter" className="text-sm font-medium text-gray-700 whitespace-nowrap">
+            Status:
+          </label>
+          <Select
+            value={activeFilter}
+            onValueChange={(value) => setActiveFilter(value as StatusFilter)}
+          >
+            <SelectTrigger className="w-48" id="status-filter">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_FILTERS.map((filter) => {
+                const count = filter.value === 'all' 
+                  ? allRequests.length 
+                  : allRequests.filter((r) => r.status === filter.value).length;
+                
+                return (
+                  <SelectItem key={filter.value} value={filter.value}>
+                    <div className="flex items-center justify-between w-full">
+                      <span className="font-medium">{filter.label}</span>
+                      <Badge
+                        variant="secondary"
+                        className="ml-3 bg-gray-200 text-gray-700 min-w-[24px] justify-center"
+                      >
+                        {count}
+                      </Badge>
+                    </div>
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
