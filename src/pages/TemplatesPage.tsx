@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import {
   FileText,
@@ -6,6 +6,7 @@ import {
   Download,
   AppWindow,
   ClipboardCheck,
+  ChevronRight,
   LucideIcon,
 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
@@ -112,6 +113,17 @@ export default function DocumentStudioPage() {
   const currentData = getDataForTab(activeTab);
   const currentConfig = tabConfig[activeTab];
 
+  const filteredData = useMemo(() => {
+    return currentData.filter((item: any) => {
+      for (const [group, values] of Object.entries(selectedFilters)) {
+        if ((values as string[]).length > 0) {
+          if (!(values as string[]).includes(item[group])) return false;
+        }
+      }
+      return true;
+    });
+  }, [currentData, selectedFilters]);
+
   const totalDocuments = Object.values(tabConfig).reduce((sum, tab) => sum + tab.count, 0);
 
   return (
@@ -120,12 +132,12 @@ export default function DocumentStudioPage() {
 
       <section className="bg-gradient-to-b from-purple-50 to-white py-8 lg:py-12 border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4">
-          <nav className="text-sm text-gray-600 mb-4">
-            <Link to="/" className="hover:text-gray-900">Home</Link>
-            <span className="mx-2">/</span>
-            <Link to="/marketplaces" className="hover:text-gray-900">Marketplaces</Link>
-            <span className="mx-2">/</span>
-            <span className="font-medium text-gray-900">Document Studio</span>
+          <nav className="flex items-center text-sm text-muted-foreground mb-4">
+            <Link to="/" className="hover:text-foreground transition-colors">Home</Link>
+            <ChevronRight className="w-4 h-4 mx-2" />
+            <Link to="/marketplaces" className="hover:text-foreground transition-colors">Marketplaces</Link>
+            <ChevronRight className="w-4 h-4 mx-2" />
+            <span className="font-medium text-foreground">Document Studio</span>
           </nav>
 
           <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-xs font-semibold uppercase inline-block mb-3">
@@ -172,7 +184,7 @@ export default function DocumentStudioPage() {
                 <TabsTrigger
                   key={tab}
                   value={tab}
-                  className="flex items-center gap-2 px-4 lg:px-6 py-4 text-gray-600 hover:text-gray-900 font-medium relative data-[state=active]:text-[#001F3F] data-[state=active]:border-b-2 data-[state=active]:border-purple-600 data-[state=active]:-mb-0.5 rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                  className="flex items-center gap-2 px-4 lg:px-6 py-4 text-gray-600 hover:text-gray-900 font-medium relative data-[state=active]:text-[#001F3F] data-[state=active]:border-b-2 data-[state=active]:border-orange-600 rounded-none bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                 >
                   <Icon size={20} />
                   <span className="hidden lg:inline">{config.label}</span>
@@ -209,14 +221,14 @@ export default function DocumentStudioPage() {
 
             <div className="px-4 lg:px-8 py-3 bg-gray-50 border-b border-gray-200">
               <p className="text-sm text-gray-600">
-                Showing <span className="font-semibold text-gray-900">{currentData.length}</span> {getTabLabel(activeTab)}
+                Showing <span className="font-semibold text-gray-900">{filteredData.length}</span> {getTabLabel(activeTab)}
               </p>
             </div>
 
             {(Object.keys(tabConfig) as TabType[]).map((tab) => (
               <TabsContent key={tab} value={tab} className="flex-1 px-4 lg:px-8 py-6 mt-0">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {getDataForTab(tab).map((template) => (
+                  {filteredData.map((template) => (
                     <TemplateCard key={template.id} template={template as any} tab={tab} />
                   ))}
                 </div>

@@ -1,4 +1,4 @@
-export { solutionSpecs, type SolutionSpec } from './solutionSpecs';
+export { solutionSpecs, type SolutionSpec, type Complexity } from './solutionSpecs';
 export { solutionBuilds, type SolutionBuild } from './solutionBuilds';
 export { solutionSpecsFilters, solutionBuildFilters, type FilterConfig } from './filters';
 export {
