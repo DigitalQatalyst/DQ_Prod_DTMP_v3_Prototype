@@ -40,6 +40,7 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Badge } from "@/components/ui/badge";
 import { IntelligenceCard } from "@/components/digitalIntelligence";
+import { LoginModal } from "@/components/learningCenter";
 import {
   systemsPortfolio,
   digitalMaturity,
@@ -48,6 +49,7 @@ import {
   type DigitalMaturityService,
   type ProjectsPortfolioService,
 } from "@/data/digitalIntelligence";
+import { isUserAuthenticated } from "@/data/sessionAuth";
 import { createDIStage3Intake } from "@/data/stage3/intake";
 import type { DIServiceTab } from "@/data/digitalIntelligence/requestState";
 
@@ -73,6 +75,7 @@ export default function DigitalIntelligenceDetailPage() {
   const { tab, cardId } = useParams<{ tab: string; cardId: string }>();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<ContentTab>("about");
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   let service: ServiceType | undefined;
   let tabDisplayName = "";
@@ -138,16 +141,11 @@ export default function DigitalIntelligenceDetailPage() {
   };
 
   const handleAccessClick = () => {
-    // Create the Stage 3 intake record for the analytics access request
-    createDIStage3Intake({
-      serviceId: service!.id,
-      serviceTitle: service!.title,
-      tab: (tab as DIServiceTab) || "systems-portfolio",
-      requesterName: "Current User",
-      requesterEmail: "user@dtmp.local",
-      requesterRole: "Platform User",
-      message: `Analytics access request for: ${service!.title}`,
-    });
+    if (!isUserAuthenticated()) {
+      setShowLoginModal(true);
+      return;
+    }
+
     navigate(`/marketplaces/digital-intelligence/${tab}/${service!.id}/dashboard`);
   };
 
@@ -237,12 +235,7 @@ export default function DigitalIntelligenceDetailPage() {
           Business Value
         </h2>
         <ul className="space-y-3">
-          {[
-            "Reduce decision-making time with actionable insights",
-            "Identify risks and opportunities before they materialize",
-            "Optimize resource allocation and costs",
-            "Enable continuous improvement through data-driven insights",
-          ].map((item, index) => (
+          {(service.businessValue || []).map((item, index) => (
             <li key={index} className="flex items-start gap-3">
               <CheckCircle2 className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
               <span className="text-gray-700">{item}</span>
@@ -508,25 +501,14 @@ export default function DigitalIntelligenceDetailPage() {
         <div className="bg-gradient-to-r from-[#0B1437] to-[#1a2555] text-white">
           <div className="max-w-7xl mx-auto px-4 pt-6 pb-10">
             {/* Breadcrumb */}
-            <nav
-              aria-label="Breadcrumb"
-              className="flex items-center gap-2 text-sm text-gray-300 mb-6 flex-wrap"
-            >
-              <button onClick={() => navigate("/")} className="hover:text-white transition-colors">
-                Home
-              </button>
-              <ChevronRight size={14} aria-hidden="true" className="text-gray-500" />
-              <button onClick={() => navigate("/marketplaces")} className="hover:text-white transition-colors">
-                Marketplaces
-              </button>
-              <ChevronRight size={14} aria-hidden="true" className="text-gray-500" />
-              <button onClick={() => navigate("/marketplaces/digital-intelligence")} className="hover:text-white transition-colors">
-                Digital Intelligence
-              </button>
-              <ChevronRight size={14} aria-hidden="true" className="text-gray-500" />
-              <span className="text-white font-medium" aria-current="page">
-                {service.title}
-              </span>
+            <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-sm text-gray-300 mb-6 flex-wrap">
+              <Link to="/" className="hover:text-white transition-colors">Home</Link>
+              <ChevronRight size={14} className="text-gray-500" />
+              <Link to="/marketplaces" className="hover:text-white transition-colors">Marketplaces</Link>
+              <ChevronRight size={14} className="text-gray-500" />
+              <Link to="/marketplaces/digital-intelligence" className="hover:text-white transition-colors">Digital Intelligence</Link>
+              <ChevronRight size={14} className="text-gray-500" />
+              <span className="text-white font-medium">{service.title}</span>
             </nav>
 
             {/* Back Button */}
@@ -764,6 +746,32 @@ export default function DigitalIntelligenceDetailPage() {
       </main>
 
       <Footer />
+
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        context={{
+          marketplace: "digital-intelligence",
+          tab: (tab as DIServiceTab) || "systems-portfolio",
+          cardId: service.id,
+          serviceName: service.title,
+          action: "View Analytics",
+          dashboardName: service.title,
+        }}
+        onLoginSuccess={(email) => {
+          createDIStage3Intake({
+            serviceId: service.id,
+            serviceTitle: service.title,
+            tab: (tab as DIServiceTab) || "systems-portfolio",
+            requesterName: email?.split("@")[0] || "Platform User",
+            requesterEmail: email || "unknown@dtmp.local",
+            requesterRole: "Business User",
+            message: `Analytics access request for: ${service.title}`,
+          });
+          setShowLoginModal(false);
+          navigate(`/marketplaces/digital-intelligence/${tab}/${service.id}/dashboard`);
+        }}
+      />
     </div>
   );
 }

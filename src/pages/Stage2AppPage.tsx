@@ -8,6 +8,7 @@ import {
   BarChart3,
   FileText,
   PenTool,
+  Layers,
   Rocket,
   RefreshCw,
   Briefcase,
@@ -1688,7 +1689,7 @@ export default function Stage2AppPage() {
               className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg ${isActiveService("Solutions Specs")}`}
               title="Solutions Specs"
             >
-              <PenTool className="w-4 h-4 flex-shrink-0" />
+              <Layers className="w-4 h-4 flex-shrink-0" />
               {!leftSidebarCollapsed && "Solutions Specs"}
             </button>
 

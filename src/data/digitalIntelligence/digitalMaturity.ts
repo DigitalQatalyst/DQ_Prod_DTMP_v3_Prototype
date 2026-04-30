@@ -13,6 +13,7 @@
    complexity: "Low" | "Medium" | "High";
    accuracy: string;
    keyInsights: string[];
+  businessValue: string[];
  }
  
  export const digitalMaturity: DigitalMaturityService[] = [
@@ -30,7 +31,13 @@
     outputFormat: "Interactive Dashboard",
     complexity: "High",
     accuracy: "93% Accuracy",
-     keyInsights: ["Maturity by domain", "Gap analysis", "Improvement roadmap"]
+     keyInsights: ["Maturity by domain", "Gap analysis", "Improvement roadmap"],
+    businessValue: [
+      "Benchmark your organisation's digital capability against public sector and industry peers",
+      "Identify the specific capability gaps that are blocking transformation progress most acutely",
+      "Build a credible board-level narrative around maturity progress with before/after comparisons",
+      "Prioritise investment areas with the highest maturity lift potential relative to cost"
+    ]
    },
    {
      id: "transformation-readiness-score",
@@ -46,7 +53,12 @@
      outputFormat: "PDF Report",
      complexity: "Medium",
      accuracy: "88% Accuracy",
-     keyInsights: ["Readiness score", "Risk factors", "Enabler recommendations"]
+     keyInsights: ["Readiness score", "Risk factors", "Enabler recommendations"],
+    businessValue: [
+      "Enable data-driven decision making for transformation readiness score",
+      "Identify key risks and opportunities early to optimize outcomes",
+      "Maximize return on investment through actionable insights"
+    ]
    },
    {
     id: "capability-maturity-tracking",
@@ -62,7 +74,12 @@
     outputFormat: "Interactive Dashboard",
     complexity: "Medium",
     accuracy: "91% Accuracy",
-     keyInsights: ["Capability scores", "Maturity trends", "Peer benchmarks"]
+     keyInsights: ["Capability scores", "Maturity trends", "Peer benchmarks"],
+    businessValue: [
+      "Enable data-driven decision making for capability maturity tracking",
+      "Identify key risks and opportunities early to optimize outcomes",
+      "Maximize return on investment through actionable insights"
+    ]
    },
    {
      id: "technology-maturity-index",
@@ -78,7 +95,12 @@
      outputFormat: "Excel Scorecard",
      complexity: "High",
      accuracy: "92% Accuracy",
-     keyInsights: ["Tech debt score", "EOL risks", "Modernization priorities"]
+     keyInsights: ["Tech debt score", "EOL risks", "Modernization priorities"],
+    businessValue: [
+      "Enable data-driven decision making for technology maturity index",
+      "Identify key risks and opportunities early to optimize outcomes",
+      "Maximize return on investment through actionable insights"
+    ]
    },
    {
     id: "process-maturity-evaluation",
@@ -94,7 +116,12 @@
     outputFormat: "PPTX Presentation",
     complexity: "High",
     accuracy: "89% Accuracy",
-     keyInsights: ["Process scores", "Best practice gaps", "Improvement areas"]
+     keyInsights: ["Process scores", "Best practice gaps", "Improvement areas"],
+    businessValue: [
+      "Enable data-driven decision making for process maturity evaluation",
+      "Identify key risks and opportunities early to optimize outcomes",
+      "Maximize return on investment through actionable insights"
+    ]
    },
    {
      id: "benchmark-intelligence",
@@ -110,7 +137,12 @@
      outputFormat: "Interactive Dashboard",
      complexity: "Medium",
      accuracy: "85% Accuracy",
-     keyInsights: ["Industry position", "Best practice gaps", "Competitive insights"]
+     keyInsights: ["Industry position", "Best practice gaps", "Competitive insights"],
+    businessValue: [
+      "Enable data-driven decision making for industry benchmark intelligence",
+      "Identify key risks and opportunities early to optimize outcomes",
+      "Maximize return on investment through actionable insights"
+    ]
    },
    {
     id: "maturity-roadmap-generator",
@@ -126,7 +158,12 @@
     outputFormat: "PPTX Presentation",
     complexity: "High",
     accuracy: "86% Accuracy",
-     keyInsights: ["Phased roadmap", "Quick wins", "Strategic initiatives"]
+     keyInsights: ["Phased roadmap", "Quick wins", "Strategic initiatives"],
+    businessValue: [
+      "Enable data-driven decision making for maturity roadmap generator",
+      "Identify key risks and opportunities early to optimize outcomes",
+      "Maximize return on investment through actionable insights"
+    ]
    },
    {
      id: "continuous-maturity-monitoring",
@@ -142,6 +179,11 @@
      outputFormat: "Interactive Dashboard",
      complexity: "Medium",
      accuracy: "90% Accuracy",
-     keyInsights: ["Maturity trends", "Regression alerts", "Improvement velocity"]
+     keyInsights: ["Maturity trends", "Regression alerts", "Improvement velocity"],
+    businessValue: [
+      "Enable data-driven decision making for continuous maturity monitoring",
+      "Identify key risks and opportunities early to optimize outcomes",
+      "Maximize return on investment through actionable insights"
+    ]
    }
  ];

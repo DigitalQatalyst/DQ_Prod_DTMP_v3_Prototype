@@ -4,10 +4,11 @@ import {
   ArrowLeft,
   CheckCircle,
   Clock,
-  Eye,
   AlertCircle,
   ExternalLink,
   ClipboardList,
+  ArrowRight,
+  Rocket,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -214,6 +215,46 @@ export default function SpecsRequestDetailPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* ── Next Step CTA — shown only when spec is delivered ── */}
+          {request.status === 'completed' && (
+            <div className="rounded-xl border-2 border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 p-5">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                  <Rocket className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-gray-900 mb-0.5">Your Specification is Ready</p>
+                  <p className="text-xs text-gray-600 leading-relaxed">
+                    The solution spec for <span className="font-semibold text-gray-800">{request.solutionName}</span> has
+                    been delivered. The logical next step is to initiate a Solution Build — where your
+                    architects will turn this specification into a working digital solution.
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button
+                  onClick={() => navigate('/marketplaces/solution-build', {
+                    state: { fromSpec: true, specId: request.specId, solutionName: request.solutionName },
+                  })}
+                  className="bg-green-600 hover:bg-green-700 text-white font-semibold flex items-center gap-2"
+                >
+                  Proceed to Solution Build
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+                {request.specId && (
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate(`/marketplaces/solution-specs/${request.specId}`)}
+                    className="border-green-300 text-green-700 hover:bg-green-50 flex items-center gap-2"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    Review Spec
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right: Details sidebar */}
@@ -292,16 +333,26 @@ export default function SpecsRequestDetailPage() {
 
           {request.status === 'completed' && (
             <Card className="border-green-200 bg-green-50/50">
-              <CardContent className="pt-5">
+              <CardContent className="pt-5 space-y-3">
                 <div className="flex items-start gap-3">
                   <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm font-semibold text-gray-900 mb-1">Build Completed</p>
+                    <p className="text-sm font-semibold text-gray-900 mb-0.5">Spec Delivered</p>
                     <p className="text-xs text-gray-600">
-                      Your solution spec build has been completed. Check the marketplace for the deliverables.
+                      Ready to build. Proceed to the Solution Build marketplace to start implementation.
                     </p>
                   </div>
                 </div>
+                <Button
+                  size="sm"
+                  onClick={() => navigate('/marketplaces/solution-build', {
+                    state: { fromSpec: true, specId: request.specId, solutionName: request.solutionName },
+                  })}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold flex items-center justify-center gap-2"
+                >
+                  Proceed to Solution Build
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Button>
               </CardContent>
             </Card>
           )}

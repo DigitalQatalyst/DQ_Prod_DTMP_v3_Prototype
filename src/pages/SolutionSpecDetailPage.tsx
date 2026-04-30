@@ -37,6 +37,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { LoginModal } from "@/components/learningCenter/LoginModal";
+import { isUserAuthenticated } from "@/data/sessionAuth";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 
@@ -205,7 +206,7 @@ export function SolutionSpecDetailPage() {
   const architectureContent = getArchitectureContent(spec);
   const implementationContent = getImplementationContent();
 
-  const handleMakeRequest = () => {
+  const openRequestForm = () => {
     setFormData({
       requestType: "",
       solutionName: spec.title,
@@ -215,6 +216,14 @@ export function SolutionSpecDetailPage() {
     });
     setFormErrors({});
     setShowFormDialog(true);
+  };
+
+  const handleMakeRequest = () => {
+    if (!isUserAuthenticated()) {
+      setShowLoginModal(true);
+      return;
+    }
+    openRequestForm();
   };
 
   const handleSubmitRequest = () => {
@@ -552,21 +561,13 @@ export function SolutionSpecDetailPage() {
                       ].map((doc, idx) => (
                         <div
                           key={idx}
-                          className="flex items-center gap-4 bg-gray-50 border border-gray-200 rounded-lg p-4 hover:border-orange-300 transition-colors"
+                          className="flex items-center gap-4 bg-gray-50 border border-gray-200 rounded-lg p-4"
                         >
                           <FileText className="w-8 h-8 text-gray-400 flex-shrink-0" />
                           <div className="flex-1">
                             <h4 className="text-sm font-semibold text-gray-900">{doc.name}</h4>
                             <p className="text-xs text-muted-foreground">{doc.type} · {doc.size}</p>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-orange-600 hover:text-orange-700"
-                            onClick={handleMakeRequest}
-                          >
-                            <Download className="w-5 h-5" />
-                          </Button>
                         </div>
                       ))}
                     </div>
@@ -724,22 +725,24 @@ export function SolutionSpecDetailPage() {
                 </Button>
 
                 <Button
-                  onClick={() => navigate('/marketplaces/solution-build/wizard', {
-                    state: {
-                      fromSpec: true,
-                      specData: {
-                        id: spec.id,
-                        title: spec.title,
-                        description: spec.description,
-                        solutionType: spec.solutionType,
-                        tags: spec.tags,
-                        componentCount: spec.componentCount,
-                        diagramCount: spec.diagramCount,
-                        scope: spec.scope,
-                        maturityLevel: spec.maturityLevel,
-                      }
-                    }
-                  })}
+                  onClick={() =>
+                    navigate("/marketplaces/solution-build/wizard", {
+                      state: {
+                        fromSpec: true,
+                        specData: {
+                          id: spec.id,
+                          title: spec.title,
+                          description: spec.description,
+                          solutionType: spec.solutionType,
+                          tags: spec.tags,
+                          componentCount: spec.componentCount,
+                          diagramCount: spec.diagramCount,
+                          scope: spec.scope,
+                          maturityLevel: spec.maturityLevel,
+                        },
+                      },
+                    })
+                  }
                   variant="outline"
                   className="w-full mt-3 border-2 border-orange-600 text-orange-600 hover:bg-orange-50 hover:text-orange-700 font-semibold"
                 >
@@ -967,7 +970,7 @@ export function SolutionSpecDetailPage() {
         }}
         onLoginSuccess={() => {
           setShowLoginModal(false);
-          handleMakeRequest();
+          openRequestForm();
         }}
       />
 
