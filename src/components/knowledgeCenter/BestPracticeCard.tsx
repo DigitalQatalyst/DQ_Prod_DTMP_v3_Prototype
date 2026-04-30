@@ -34,7 +34,7 @@ export function BestPracticeCard({ practice, onClick }: BestPracticeCardProps) {
     (knowledgeItem?.endorsements || 0) + getEndorsementCount(itemId)
   );
   const [showReviewModal, setShowReviewModal] = useState(false);
-  const [reviewTrigger, setReviewTrigger] = useState(0); // Trigger to force re-check
+  const [reviewTrigger, setReviewTrigger] = useState(0);
   
   const userCanReview = canUserReview(sessionUser?.role, sessionUser?.email);
   const [latestReviewDate, setLatestReviewDate] = useState(
@@ -42,7 +42,11 @@ export function BestPracticeCard({ practice, onClick }: BestPracticeCardProps) {
   );
   const latestReview = getLatestReview(itemId);
   
-  // Recalculate staleness when review changes
+  const hasPendingUpdates = latestReview && 
+    (latestReview.outcome === "minor-updates" || 
+     latestReview.outcome === "major-revision" || 
+     latestReview.outcome === "deprecated");
+  
   useEffect(() => {
     if (knowledgeItem) {
       const staleStatus = isKnowledgeItemStale(knowledgeItem);
@@ -71,22 +75,14 @@ export function BestPracticeCard({ practice, onClick }: BestPracticeCardProps) {
   };
   
   const handleReviewSubmitted = () => {
-    // Update the review date to today
     const newReview = getLatestReview(itemId);
     if (newReview) {
       setLatestReviewDate(newReview.reviewedAt);
     }
-    // Trigger recalculation of staleness
     setReviewTrigger(prev => prev + 1);
   };
   
-  const handleOpenDetailedReview = () => {
-    // Navigate to detail page for detailed review
-    navigate(`/marketplaces/knowledge-center/best-practices/${practice.id}`);
-  };
-  
   const handleCardClick = () => {
-    // Don't navigate if modal is open
     if (showReviewModal) return;
     onClick();
   };
@@ -94,7 +90,7 @@ export function BestPracticeCard({ practice, onClick }: BestPracticeCardProps) {
   return (
     <div
       onClick={handleCardClick}
-      className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-xl hover:border-orange-300 hover:-translate-y-1 transition-all duration-300 cursor-pointer"
+      className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-xl hover:border-orange-300 transition-all duration-300 cursor-pointer"
     >
       <div className="flex items-start justify-between mb-4">
         <div className="w-16 h-16 rounded-lg bg-green-50 flex items-center justify-center">
@@ -106,7 +102,14 @@ export function BestPracticeCard({ practice, onClick }: BestPracticeCardProps) {
               Featured
             </span>
           )}
-          {isStale && (
+          {hasPendingUpdates ? (
+            <div className="flex items-center gap-2">
+              <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" />
+                Update Pending
+              </span>
+            </div>
+          ) : isStale && (
             <div className="flex items-center gap-2">
               <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full flex items-center gap-1">
                 <AlertCircle className="w-3 h-3" />
@@ -115,11 +118,10 @@ export function BestPracticeCard({ practice, onClick }: BestPracticeCardProps) {
               {userCanReview && (
                 <button
                   onClick={handleQuickReview}
-                  className="text-xs bg-emerald-600 text-white px-3 py-1 rounded-full flex items-center gap-1 hover:bg-emerald-700 transition-colors font-medium"
+                  className="w-6 h-6 rounded-full bg-orange-600 hover:bg-orange-700 text-white flex items-center justify-center transition-colors shadow-sm"
                   title="Quick Review"
                 >
-                  <FileCheck className="w-3 h-3" />
-                  Review
+                  <FileCheck className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
@@ -179,7 +181,6 @@ export function BestPracticeCard({ practice, onClick }: BestPracticeCardProps) {
         </button>
       </div>
       
-      {/* Quick Review Modal */}
       {knowledgeItem && (
         <QuickReviewModal
           isOpen={showReviewModal}
@@ -188,7 +189,6 @@ export function BestPracticeCard({ practice, onClick }: BestPracticeCardProps) {
           itemTitle={practice.title}
           lastReviewed={latestReviewDate || knowledgeItem.lastReviewed || ""}
           onReviewSubmitted={handleReviewSubmitted}
-          onOpenDetailedReview={handleOpenDetailedReview}
         />
       )}
     </div>
