@@ -11,6 +11,35 @@ export const sampleDashboardData: Record<string, DashboardData> = {
       { timestamp: '2026-02-12', value: 39, label: 'Sprint 4' },
       { timestamp: '2026-02-26', value: 35, label: 'Sprint 5' }
     ],
+    widgetData: {
+      'velocity-trend': [
+        { name: 'Sprint 1', value: 38 },
+        { name: 'Sprint 2', value: 42 },
+        { name: 'Sprint 3', value: 45 },
+        { name: 'Sprint 4', value: 39 },
+        { name: 'Sprint 5', value: 35 }
+      ],
+      'team-comparison': [
+        { name: 'Team Alpha', value: 42 },
+        { name: 'Team Beta', value: 38 },
+        { name: 'Team Gamma', value: 35 },
+        { name: 'Team Delta', value: 40 }
+      ],
+      'throughput-area': [
+        { name: 'Week 1', value: 12 },
+        { name: 'Week 2', value: 15 },
+        { name: 'Week 3', value: 14 },
+        { name: 'Week 4', value: 18 },
+        { name: 'Week 5', value: 16 },
+        { name: 'Week 6', value: 13 }
+      ],
+      'work-split': [
+        { name: 'Features', value: 45 },
+        { name: 'Bug Fixes', value: 25 },
+        { name: 'Technical Debt', value: 20 },
+        { name: 'Support', value: 10 }
+      ]
+    },
     metrics: [
       {
         id: 'current-velocity',
@@ -48,6 +77,23 @@ export const sampleDashboardData: Record<string, DashboardData> = {
         trendValue: -15,
         trendLabel: '2 members on leave',
         severity: 'warning'
+      },
+      {
+        id: 'velocity-stability',
+        label: 'Velocity Stability',
+        value: '82%',
+        trend: 'up',
+        trendValue: 5,
+        trendLabel: 'Improving consistency',
+        severity: 'success'
+      },
+      {
+        id: 'sprint-commitment',
+        label: 'Sprint Commitment Accuracy',
+        value: '88%',
+        trend: 'stable',
+        trendLabel: 'Stories completed vs planned',
+        severity: 'success'
       }
     ],
     insights: [
@@ -700,6 +746,31 @@ export const sampleDashboardData: Record<string, DashboardData> = {
       { timestamp: '2026-02-19', value: 172, label: 'Feb 19' },
       { timestamp: '2026-02-23', value: 165, label: 'Feb 23' }
     ],
+    widgetData: {
+      'latency-trend': [
+        { name: 'Jan 25', value: 142, p50: 142, p95: 285, p99: 420 },
+        { name: 'Jan 30', value: 138, p50: 138, p95: 278, p99: 405 },
+        { name: 'Feb 4', value: 155, p50: 155, p95: 310, p99: 465 },
+        { name: 'Feb 9', value: 161, p50: 161, p95: 322, p99: 485 },
+        { name: 'Feb 14', value: 148, p50: 148, p95: 296, p99: 445 },
+        { name: 'Feb 19', value: 172, p50: 172, p95: 344, p99: 515 },
+        { name: 'Feb 23', value: 165, p50: 165, p95: 330, p99: 495 }
+      ],
+      'bottleneck-ranking': [
+        { name: 'Payment Service', value: 290 },
+        { name: 'Order Processing', value: 210 },
+        { name: 'Notification Hub', value: 125 },
+        { name: 'Catalog API', value: 95 },
+        { name: 'User Auth', value: 58 }
+      ],
+      'perf-radar': [
+        { name: 'Latency', value: 72 },
+        { name: 'Throughput', value: 85 },
+        { name: 'Error Rate', value: 92 },
+        { name: 'Saturation', value: 68 },
+        { name: 'Availability', value: 98 }
+      ]
+    },
     metrics: [
       {
         id: 'avg-response',
@@ -1598,10 +1669,43 @@ export const sampleDashboardData: Record<string, DashboardData> = {
       { timestamp: '2025-Q4', value: 3.1, label: 'Q4 2025' },
       { timestamp: '2026-Q1', value: 3.3, label: 'Q1 2026' }
     ],
+    widgetData: {
+      'maturity-over-time': [
+        { name: 'Q1 2025', value: 2.4 },
+        { name: 'Q2 2025', value: 2.6 },
+        { name: 'Q3 2025', value: 2.9 },
+        { name: 'Q4 2025', value: 3.1 },
+        { name: 'Q1 2026', value: 3.3 }
+      ],
+      'capability-radar': [
+        { name: 'Digital Customer Engagement', value: 4.1 },
+        { name: 'Data Analytics & BI', value: 3.5 },
+        { name: 'Cloud-Native Development', value: 2.5 },
+        { name: 'Supply Chain Management', value: 1.8 },
+        { name: 'Cybersecurity Operations', value: 3.9 }
+      ],
+      'maturity-distribution': [
+        { name: 'Level 5 - Optimizing', value: 8 },
+        { name: 'Level 4 - Managed', value: 12 },
+        { name: 'Level 3 - Defined', value: 15 },
+        { name: 'Level 2 - Repeatable', value: 5 },
+        { name: 'Level 1 - Initial', value: 2 }
+      ],
+      'gap-analysis': [
+        { name: 'Supply Chain Mgmt', value: 1.2 },
+        { name: 'Cloud-Native Dev', value: 0.9 },
+        { name: 'Data Analytics', value: 0.1 },
+        { name: 'Digital Customer', value: -0.3 },
+        { name: 'Cybersecurity', value: -0.2 }
+      ]
+    },
     metrics: [
       { id: 'avg-maturity', label: 'Average Maturity Level', value: 3.3, unit: 'out of 5', trend: 'up', trendValue: 6.5, trendLabel: '+0.2 vs last quarter', severity: 'success' },
       { id: 'capabilities-tracked', label: 'Capabilities Tracked', value: 42, trend: 'stable', severity: 'info' },
-      { id: 'improving', label: 'Capabilities Improving', value: '28/42', trend: 'up', trendValue: 5, trendLabel: '5 more than last quarter', severity: 'success' }
+      { id: 'improving', label: 'Capabilities Improving', value: '28/42', trend: 'up', trendValue: 5, trendLabel: '5 more than last quarter', severity: 'success' },
+      { id: 'stagnant', label: 'Stagnant Capabilities', value: 6, trend: 'down', trendValue: -2, trendLabel: '2 fewer than last quarter', severity: 'warning' },
+      { id: 'below-benchmark', label: 'Below Industry Benchmark', value: 9, trend: 'down', trendValue: -3, trendLabel: 'Closing the gap', severity: 'warning' },
+      { id: 'maturity-velocity', label: 'Maturity Velocity', value: '+0.2', unit: 'per quarter', trend: 'stable', trendLabel: 'Consistent growth', severity: 'success' }
     ],
     insights: [
       { id: 'cmt-insight-001', type: 'info', severity: 'low', title: 'Steady Maturity Growth Across Portfolio', description: '67% of tracked capabilities showed improvement this quarter. Average improvement rate of 0.2 points per quarter indicates healthy organizational learning.', confidence: 94, actionable: false },

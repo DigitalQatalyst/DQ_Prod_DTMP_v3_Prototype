@@ -319,12 +319,15 @@ const featuredDashboardConfigs: Record<string, any> = {
       { id: 'avg-maturity', type: 'metric', title: 'Avg Capability Maturity', description: 'Weighted average across capabilities', position: { row: 1, col: 1, width: 1, height: 1 } },
       { id: 'capabilities-tracked', type: 'metric', title: 'Capabilities Tracked', description: 'Total business capabilities', position: { row: 1, col: 2, width: 1, height: 1 } },
       { id: 'improving', type: 'metric', title: 'Improving', description: 'Capabilities trending upward', position: { row: 1, col: 3, width: 1, height: 1 } },
-      { id: 'maturity-over-time', type: 'chart', chartType: 'line', title: 'Maturity Over Time', description: 'Quarterly capability maturity scores', position: { row: 2, col: 1, width: 2, height: 1 } },
-      { id: 'capability-radar', type: 'chart', chartType: 'radar', title: 'Capability Heatmap', description: 'Maturity levels across core capabilities', position: { row: 2, col: 3, width: 1, height: 1 } },
-      { id: 'benchmark-comparison', type: 'chart', chartType: 'bar', title: 'Benchmark Comparison', description: 'Your scores vs peer average', position: { row: 3, col: 1, width: 2, height: 1 } },
-      { id: 'level-dist', type: 'chart', chartType: 'pie', title: 'Maturity Levels', description: 'Capabilities by maturity level (1-5)', position: { row: 3, col: 3, width: 1, height: 1 } },
-      { id: 'ai-insights', type: 'insight', title: 'Trend Insights', description: 'Regression alerts and improvement velocity analysis', position: { row: 4, col: 1, width: 2, height: 1 } },
-      { id: 'capability-table', type: 'table', title: 'Capability Scorecard', description: 'Detailed scores, trends, and benchmarks per capability', position: { row: 4, col: 3, width: 1, height: 1 } }
+      { id: 'stagnant', type: 'metric', title: 'Stagnant Capabilities', description: 'Capabilities with no improvement', position: { row: 2, col: 1, width: 1, height: 1 } },
+      { id: 'below-benchmark', type: 'metric', title: 'Below Industry Benchmark', description: 'Capabilities lagging peers', position: { row: 2, col: 2, width: 1, height: 1 } },
+      { id: 'maturity-velocity', type: 'metric', title: 'Maturity Velocity', description: 'Quarterly improvement rate', position: { row: 2, col: 3, width: 1, height: 1 } },
+      { id: 'maturity-over-time', type: 'chart', chartType: 'line', title: 'Maturity Over Time', description: 'Quarterly capability maturity scores', position: { row: 3, col: 1, width: 2, height: 1 } },
+      { id: 'capability-radar', type: 'chart', chartType: 'radar', title: 'Capability Heatmap', description: 'Maturity levels across core capabilities', position: { row: 3, col: 3, width: 1, height: 1 } },
+      { id: 'benchmark-comparison', type: 'chart', chartType: 'bar', title: 'Benchmark Comparison', description: 'Your scores vs peer average', position: { row: 4, col: 1, width: 2, height: 1 } },
+      { id: 'level-dist', type: 'chart', chartType: 'pie', title: 'Maturity Levels', description: 'Capabilities by maturity level (1-5)', position: { row: 4, col: 3, width: 1, height: 1 } },
+      { id: 'ai-insights', type: 'insight', title: 'Trend Insights', description: 'Regression alerts and improvement velocity analysis', position: { row: 5, col: 1, width: 2, height: 1 } },
+      { id: 'capability-table', type: 'table', title: 'Capability Scorecard', description: 'Detailed scores, trends, and benchmarks per capability', position: { row: 5, col: 3, width: 1, height: 1 } }
     ],
     filters: [
       { id: 'dateRange', label: 'Date Range', type: 'daterange', defaultValue: 'last-year' },
@@ -462,12 +465,15 @@ const featuredDashboardConfigs: Record<string, any> = {
       { id: 'current-velocity', type: 'metric', title: 'Current Sprint Velocity', description: 'Story points completed', position: { row: 1, col: 1, width: 1, height: 1 } },
       { id: 'avg-velocity', type: 'metric', title: 'Average Velocity', description: '5 sprint average', position: { row: 1, col: 2, width: 1, height: 1 } },
       { id: 'predicted-next', type: 'metric', title: 'Predicted Next Sprint', description: 'AI forecast', position: { row: 1, col: 3, width: 1, height: 1 } },
-      { id: 'velocity-trend', type: 'chart', chartType: 'line', title: 'Velocity Trend', description: 'Sprint-over-sprint velocity tracking', position: { row: 2, col: 1, width: 2, height: 1 } },
-      { id: 'team-comparison', type: 'chart', chartType: 'bar', title: 'Team Velocity', description: 'Velocity comparison across teams', position: { row: 2, col: 3, width: 1, height: 1 } },
-      { id: 'throughput-area', type: 'chart', chartType: 'area', title: 'Throughput Trend', description: 'Items completed per week with rolling average', position: { row: 3, col: 1, width: 2, height: 1 } },
-      { id: 'work-split', type: 'chart', chartType: 'donut', title: 'Work Type Split', description: 'Features, bugs, tech debt, support', position: { row: 3, col: 3, width: 1, height: 1 } },
-      { id: 'ai-insights', type: 'insight', title: 'Velocity Intelligence', description: 'Sprint predictions and bottleneck analysis', position: { row: 4, col: 1, width: 2, height: 1 } },
-      { id: 'forecast-table', type: 'table', title: 'Sprint Forecast', description: 'Upcoming sprint predictions with confidence intervals', position: { row: 4, col: 3, width: 1, height: 1 } }
+      { id: 'team-capacity', type: 'metric', title: 'Team Capacity', description: 'Current team availability', position: { row: 2, col: 1, width: 1, height: 1 } },
+      { id: 'velocity-stability', type: 'metric', title: 'Velocity Stability', description: 'Consistency measure', position: { row: 2, col: 2, width: 1, height: 1 } },
+      { id: 'sprint-commitment', type: 'metric', title: 'Sprint Commitment Accuracy', description: 'Completed vs planned', position: { row: 2, col: 3, width: 1, height: 1 } },
+      { id: 'velocity-trend', type: 'chart', chartType: 'line', title: 'Velocity Trend', description: 'Sprint-over-sprint velocity tracking', position: { row: 3, col: 1, width: 2, height: 1 } },
+      { id: 'team-comparison', type: 'chart', chartType: 'bar', title: 'Team Velocity', description: 'Velocity comparison across teams', position: { row: 3, col: 3, width: 1, height: 1 } },
+      { id: 'throughput-area', type: 'chart', chartType: 'area', title: 'Throughput Trend', description: 'Items completed per week with rolling average', position: { row: 4, col: 1, width: 2, height: 1 } },
+      { id: 'work-split', type: 'chart', chartType: 'donut', title: 'Work Type Split', description: 'Features, bugs, tech debt, support', position: { row: 4, col: 3, width: 1, height: 1 } },
+      { id: 'ai-insights', type: 'insight', title: 'Velocity Intelligence', description: 'Sprint predictions and bottleneck analysis', position: { row: 5, col: 1, width: 2, height: 1 } },
+      { id: 'forecast-table', type: 'table', title: 'Sprint Forecast', description: 'Upcoming sprint predictions with confidence intervals', position: { row: 5, col: 3, width: 1, height: 1 } }
     ],
     filters: [
       { id: 'dateRange', label: 'Date Range', type: 'daterange', defaultValue: 'last-90-days' },
