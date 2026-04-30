@@ -75,6 +75,8 @@ export function LoginModal({
     }
   }, [isOpen]);
 
+  console.log('LoginModal render - isOpen:', isOpen);
+
   if (!isOpen) return null;
 
   // ── Shared post-auth routing ──────────────────────────────────────────────
@@ -187,10 +189,30 @@ export function LoginModal({
   const description = isSignup
     ? context.marketplace === "solution-specs"
       ? `Create an account to request the specification package for "${context.serviceName}".`
-      : "Create your account to get started."
-    : context.marketplace === "solution-specs"
-      ? `Log in to request the specification package for "${context.serviceName}".`
-      : "Please log in to continue with your enrollment";
+      : context.marketplace === "solution-build"
+        ? `Create an account to request deployment of "${context.serviceName}".`
+        : context.marketplace === "digital-intelligence"
+          ? `Create an account to submit your request for "${context.dashboardName || context.serviceName || "Digital Intelligence"}".`
+          : context.marketplace === "knowledge-center"
+            ? "Create an account to save this item to your Knowledge Centre workspace."
+            : (context.marketplace === "document-studio" || context.marketplace === "templates") && context.serviceName
+              ? `Create an account to request an AI-generated document for "${context.serviceName}".`
+              : "Create your account to get started."
+    : context.marketplace === "solution-build"
+      ? `Log in to request deployment of "${context.serviceName}".`
+      : context.marketplace === "solution-specs" && context.action === "Make Request"
+        ? `Log in to submit your request for "${context.serviceName}".`
+        : context.marketplace === "solution-specs"
+          ? "Log in to access this solution specification."
+          : context.marketplace === "digital-intelligence" && context.action === "View Analytics"
+            ? `Log in to request access to "${context.dashboardName || context.serviceName}".`
+            : context.marketplace === "digital-intelligence"
+              ? `Log in to submit your request for "${context.dashboardName || context.serviceName || "Digital Intelligence"}".`
+              : context.marketplace === "knowledge-center"
+                ? "Log in to save this item to your Knowledge Centre workspace."
+                : (context.marketplace === "document-studio" || context.marketplace === "templates") && context.serviceName
+                  ? `Log in to request an AI-generated document for "${context.serviceName}".`
+                  : "Please log in to continue with your enrollment";
 
   return (
     <div

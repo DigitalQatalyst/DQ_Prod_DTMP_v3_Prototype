@@ -6,6 +6,7 @@ import {
   FileText,
   Layers,
   GitBranch,
+  Download,
   Calendar,
   User,
   Building2,
@@ -19,6 +20,7 @@ import {
   BookOpen,
   ExternalLink,
   Check,
+  Wrench,
 } from "lucide-react";
 import { solutionSpecs, SolutionType } from "@/data/blueprints/solutionSpecs";
 import {
@@ -722,6 +724,42 @@ export function SolutionSpecDetailPage() {
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
 
+                <Button
+                  onClick={() =>
+                    navigate("/marketplaces/solution-build/wizard", {
+                      state: {
+                        fromSpec: true,
+                        specData: {
+                          id: spec.id,
+                          title: spec.title,
+                          description: spec.description,
+                          solutionType: spec.solutionType,
+                          tags: spec.tags,
+                          componentCount: spec.componentCount,
+                          diagramCount: spec.diagramCount,
+                          scope: spec.scope,
+                          maturityLevel: spec.maturityLevel,
+                        },
+                      },
+                    })
+                  }
+                  variant="outline"
+                  className="w-full mt-3 border-2 border-orange-600 text-orange-600 hover:bg-orange-50 hover:text-orange-700 font-semibold"
+                >
+                  <Wrench className="w-4 h-4 mr-2" />
+                  Proceed to Build
+                </Button>
+
+                {spec.downloadUrl && (
+                  <Button
+                    variant="outline"
+                    className="w-full mt-3"
+                    onClick={handleMakeRequest}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Download Preview
+                  </Button>
+                )}
               </div>
             </aside>
 

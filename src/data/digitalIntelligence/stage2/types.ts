@@ -176,6 +176,7 @@ export interface DashboardData {
   serviceId: string;
   dataSource: string;
   timeSeries: TimeSeriesDataPoint[];
+  widgetData?: Record<string, Array<{ name: string; value: number; [key: string]: any }>>;
   metrics: DashboardMetric[];
   insights: AIInsight[];
   tableData?: any[];
