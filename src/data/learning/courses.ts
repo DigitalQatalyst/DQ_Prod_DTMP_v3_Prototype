@@ -99,6 +99,70 @@ export const enrolledCourses: CourseEnrollment[] = [
     enrolledCount: 567
   },
   {
+    id: "agile-transformation-methods",
+    courseId: "agile-methods-001",
+    courseName: "Agile Transformation Methods",
+    instructor: "Jennifer Park",
+    instructorTitle: "Agile Coach & Transformation Lead",
+    thumbnail: "/placeholder.svg",
+    progress: 100,
+    status: 'completed',
+    difficulty: 'intermediate',
+    duration: "11 weeks",
+    credits: 18,
+    enrolledDate: "2023-11-15",
+    lastAccessed: "2024-01-20",
+    estimatedCompletion: "2024-01-18",
+    currentModule: {
+      id: "module-8",
+      number: 8,
+      title: "Agile Metrics and Reporting",
+      progress: 100
+    },
+    stats: {
+      modulesCompleted: 8,
+      totalModules: 8,
+      averageQuizScore: 91,
+      timeInvested: "38h 30m",
+      certificateEarned: true
+    },
+    rating: 4.8,
+    reviewCount: 245,
+    enrolledCount: 512
+  },
+  {
+    id: "scrum-master-certification",
+    courseId: "scrum-cert-001",
+    courseName: "Scrum Master Certification",
+    instructor: "Jennifer Park",
+    instructorTitle: "Agile Coach & Transformation Lead",
+    thumbnail: "/placeholder.svg",
+    progress: 100,
+    status: 'completed',
+    difficulty: 'intermediate',
+    duration: "8 weeks",
+    credits: 16,
+    enrolledDate: "2023-12-01",
+    lastAccessed: "2024-01-25",
+    estimatedCompletion: "2024-01-22",
+    currentModule: {
+      id: "module-6",
+      number: 6,
+      title: "Scrum Master Certification Exam",
+      progress: 100
+    },
+    stats: {
+      modulesCompleted: 6,
+      totalModules: 6,
+      averageQuizScore: 96,
+      timeInvested: "32h 45m",
+      certificateEarned: true
+    },
+    rating: 4.9,
+    reviewCount: 389,
+    enrolledCount: 678
+  },
+  {
     id: "cloud-migration-strategies",
     courseId: "cloud-mig-001",
     courseName: "Cloud Migration Strategies",

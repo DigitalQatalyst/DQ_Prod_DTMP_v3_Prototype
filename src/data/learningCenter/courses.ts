@@ -9,6 +9,7 @@ export interface Course extends LearningCourseContract {
   lessons: number;
   level: "Beginner" | "Intermediate" | "Advanced" | "Executive";
   provider: { name: string; logo?: string } | null;
+  instructor?: string;
   rating: number;
   students: number;
   featured?: boolean;
@@ -53,6 +54,7 @@ export const courses: Course[] = [
     lessons: 12,
     level: "Beginner",
     provider: { name: "Coursera" },
+    instructor: "Dr. Sarah Chen",
     rating: 4.8,
     students: 1250,
     featured: true,
@@ -129,6 +131,7 @@ export const courses: Course[] = [
     lessons: 16,
     level: "Intermediate",
     provider: { name: "LinkedIn Learning" },
+    instructor: "Michael Torres",
     rating: 4.6,
     students: 890,
     department: "Architecture",
@@ -159,6 +162,7 @@ export const courses: Course[] = [
     lessons: 14,
     level: "Intermediate",
     provider: { name: "Internal" },
+    instructor: "instructor",
     rating: 4.9,
     students: 620,
     department: "Leadership",

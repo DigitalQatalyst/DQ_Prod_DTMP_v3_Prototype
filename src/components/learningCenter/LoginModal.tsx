@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { enrolledCourses } from "@/data/learning";
 import { mapRuntimeCourseToStage2CourseId } from "@/data/learningCenter/trackProgress";
-import { setUserAuthenticated } from "@/data/sessionAuth";
+import { setUserAuthenticated, setSessionUser, isLearningCenterAdmin } from "@/data/sessionAuth";
 import { setSessionRole, isTOStage3Role, type SessionRole } from "@/data/sessionRole";
+import { createStage3Request } from "@/data/stage3";
 
 type ModalView = "login" | "signup";
 
@@ -84,6 +85,13 @@ export function LoginModal({
     const role = resolveRoleFromEmail(actorEmail);
     setUserAuthenticated(true);
     setSessionRole(role);
+    
+    // Store user session data
+    setSessionUser({
+      email: actorEmail,
+      name: actorEmail.split("@")[0],
+      role,
+    });
 
     if (onLoginSuccess) {
       onLoginSuccess(actorEmail);
@@ -113,8 +121,38 @@ export function LoginModal({
         mapRuntimeCourseToStage2CourseId(context.cardId) ??
         (enrolledCourses.some((c) => c.id === context.cardId) ? context.cardId : fallbackCourseId);
 
-      navigate(`/stage2/learning-center/course/${mappedCourseId}/user`, {
-        state: { ...context, cardId: mappedCourseId, actorEmail, learningRole: "learner" },
+      createStage3Request({
+        type: "learning-center",
+        title: `Learning Enrollment: ${context.serviceName}`,
+        description: `Course enrollment request for "${context.serviceName}". User: ${actorEmail}. Enrollment date: ${new Date().toLocaleDateString()}.`,
+        requester: {
+          name: actorEmail.split("@")[0],
+          email: actorEmail,
+          department: "Learning & Development",
+          organization: "DTMP",
+        },
+        priority: "low",
+        estimatedHours: 1,
+        tags: ["learning-center", "enrollment", mappedCourseId],
+        notes: [
+          `Enrollment initiated from Stage 1 Learning Centre.`,
+          `Course ID: ${mappedCourseId}`,
+          `Course Name: ${context.serviceName}`,
+        ],
+      });
+
+      // Determine if user should go to admin or learner view
+      const isAdmin = isLearningCenterAdmin();
+      const viewMode = isAdmin ? "admin" : "user";
+      const learningRole = isAdmin ? "admin" : "learner";
+
+      navigate(`/stage2/learning-center/course/${mappedCourseId}/${viewMode}`, {
+        state: {
+          ...context,
+          cardId: mappedCourseId,
+          actorEmail,
+          learningRole,
+        },
       });
       return;
     }
@@ -187,32 +225,44 @@ export function LoginModal({
   const isSignup = view === "signup";
 
   const description = isSignup
-    ? context.marketplace === "solution-specs"
-      ? `Create an account to request the specification package for "${context.serviceName}".`
+    ? context.marketplace === "learning-center"
+      ? "Create an account to continue with your enrollment."
+      : context.marketplace === "solution-specs"
+        ? `Create an account to request the specification package for "${context.serviceName}".`
+        : context.marketplace === "solution-build"
+          ? `Create an account to request deployment of "${context.serviceName}".`
+          : context.marketplace === "digital-intelligence"
+            ? `Create an account to submit your request for "${context.dashboardName || context.serviceName || "Digital Intelligence"}".`
+            : context.marketplace === "knowledge-center"
+              ? "Create an account to save this item to your Knowledge Centre workspace."
+              : context.marketplace === "support-services"
+                ? `Create an account to submit a support request for "${context.serviceName}".`
+                : context.marketplace === "portfolio-management"
+                  ? "Create an account to track and manage this portfolio request."
+                  : (context.marketplace === "document-studio" || context.marketplace === "templates") && context.serviceName
+                    ? `Create an account to request an AI-generated document for "${context.serviceName}".`
+                    : "Create your account to get started."
+    : context.marketplace === "learning-center"
+      ? "Please log in to continue with your enrollment."
       : context.marketplace === "solution-build"
-        ? `Create an account to request deployment of "${context.serviceName}".`
-        : context.marketplace === "digital-intelligence"
-          ? `Create an account to submit your request for "${context.dashboardName || context.serviceName || "Digital Intelligence"}".`
-          : context.marketplace === "knowledge-center"
-            ? "Create an account to save this item to your Knowledge Centre workspace."
-            : (context.marketplace === "document-studio" || context.marketplace === "templates") && context.serviceName
-              ? `Create an account to request an AI-generated document for "${context.serviceName}".`
-              : "Create your account to get started."
-    : context.marketplace === "solution-build"
-      ? `Log in to request deployment of "${context.serviceName}".`
-      : context.marketplace === "solution-specs" && context.action === "Make Request"
-        ? `Log in to submit your request for "${context.serviceName}".`
-        : context.marketplace === "solution-specs"
-          ? "Log in to access this solution specification."
-          : context.marketplace === "digital-intelligence" && context.action === "View Analytics"
-            ? `Log in to request access to "${context.dashboardName || context.serviceName}".`
-            : context.marketplace === "digital-intelligence"
-              ? `Log in to submit your request for "${context.dashboardName || context.serviceName || "Digital Intelligence"}".`
-              : context.marketplace === "knowledge-center"
-                ? "Log in to save this item to your Knowledge Centre workspace."
-                : (context.marketplace === "document-studio" || context.marketplace === "templates") && context.serviceName
-                  ? `Log in to request an AI-generated document for "${context.serviceName}".`
-                  : "Please log in to continue with your enrollment";
+        ? `Log in to request deployment of "${context.serviceName}".`
+        : context.marketplace === "solution-specs" && context.action === "Make Request"
+          ? `Log in to submit your request for "${context.serviceName}".`
+          : context.marketplace === "solution-specs"
+            ? "Log in to access this solution specification."
+            : context.marketplace === "digital-intelligence" && context.action === "View Analytics"
+              ? `Log in to request access to "${context.dashboardName || context.serviceName}".`
+              : context.marketplace === "digital-intelligence"
+                ? `Log in to submit your request for "${context.dashboardName || context.serviceName || "Digital Intelligence"}".`
+                : context.marketplace === "knowledge-center"
+                  ? "Log in to save this item to your Knowledge Centre workspace."
+                  : context.marketplace === "support-services"
+                    ? `Log in to submit a support request for "${context.serviceName}".`
+                    : context.marketplace === "portfolio-management"
+                      ? "Log in to track and manage this portfolio request."
+                      : (context.marketplace === "document-studio" || context.marketplace === "templates") && context.serviceName
+                        ? `Log in to request an AI-generated document for "${context.serviceName}".`
+                        : "Log in to access this service.";
 
   return (
     <div
@@ -420,6 +470,7 @@ export function LoginModal({
             <div className="space-y-1 text-xs text-gray-500">
               <p><span className="font-medium text-gray-700">TO Ops:</span> any@to.dtmp.com</p>
               <p><span className="font-medium text-gray-700">TO Admin:</span> admin@to.dtmp.com</p>
+              <p><span className="font-medium text-gray-700">Course Instructor/Admin:</span> instructor@... or admin@...</p>
               <p><span className="font-medium text-gray-700">Business User:</span> any other email</p>
               <p className="text-gray-400 mt-1">Password: any value</p>
             </div>

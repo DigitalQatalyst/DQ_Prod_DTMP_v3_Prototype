@@ -3,11 +3,15 @@ import { Review } from "@/data/learningCenter/reviews";
 
 interface ReviewCardProps {
   review: Review;
+  onClick?: () => void;
 }
 
-export function ReviewCard({ review }: ReviewCardProps) {
+export function ReviewCard({ review, onClick }: ReviewCardProps) {
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
+    <div 
+      onClick={onClick}
+      className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-xl hover:border-orange-300 hover:-translate-y-1 transition-all duration-300 cursor-pointer"
+    >
       {/* Header */}
       <div className="flex justify-between items-start mb-4">
         <div className="flex items-center gap-3">
@@ -55,7 +59,13 @@ export function ReviewCard({ review }: ReviewCardProps) {
 
       {/* Footer */}
       <div className="border-t border-gray-100 pt-3">
-        <button className="flex items-center gap-1 text-sm text-gray-600 hover:text-orange-600 transition-colors">
+        <button 
+          onClick={(e) => { 
+            e.stopPropagation(); 
+            // TODO: Implement helpful vote logic
+          }}
+          className="flex items-center gap-1 text-sm text-gray-600 hover:text-orange-600 transition-colors"
+        >
           <ThumbsUp className="w-4 h-4" />
           Helpful ({review.helpfulCount})
         </button>

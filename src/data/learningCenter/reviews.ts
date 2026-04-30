@@ -174,3 +174,7 @@ export const reviews: Review[] = [
 export const reviewsFilters = {
   contentType: ["Courses", "Learning Tracks"]
 };
+
+export function addReview(review: Review): void {
+  reviews.push(review);
+}

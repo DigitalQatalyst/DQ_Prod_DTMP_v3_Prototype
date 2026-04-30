@@ -102,7 +102,7 @@ interface LearningWorkspaceMainProps {
   activeLearningAdminTab: LearningAdminTab;
   setActiveLearningAdminTab: (tab: LearningAdminTab) => void;
   canAccessAdminView: boolean;
-  selectedLearningCourse?: unknown;
+  selectedLearningCourse?: { status?: "not-started" | "in-progress" | "completed" };
   activeTrackAnalytics?: unknown;
   adminViewData: any;
   userViewData: any;
@@ -341,7 +341,11 @@ export function LearningWorkspaceMain({
                 <UserResourcesTab resources={userViewData.resources} />
               )}
               {activeLearningUserTab === "certificate" && (
-                <UserCertificateTab data={userViewData} pathCertificate={activePathCertificate} />
+                <UserCertificateTab 
+                  data={userViewData} 
+                  pathCertificate={activePathCertificate}
+                  courseStatus={selectedLearningCourse?.status}
+                />
               )}
             </>
           )}
