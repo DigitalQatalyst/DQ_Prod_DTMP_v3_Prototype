@@ -11,6 +11,7 @@ import LearningCenterPage from "./pages/LearningCenterPage";
 import LearningCenterDetailPage from "./pages/LearningCenterDetailPage";
 import KnowledgeCenterPage from "./pages/KnowledgeCenterPage";
 import KnowledgeCenterDetailPage from "./pages/KnowledgeCenterDetailPage";
+import KnowledgeContributePage from "./pages/KnowledgeContributePage";
 import TransactAppPage from "./pages/TransactAppPage";
 import Stage2AppPage from "./pages/Stage2AppPage";
 import Stage3AppPage from "./pages/Stage3AppPage";
@@ -42,6 +43,7 @@ import DigitalIntelligencePage from "./pages/DigitalIntelligencePage";
 import DigitalIntelligenceDetailPage from "./pages/DigitalIntelligenceDetailPage";
 import DigitalIntelligenceDashboardPage from "./pages/DigitalIntelligenceDashboardPage";
 import DocumentPreviewPage from "./pages/stage2/specs/DocumentPreviewPage";
+import PriorityEscalationTestPage from "./pages/PriorityEscalationTestPage";
 import { isUserAuthenticated } from "./data/sessionAuth";
 import { getSessionRole, isTOStage3Role } from "./data/sessionRole";
 
@@ -227,6 +229,7 @@ const App = () => (
 
             {/* Knowledge Center marketplace */}
             <Route path="/marketplaces/knowledge-center" element={<KnowledgeCenterPage />} />
+            <Route path="/marketplaces/knowledge-center/contribute" element={<KnowledgeContributePage />} />
             <Route path="/marketplaces/knowledge-center/:tab/:cardId" element={<KnowledgeCenterDetailPage />} />
 
             {/* Templates marketplace */}
@@ -251,6 +254,9 @@ const App = () => (
             <Route path="/marketplaces/solution-build" element={<SolutionBuildPage />} />
             <Route path="/marketplaces/solution-build/wizard" element={<BuildRequestWizard />} />
             <Route path="/marketplaces/solution-build/:id" element={<SolutionBuildDetailPage />} />
+
+            {/* Priority Escalation Test Page */}
+            <Route path="/test/priority-escalation" element={<PriorityEscalationTestPage />} />
 
             {/* Support Services marketplace */}
             <Route path="/marketplaces/support-services" element={<SupportServicesPage />} />

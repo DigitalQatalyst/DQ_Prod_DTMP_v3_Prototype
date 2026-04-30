@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   ChevronRight, Clock, User, Download,
@@ -50,7 +50,8 @@ import {
   recordStaleFlagMetric,
   type KnowledgeUsageMetric,
 } from "@/data/knowledgeCenter/analyticsState";
-import { isUserAuthenticated } from "@/data/sessionAuth";
+import { getLatestReview } from "@/data/knowledgeCenter/reviewState";
+import { courses } from "@/data/learningCenter/courses";
 import {
   mapBestPracticeToDepartment,
   mapIndustryToDepartment,
@@ -95,6 +96,27 @@ export default function KnowledgeCenterDetailPage() {
     normalizedTab && cardId
       ? getRelatedKnowledgeItems(normalizedTab as KnowledgeTab, cardId, 3)
       : [];
+
+  // Get related courses based on knowledge item
+  const relatedCourses = useMemo(() => {
+    if (!knowledgeItem?.relatedCourseIds || knowledgeItem.relatedCourseIds.length === 0) {
+      // If no explicit course IDs, try to match by tags
+      const itemTags = knowledgeItem?.tags.map(t => t.toLowerCase()) || [];
+      return courses
+        .filter(course => {
+          const courseKeywords = [
+            course.title.toLowerCase(),
+            course.category.toLowerCase(),
+            course.department.toLowerCase(),
+          ];
+          return itemTags.some(tag => 
+            courseKeywords.some(keyword => keyword.includes(tag) || tag.includes(keyword))
+          );
+        })
+        .slice(0, 3);
+    }
+    return courses.filter(c => knowledgeItem.relatedCourseIds?.includes(c.id));
+  }, [knowledgeItem]);
 
   useEffect(() => {
     if (!normalizedTab || !cardId) return;
@@ -441,6 +463,15 @@ export default function KnowledgeCenterDetailPage() {
   const getGradientForSeed = (seed: string) =>
     showcaseGradients[seed.length % showcaseGradients.length];
 
+  const getUpdatedDate = () => {
+    if (!knowledgeItem?.id) return knowledgeItem?.updatedAt || "N/A";
+    const latestReview = getLatestReview(knowledgeItem.id);
+    if (latestReview && latestReview.outcome === "accurate") {
+      return new Date(latestReview.reviewedAt).toISOString().slice(0, 10);
+    }
+    return knowledgeItem.updatedAt;
+  };
+
   const renderBestPracticeDetail = () => {
     const practice = item as typeof bestPractices[0];
     const Icon = practice.icon;
@@ -502,6 +533,34 @@ export default function KnowledgeCenterDetailPage() {
                   <h2 className="text-2xl font-bold text-foreground mb-4">Overview</h2>
                   <p className="text-muted-foreground mb-6">{practice.summary}</p>
                   
+                  <h3 className="text-xl font-semibold text-foreground mb-3">Why This Matters</h3>
+                  <p className="text-muted-foreground mb-6">
+                    This best practice addresses critical challenges in digital transformation by providing a proven framework 
+                    that reduces implementation risk and accelerates value delivery. Organizations applying this approach typically 
+                    see improved alignment between business objectives and technical execution, enhanced team collaboration, and 
+                    measurable improvements in delivery velocity and quality.
+                  </p>
+
+                  <h3 className="text-xl font-semibold text-foreground mb-3">Key Benefits</h3>
+                  <ul className="space-y-2 mb-6 text-muted-foreground">
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                      <span>Reduces time-to-value by establishing clear decision frameworks and governance checkpoints</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                      <span>Improves cross-functional alignment through standardized communication and collaboration patterns</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                      <span>Enables scalable adoption across teams with reusable templates and proven implementation paths</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                      <span>Provides measurable outcomes through built-in metrics and continuous improvement mechanisms</span>
+                    </li>
+                  </ul>
+                  
                   <h3 className="text-xl font-semibold text-foreground mb-3">Impact Areas</h3>
                   <div className="flex flex-wrap gap-2 mb-6">
                     {practice.impactAreas.map((area) => (
@@ -512,58 +571,185 @@ export default function KnowledgeCenterDetailPage() {
                   </div>
 
                   <h3 className="text-xl font-semibold text-foreground mb-3">Department Applicability</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Primary: {mapBestPracticeToDepartment(practice)}
+                  </p>
+                  <p className="text-muted-foreground mb-6">
+                    This practice is designed to be adapted across multiple departments and contexts. While it originated in 
+                    {mapBestPracticeToDepartment(practice)}, the principles and frameworks can be tailored for Finance, Operations, 
+                    HR, and other business units undergoing digital transformation initiatives.
+                  </p>
+
+                  <h3 className="text-xl font-semibold text-foreground mb-3">Maturity Considerations</h3>
                   <p className="text-muted-foreground">
-                    {mapBestPracticeToDepartment(practice)}
+                    <strong>Current Level: {practice.maturityLevel}</strong> - This practice is most effective for organizations 
+                    at this maturity stage. If your organization is at an earlier stage, consider starting with foundational 
+                    practices first. If you're more advanced, you can accelerate implementation by leveraging existing capabilities 
+                    and focusing on optimization and scaling.
                   </p>
                 </TabsContent>
 
                 <TabsContent value="implementation" className="mt-6">
                   <h2 className="text-2xl font-bold text-foreground mb-4">Implementation Guide</h2>
                   <p className="text-muted-foreground mb-4">
-                    Use this pattern in phased increments to reduce delivery risk and improve adoption.
+                    Follow this phased approach to reduce risk and accelerate adoption across your organization.
                   </p>
-                  <ol className="list-decimal ml-5 space-y-2 text-sm text-muted-foreground">
-                    <li>Establish outcomes and baseline measures for {practice.impactAreas[0] ?? "target capability"}.</li>
-                    <li>Define the operating model, ownership, and governance controls across {mapBestPracticeToDepartment(practice)}.</li>
-                    <li>Pilot in one value stream, then scale with reusable templates and checkpoints.</li>
-                    <li>Track progress monthly and adjust controls based on adoption, quality, and speed metrics.</li>
-                  </ol>
+                  
+                  <div className="space-y-4">
+                    <div className="border-l-4 border-blue-500 pl-4 py-2">
+                      <h3 className="font-semibold text-foreground mb-1">Phase 1: Foundation (Weeks 1-4)</h3>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Establish clear outcomes and baseline measures for {practice.impactAreas[0] ?? "target capability"}. 
+                        Secure executive sponsorship and identify pilot team.
+                      </p>
+                      <p className="text-xs text-muted-foreground">Key Deliverables: Charter document, success metrics, stakeholder map</p>
+                    </div>
+
+                    <div className="border-l-4 border-green-500 pl-4 py-2">
+                      <h3 className="font-semibold text-foreground mb-1">Phase 2: Design (Weeks 5-8)</h3>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Define the operating model, ownership, and governance controls across {mapBestPracticeToDepartment(practice)}. 
+                        Develop templates and training materials.
+                      </p>
+                      <p className="text-xs text-muted-foreground">Key Deliverables: Operating model, RACI matrix, process documentation</p>
+                    </div>
+
+                    <div className="border-l-4 border-orange-500 pl-4 py-2">
+                      <h3 className="font-semibold text-foreground mb-1">Phase 3: Pilot (Weeks 9-16)</h3>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Launch pilot in one value stream. Gather feedback, refine approach, and document lessons learned.
+                      </p>
+                      <p className="text-xs text-muted-foreground">Key Deliverables: Pilot results, refined templates, lessons learned report</p>
+                    </div>
+
+                    <div className="border-l-4 border-purple-500 pl-4 py-2">
+                      <h3 className="font-semibold text-foreground mb-1">Phase 4: Scale (Weeks 17+)</h3>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Roll out to additional teams using proven templates. Track progress monthly and adjust based on adoption, quality, and speed metrics.
+                      </p>
+                      <p className="text-xs text-muted-foreground">Key Deliverables: Scaled deployment, continuous improvement plan</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 bg-amber-50 border border-amber-200 rounded-lg p-4">
+                    <h3 className="font-semibold text-foreground mb-2 flex items-center gap-2">
+                      <span className="text-amber-600">⚠</span> Common Pitfalls to Avoid
+                    </h3>
+                    <ul className="text-sm text-muted-foreground space-y-1">
+                      <li>• Skipping the pilot phase and attempting full-scale rollout immediately</li>
+                      <li>• Insufficient change management and stakeholder communication</li>
+                      <li>• Not adapting the framework to your organizational context</li>
+                    </ul>
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="examples" className="mt-6">
                   <h2 className="text-2xl font-bold text-foreground mb-4">Real-World Examples</h2>
-                  <div className="space-y-3 text-sm text-muted-foreground">
-                    <div className="p-3 rounded-lg border border-gray-200">
-                      <p className="font-semibold text-foreground mb-1">Enterprise Rollout Example</p>
-                      <p>
-                        A cross-functional team applied this pattern to standardize decision-making and improve governance quality while maintaining delivery speed.
+                  
+                  <div className="space-y-4">
+                    <div className="bg-gradient-to-r from-blue-50 to-white border border-blue-200 rounded-lg p-4">
+                      <div className="flex items-start gap-3 mb-2">
+                        <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">1</div>
+                        <div>
+                          <p className="font-semibold text-foreground mb-1">Global Financial Services Firm</p>
+                          <p className="text-xs text-blue-700 mb-2">Enterprise-wide rollout • 18 months • 2,500+ employees</p>
+                        </div>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Applied this pattern to standardize decision-making across 12 business units. Improved governance quality 
+                        while reducing approval cycles by 40%.
                       </p>
+                      <p className="text-xs text-muted-foreground italic">Key Success Factor: Executive steering committee met bi-weekly to remove blockers</p>
                     </div>
-                    <div className="p-3 rounded-lg border border-gray-200">
-                      <p className="font-semibold text-foreground mb-1">Business Unit Pilot Example</p>
-                      <p>
-                        A focused pilot used this approach to improve consistency in architecture and handoffs, then scaled to adjacent teams.
+
+                    <div className="bg-gradient-to-r from-green-50 to-white border border-green-200 rounded-lg p-4">
+                      <div className="flex items-start gap-3 mb-2">
+                        <div className="w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">2</div>
+                        <div>
+                          <p className="font-semibold text-foreground mb-1">Regional Healthcare Provider</p>
+                          <p className="text-xs text-green-700 mb-2">Business unit pilot • 6 months • 200 employees</p>
+                        </div>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Started with IT department pilot to improve architecture consistency and cross-team handoffs. 
+                        Scaled to Operations and Clinical teams after demonstrating 30% reduction in rework.
                       </p>
+                      <p className="text-xs text-muted-foreground italic">Key Success Factor: Dedicated change champions in each department</p>
+                    </div>
+
+                    <div className="bg-gradient-to-r from-purple-50 to-white border border-purple-200 rounded-lg p-4">
+                      <div className="flex items-start gap-3 mb-2">
+                        <div className="w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">3</div>
+                        <div>
+                          <p className="font-semibold text-foreground mb-1">Manufacturing Conglomerate</p>
+                          <p className="text-xs text-purple-700 mb-2">Rapid deployment • 3 months • 500 employees</p>
+                        </div>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Accelerated implementation to support merger integration. Focused on critical workflows first, 
+                        achieving operational alignment 2 months ahead of schedule.
+                      </p>
+                      <p className="text-xs text-muted-foreground italic">Key Success Factor: Pre-built templates adapted from similar industry implementations</p>
                     </div>
                   </div>
                 </TabsContent>
 
                 <TabsContent value="resources" className="mt-6">
                   <h2 className="text-2xl font-bold text-foreground mb-4">Additional Resources</h2>
-                  <ul className="space-y-2 text-sm text-muted-foreground">
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-600 mt-0.5" />
-                      Implementation checklist and decision templates.
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-600 mt-0.5" />
-                      Governance cadence and KPI scorecard starter pack.
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-600 mt-0.5" />
-                      Related case studies and references in Knowledge Center library.
-                    </li>
-                  </ul>
+                  
+                  <div className="space-y-3">
+                    <div className="border border-gray-200 rounded-lg p-4 hover:border-orange-300 transition-colors">
+                      <div className="flex items-start gap-3">
+                        <FileText className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="font-semibold text-foreground mb-1">Implementation Checklist & Templates</p>
+                          <p className="text-sm text-muted-foreground mb-2">
+                            Step-by-step checklist, decision tree templates, and stakeholder communication guides.
+                          </p>
+                          <span className="text-xs text-orange-600">PDF • 24 pages • Includes editable templates</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="border border-gray-200 rounded-lg p-4 hover:border-orange-300 transition-colors">
+                      <div className="flex items-start gap-3">
+                        <FileText className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="font-semibold text-foreground mb-1">Governance Cadence & KPI Scorecard</p>
+                          <p className="text-sm text-muted-foreground mb-2">
+                            Meeting templates, decision logs, and pre-configured KPI dashboards for tracking progress.
+                          </p>
+                          <span className="text-xs text-orange-600">Excel + PowerPoint • Customizable metrics</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="border border-gray-200 rounded-lg p-4 hover:border-orange-300 transition-colors">
+                      <div className="flex items-start gap-3">
+                        <BookOpen className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="font-semibold text-foreground mb-1">Related Case Studies & Research</p>
+                          <p className="text-sm text-muted-foreground mb-2">
+                            Industry benchmarks, academic research, and detailed case studies from similar implementations.
+                          </p>
+                          <span className="text-xs text-orange-600">Available in Knowledge Center Library</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="border border-gray-200 rounded-lg p-4 hover:border-orange-300 transition-colors">
+                      <div className="flex items-start gap-3">
+                        <User className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="font-semibold text-foreground mb-1">Expert Office Hours</p>
+                          <p className="text-sm text-muted-foreground mb-2">
+                            Monthly Q&A sessions with Transformation Office experts and practitioners who have implemented this pattern.
+                          </p>
+                          <span className="text-xs text-orange-600">Virtual • First Tuesday of each month</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </TabsContent>
               </Tabs>
             </div>
@@ -599,7 +785,7 @@ export default function KnowledgeCenterDetailPage() {
                     </tr>
                     <tr>
                       <td className="text-sm text-muted-foreground py-3 pr-4">Updated</td>
-                      <td className="text-sm font-medium text-foreground py-3">{knowledgeItem?.updatedAt}</td>
+                      <td className="text-sm font-medium text-foreground py-3">{getUpdatedDate()}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -679,15 +865,51 @@ export default function KnowledgeCenterDetailPage() {
                 <p className="text-muted-foreground">{testimonial.speaker.role}</p>
               </div>
 
+              <h3 className="text-xl font-semibold text-foreground mb-4">The Challenge</h3>
+              <p className="text-muted-foreground mb-6">
+                {testimonial.organization} faced significant challenges in their transformation journey, including legacy system 
+                constraints, organizational resistance to change, and the need to maintain business continuity while modernizing 
+                critical operations. The leadership team recognized that traditional approaches would not deliver the speed and 
+                agility required to remain competitive in their rapidly evolving market.
+              </p>
+
+              <h3 className="text-xl font-semibold text-foreground mb-4">The Approach</h3>
+              <p className="text-muted-foreground mb-6">
+                Working closely with the Transformation Office, the organization adopted a phased implementation strategy that 
+                prioritized quick wins while building toward long-term sustainable change. They established cross-functional teams, 
+                implemented agile governance frameworks, and invested in upskilling their workforce to support the new operating model. 
+                The approach emphasized continuous learning, rapid iteration, and data-driven decision making.
+              </p>
+
               <h3 className="text-xl font-semibold text-foreground mb-4">Key Outcomes</h3>
-              <div className="grid gap-4">
+              <div className="grid gap-4 mb-6">
                 {testimonial.outcomes.map((outcome) => (
                   <div key={outcome} className="flex items-center gap-3 bg-green-50 p-4 rounded-lg">
-                    <CheckCircle className="w-6 h-6 text-green-600" />
+                    <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0" />
                     <span className="text-foreground font-medium">{outcome}</span>
                   </div>
                 ))}
               </div>
+
+              <h3 className="text-xl font-semibold text-foreground mb-4">Lessons Learned</h3>
+              <ul className="space-y-2 text-muted-foreground">
+                <li className="flex items-start gap-2">
+                  <span className="text-orange-600 font-bold mt-1">•</span>
+                  <span>Executive sponsorship and visible leadership commitment were critical to overcoming organizational inertia</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-orange-600 font-bold mt-1">•</span>
+                  <span>Early wins built momentum and credibility, making it easier to secure resources for larger initiatives</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-orange-600 font-bold mt-1">•</span>
+                  <span>Investing in change management and communication was as important as the technical implementation</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-orange-600 font-bold mt-1">•</span>
+                  <span>Continuous measurement and transparent reporting helped maintain focus and accountability</span>
+                </li>
+              </ul>
             </div>
 
             <div className="lg:w-96">
@@ -717,7 +939,7 @@ export default function KnowledgeCenterDetailPage() {
                     </tr>
                     <tr>
                       <td className="text-sm text-muted-foreground py-3 pr-4">Updated</td>
-                      <td className="text-sm font-medium text-foreground py-3">{knowledgeItem?.updatedAt}</td>
+                      <td className="text-sm font-medium text-foreground py-3">{getUpdatedDate()}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -781,15 +1003,42 @@ export default function KnowledgeCenterDetailPage() {
                 <BookOpen className="w-24 h-24 text-white/30" />
               </div>
 
+              <h3 className="text-xl font-semibold text-foreground mb-4">About This Playbook</h3>
+              <p className="text-muted-foreground mb-6">
+                This comprehensive playbook provides end-to-end guidance for implementing transformation initiatives in 
+                {mapIndustryToDepartment(playbook.industry)} contexts. Developed through collaboration with industry experts 
+                and validated across multiple real-world implementations, it offers practical frameworks, decision trees, 
+                and actionable templates that accelerate delivery while reducing risk.
+              </p>
+
+              <h3 className="text-xl font-semibold text-foreground mb-4">Who Should Use This</h3>
+              <p className="text-muted-foreground mb-6">
+                This playbook is designed for transformation leaders, program managers, and cross-functional teams responsible 
+                for driving change initiatives. It's particularly valuable for organizations in the {playbook.scope} phase of 
+                their transformation journey, providing structured guidance that can be adapted to your specific context and 
+                organizational maturity level.
+              </p>
+
               <h3 className="text-xl font-semibold text-foreground mb-4">Topics Covered</h3>
               <ul className="space-y-3 mb-8">
                 {playbook.topics.map((topic) => (
                   <li key={topic} className="flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
                     <span className="text-muted-foreground">{topic}</span>
                   </li>
                 ))}
               </ul>
+
+              <h3 className="text-xl font-semibold text-foreground mb-4">How to Use This Playbook</h3>
+              <ol className="space-y-2 text-muted-foreground list-decimal ml-5">
+                <li>Review the entire playbook to understand the overall framework and approach</li>
+                <li>Assess your organization's current state against the maturity indicators provided</li>
+                <li>Identify the sections most relevant to your immediate priorities and challenges</li>
+                <li>Adapt the templates and frameworks to your specific organizational context</li>
+                <li>Engage stakeholders early using the communication templates and stakeholder maps</li>
+                <li>Track progress using the metrics and KPIs outlined in the measurement section</li>
+                <li>Iterate and refine based on lessons learned and feedback from your teams</li>
+              </ol>
             </div>
 
             <div className="lg:w-96">
@@ -825,7 +1074,7 @@ export default function KnowledgeCenterDetailPage() {
                     </tr>
                     <tr>
                       <td className="text-sm text-muted-foreground py-3 pr-4">Updated</td>
-                      <td className="text-sm font-medium text-foreground py-3">{knowledgeItem?.updatedAt}</td>
+                      <td className="text-sm font-medium text-foreground py-3">{getUpdatedDate()}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -896,7 +1145,22 @@ export default function KnowledgeCenterDetailPage() {
         <div className="max-w-7xl mx-auto px-4 pb-16">
           <div className="flex flex-col lg:flex-row gap-8">
             <div className="flex-1">
-              <h3 className="text-xl font-semibold text-foreground mb-4">Topics</h3>
+              <h3 className="text-xl font-semibold text-foreground mb-4">About This Resource</h3>
+              <p className="text-muted-foreground mb-6">
+                This {libraryItem.contentType.toLowerCase()} is a curated knowledge asset maintained by the Transformation Office 
+                to support practitioners across the organization. It synthesizes industry best practices, internal lessons learned, 
+                and expert insights into a practical reference guide that can be applied to real-world transformation challenges.
+              </p>
+
+              <h3 className="text-xl font-semibold text-foreground mb-4">What You'll Learn</h3>
+              <p className="text-muted-foreground mb-6">
+                This resource provides comprehensive coverage of {libraryItem.topics.slice(0, 2).join(" and ")}, with practical 
+                frameworks and actionable guidance you can apply immediately. You'll gain understanding of key concepts, common 
+                pitfalls to avoid, proven implementation patterns, and metrics for measuring success. The content is structured 
+                to support both quick reference lookups and deeper study sessions.
+              </p>
+
+              <h3 className="text-xl font-semibold text-foreground mb-4">Topics Covered</h3>
               <div className="flex flex-wrap gap-2 mb-8">
                 {libraryItem.topics.map((topic) => (
                   <span key={topic} className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm">
@@ -905,11 +1169,35 @@ export default function KnowledgeCenterDetailPage() {
                 ))}
               </div>
 
-              <h3 className="text-xl font-semibold text-foreground mb-4">Description</h3>
+              <h3 className="text-xl font-semibold text-foreground mb-4">How to Apply This Knowledge</h3>
+              <ul className="space-y-2 text-muted-foreground mb-8">
+                <li className="flex items-start gap-2">
+                  <span className="text-orange-600 font-bold mt-1">1.</span>
+                  <span>Start with the executive summary to understand the key concepts and frameworks</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-orange-600 font-bold mt-1">2.</span>
+                  <span>Review the case studies and examples to see how others have applied these principles</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-orange-600 font-bold mt-1">3.</span>
+                  <span>Use the templates and tools section to adapt frameworks to your specific context</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-orange-600 font-bold mt-1">4.</span>
+                  <span>Reference the measurement section to establish success criteria and tracking mechanisms</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-orange-600 font-bold mt-1">5.</span>
+                  <span>Connect with the author or TO team if you need clarification or additional support</span>
+                </li>
+              </ul>
+
+              <h3 className="text-xl font-semibold text-foreground mb-4">Related Resources</h3>
               <p className="text-muted-foreground mb-8">
-                This {libraryItem.contentType.toLowerCase()} provides comprehensive insights into 
-                {libraryItem.topics.slice(0, 2).join(" and ")}. Access the full document to explore 
-                detailed frameworks, best practices, and implementation guidance.
+                This resource is part of a broader knowledge ecosystem. Consider exploring related best practices, playbooks, 
+                and Learning Centre courses to deepen your understanding and build complementary skills. The "Related Content" 
+                section below provides curated recommendations based on this resource's topics and themes.
               </p>
             </div>
 
@@ -944,7 +1232,7 @@ export default function KnowledgeCenterDetailPage() {
                     </tr>
                     <tr>
                       <td className="text-sm text-muted-foreground py-3 pr-4">Updated</td>
-                      <td className="text-sm font-medium text-foreground py-3">{knowledgeItem?.updatedAt}</td>
+                      <td className="text-sm font-medium text-foreground py-3">{getUpdatedDate()}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -1050,7 +1338,7 @@ export default function KnowledgeCenterDetailPage() {
                     </tr>
                     <tr>
                       <td className="text-sm text-muted-foreground py-3 pr-4">Updated</td>
-                      <td className="text-sm font-medium text-foreground py-3">{knowledgeItem?.updatedAt}</td>
+                      <td className="text-sm font-medium text-foreground py-3">{getUpdatedDate()}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -1205,7 +1493,7 @@ export default function KnowledgeCenterDetailPage() {
                     <p><span className="text-muted-foreground">Department:</span> {knowledgeItem?.department ?? "Cross-Department"}</p>
                     <p><span className="text-muted-foreground">Type:</span> {knowledgeItem?.type ?? "Resource"}</p>
                     <p><span className="text-muted-foreground">Audience:</span> {knowledgeItem?.audience ?? "All Roles"}</p>
-                    <p><span className="text-muted-foreground">Updated:</span> {knowledgeItem?.updatedAt ?? "N/A"}</p>
+                    <p><span className="text-muted-foreground">Updated:</span> {getUpdatedDate()}</p>
                   </div>
                 </section>
 
@@ -1405,6 +1693,47 @@ export default function KnowledgeCenterDetailPage() {
 
           <section className="bg-gray-50 py-16">
         <div className="max-w-7xl mx-auto px-4">
+          {relatedCourses.length > 0 && (
+            <div className="mb-12">
+              <h2 className="text-2xl font-bold text-foreground mb-4">Deepen Your Knowledge</h2>
+              <p className="text-muted-foreground mb-6">
+                Explore related Learning Centre courses to build practical skills on this topic.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {relatedCourses.map((course) => (
+                  <button
+                    key={course.id}
+                    onClick={() => navigate(`/marketplaces/learning-center/courses/${course.id}`)}
+                    className="bg-blue-50 border border-blue-200 rounded-xl p-5 hover:shadow-lg hover:border-blue-400 transition-all text-left"
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <BookOpen className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                      <span className="text-xs font-semibold text-blue-700 uppercase tracking-wide">
+                        Learning Centre Course
+                      </span>
+                    </div>
+                    <h3 className="text-lg font-semibold text-primary-navy mb-2 line-clamp-2">
+                      {course.title}
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                      {course.description}
+                    </p>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {course.duration}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+                        {course.rating}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <h2 className="text-2xl font-bold text-foreground mb-8">Related Content</h2>
           {relatedItems.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">

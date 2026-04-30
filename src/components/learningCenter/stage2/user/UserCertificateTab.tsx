@@ -7,23 +7,80 @@ import {
   GraduationCap,
   FileText,
   Clock,
+  Star,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { useState, useEffect } from "react";
 import type { UserCourseData } from "@/data/learningCenter/stage2/types";
 import type { PathCertificateState } from "@/data/learningCenter/pathCertificates";
+import { addReview } from "@/data/learningCenter/reviews";
+import { awardCapabilityBadge, getCapabilityBadgesForUser } from "@/data/learningCenter/capabilityBadges";
+import { getSessionUser } from "@/data/sessionAuth";
 
 interface UserCertificateTabProps {
   data: UserCourseData;
   pathCertificate?: PathCertificateState;
+  courseStatus?: "not-started" | "in-progress" | "completed";
 }
 
-const UserCertificateTab = ({ data, pathCertificate }: UserCertificateTabProps) => {
+const UserCertificateTab = ({ data, pathCertificate, courseStatus }: UserCertificateTabProps) => {
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewText, setReviewText] = useState("");
+  const [hasSubmittedReview, setHasSubmittedReview] = useState(false);
+  const [userBadges, setUserBadges] = useState<any[]>([]);
+  
   const courseCertificate = data.issuedCertificates?.find(
     (certificate) => certificate.type === "course"
   );
   const allMet = data.certificateRequirements.every((r) => r.met);
-  const courseEarned = courseCertificate?.status === "earned";
+  const courseEarned = courseCertificate?.status === "earned" || allMet || data.overallProgress === 100 || courseStatus === 'completed';
+
+  useEffect(() => {
+    const sessionUser = getSessionUser();
+    if (!sessionUser) return;
+    
+    const userId = sessionUser.email;
+    
+    // Award badge if path certificate is earned
+    if (pathCertificate?.status === "earned" && pathCertificate.trackId) {
+      awardCapabilityBadge(
+        userId,
+        pathCertificate.trackId,
+        pathCertificate.trackTitle
+      );
+    }
+    
+    // Load all badges for this user
+    const badges = getCapabilityBadgesForUser(userId);
+    setUserBadges(badges);
+  }, [pathCertificate]);
+
+  const handleSubmitReview = () => {
+    if (reviewRating === 0 || reviewText.trim() === "") {
+      alert("Please provide both a rating and review text.");
+      return;
+    }
+
+    addReview({
+      id: `review-${Date.now()}`,
+      reviewer: { name: "Amina TO", avatar: "A" },
+      date: "Just now",
+      rating: reviewRating,
+      courseName: data.courseTitle,
+      courseId: data.courseId,
+      title: "",
+      text: reviewText,
+      verified: true,
+      helpfulCount: 0,
+      completionStatus: "Completed",
+    });
+
+    setHasSubmittedReview(true);
+    setReviewText("");
+    setReviewRating(0);
+  };
 
   return (
     <div className="space-y-8">
@@ -341,6 +398,100 @@ const UserCertificateTab = ({ data, pathCertificate }: UserCertificateTabProps) 
           </Button>
         </div>
       </div>
+
+      {/* Share Your Experience - Review Submission */}
+      {courseEarned && !hasSubmittedReview && (
+        <div className="bg-orange-50 border border-orange-200 rounded-xl p-6">
+          <h3 className="font-semibold text-primary-navy mb-1">Share Your Experience</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            You've completed this course. Your feedback helps other learners.
+          </p>
+          
+          <div className="mb-3">
+            <label className="text-sm font-medium text-gray-700 mb-2 block">Your Rating</label>
+            <div className="flex gap-1">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => setReviewRating(star)}
+                  className="focus:outline-none transition-colors"
+                >
+                  <Star
+                    className={`w-6 h-6 ${
+                      star <= reviewRating
+                        ? "fill-orange-500 text-orange-500"
+                        : "text-gray-300"
+                    }`}
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <Textarea
+            className="mt-3"
+            placeholder="What did you find most valuable? What would you improve?"
+            value={reviewText}
+            onChange={(e) => setReviewText(e.target.value)}
+            rows={4}
+          />
+          <Button
+            className="mt-3 bg-orange-600 hover:bg-orange-700 text-white"
+            onClick={handleSubmitReview}
+          >
+            Submit Review
+          </Button>
+        </div>
+      )}
+
+      {hasSubmittedReview && (
+        <div className="bg-green-50 border border-green-200 rounded-xl p-6">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-5 h-5 text-green-600" />
+            <h3 className="font-semibold text-green-900">Thank you for your feedback!</h3>
+          </div>
+          <p className="text-sm text-green-700 mt-2">
+            Your review has been submitted and will help other learners make informed decisions.
+          </p>
+        </div>
+      )}
+
+      {userBadges.length > 0 && (
+        <div className="bg-white border border-gray-200 rounded-xl p-6">
+          <div className="flex items-start gap-3 mb-4">
+            <Award className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <h3 className="text-lg font-semibold text-primary-navy">
+                Capability Badges Earned
+              </h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                You've earned {userBadges.length} capability badge{userBadges.length > 1 ? 's' : ''} by completing learning tracks.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {userBadges.map((badge) => (
+              <div
+                key={badge.id}
+                className="flex items-start gap-3 p-4 bg-orange-50 border border-orange-200 rounded-lg"
+              >
+                <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
+                  <Award className="w-6 h-6 text-orange-600" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-semibold text-primary-navy">{badge.badgeLabel}</h4>
+                  <p className="text-sm text-muted-foreground mt-1">{badge.description}</p>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Earned: {new Date(badge.earnedAt).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
