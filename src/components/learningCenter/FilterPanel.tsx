@@ -32,6 +32,9 @@ const filterLabels: Record<string, string> = {
   verifiedLearner: "Verified Learner",
   completionStatus: "Completion Status",
   date: "Date",
+  // Solution Specs-specific filters
+  scope: "Scope",
+  hasDiagrams: "Has Diagrams",
   // Blueprints-specific filters
   solutionType: "Solution Type",
   blueprintScope: "Blueprint Scope",

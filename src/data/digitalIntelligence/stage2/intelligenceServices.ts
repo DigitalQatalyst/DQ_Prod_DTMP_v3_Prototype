@@ -319,12 +319,15 @@ const featuredDashboardConfigs: Record<string, any> = {
       { id: 'avg-maturity', type: 'metric', title: 'Avg Capability Maturity', description: 'Weighted average across capabilities', position: { row: 1, col: 1, width: 1, height: 1 } },
       { id: 'capabilities-tracked', type: 'metric', title: 'Capabilities Tracked', description: 'Total business capabilities', position: { row: 1, col: 2, width: 1, height: 1 } },
       { id: 'improving', type: 'metric', title: 'Improving', description: 'Capabilities trending upward', position: { row: 1, col: 3, width: 1, height: 1 } },
-      { id: 'maturity-over-time', type: 'chart', chartType: 'line', title: 'Maturity Over Time', description: 'Quarterly capability maturity scores', position: { row: 2, col: 1, width: 2, height: 1 } },
-      { id: 'capability-radar', type: 'chart', chartType: 'radar', title: 'Capability Heatmap', description: 'Maturity levels across core capabilities', position: { row: 2, col: 3, width: 1, height: 1 } },
-      { id: 'benchmark-comparison', type: 'chart', chartType: 'bar', title: 'Benchmark Comparison', description: 'Your scores vs peer average', position: { row: 3, col: 1, width: 2, height: 1 } },
-      { id: 'level-dist', type: 'chart', chartType: 'pie', title: 'Maturity Levels', description: 'Capabilities by maturity level (1-5)', position: { row: 3, col: 3, width: 1, height: 1 } },
-      { id: 'ai-insights', type: 'insight', title: 'Trend Insights', description: 'Regression alerts and improvement velocity analysis', position: { row: 4, col: 1, width: 2, height: 1 } },
-      { id: 'capability-table', type: 'table', title: 'Capability Scorecard', description: 'Detailed scores, trends, and benchmarks per capability', position: { row: 4, col: 3, width: 1, height: 1 } }
+      { id: 'stagnant', type: 'metric', title: 'Stagnant Capabilities', description: 'Capabilities with no improvement', position: { row: 2, col: 1, width: 1, height: 1 } },
+      { id: 'below-benchmark', type: 'metric', title: 'Below Industry Benchmark', description: 'Capabilities lagging peers', position: { row: 2, col: 2, width: 1, height: 1 } },
+      { id: 'maturity-velocity', type: 'metric', title: 'Maturity Velocity', description: 'Quarterly improvement rate', position: { row: 2, col: 3, width: 1, height: 1 } },
+      { id: 'maturity-over-time', type: 'chart', chartType: 'line', title: 'Maturity Over Time', description: 'Quarterly capability maturity scores', position: { row: 3, col: 1, width: 2, height: 1 } },
+      { id: 'capability-radar', type: 'chart', chartType: 'radar', title: 'Capability Heatmap', description: 'Maturity levels across core capabilities', position: { row: 3, col: 3, width: 1, height: 1 } },
+      { id: 'benchmark-comparison', type: 'chart', chartType: 'bar', title: 'Benchmark Comparison', description: 'Your scores vs peer average', position: { row: 4, col: 1, width: 2, height: 1 } },
+      { id: 'level-dist', type: 'chart', chartType: 'pie', title: 'Maturity Levels', description: 'Capabilities by maturity level (1-5)', position: { row: 4, col: 3, width: 1, height: 1 } },
+      { id: 'ai-insights', type: 'insight', title: 'Trend Insights', description: 'Regression alerts and improvement velocity analysis', position: { row: 5, col: 1, width: 2, height: 1 } },
+      { id: 'capability-table', type: 'table', title: 'Capability Scorecard', description: 'Detailed scores, trends, and benchmarks per capability', position: { row: 5, col: 3, width: 1, height: 1 } }
     ],
     filters: [
       { id: 'dateRange', label: 'Date Range', type: 'daterange', defaultValue: 'last-year' },

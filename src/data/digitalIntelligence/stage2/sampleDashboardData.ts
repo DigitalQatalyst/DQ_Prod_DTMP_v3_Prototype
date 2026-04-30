@@ -1669,10 +1669,43 @@ export const sampleDashboardData: Record<string, DashboardData> = {
       { timestamp: '2025-Q4', value: 3.1, label: 'Q4 2025' },
       { timestamp: '2026-Q1', value: 3.3, label: 'Q1 2026' }
     ],
+    widgetData: {
+      'maturity-over-time': [
+        { name: 'Q1 2025', value: 2.4 },
+        { name: 'Q2 2025', value: 2.6 },
+        { name: 'Q3 2025', value: 2.9 },
+        { name: 'Q4 2025', value: 3.1 },
+        { name: 'Q1 2026', value: 3.3 }
+      ],
+      'capability-radar': [
+        { name: 'Digital Customer Engagement', value: 4.1 },
+        { name: 'Data Analytics & BI', value: 3.5 },
+        { name: 'Cloud-Native Development', value: 2.5 },
+        { name: 'Supply Chain Management', value: 1.8 },
+        { name: 'Cybersecurity Operations', value: 3.9 }
+      ],
+      'maturity-distribution': [
+        { name: 'Level 5 - Optimizing', value: 8 },
+        { name: 'Level 4 - Managed', value: 12 },
+        { name: 'Level 3 - Defined', value: 15 },
+        { name: 'Level 2 - Repeatable', value: 5 },
+        { name: 'Level 1 - Initial', value: 2 }
+      ],
+      'gap-analysis': [
+        { name: 'Supply Chain Mgmt', value: 1.2 },
+        { name: 'Cloud-Native Dev', value: 0.9 },
+        { name: 'Data Analytics', value: 0.1 },
+        { name: 'Digital Customer', value: -0.3 },
+        { name: 'Cybersecurity', value: -0.2 }
+      ]
+    },
     metrics: [
       { id: 'avg-maturity', label: 'Average Maturity Level', value: 3.3, unit: 'out of 5', trend: 'up', trendValue: 6.5, trendLabel: '+0.2 vs last quarter', severity: 'success' },
       { id: 'capabilities-tracked', label: 'Capabilities Tracked', value: 42, trend: 'stable', severity: 'info' },
-      { id: 'improving', label: 'Capabilities Improving', value: '28/42', trend: 'up', trendValue: 5, trendLabel: '5 more than last quarter', severity: 'success' }
+      { id: 'improving', label: 'Capabilities Improving', value: '28/42', trend: 'up', trendValue: 5, trendLabel: '5 more than last quarter', severity: 'success' },
+      { id: 'stagnant', label: 'Stagnant Capabilities', value: 6, trend: 'down', trendValue: -2, trendLabel: '2 fewer than last quarter', severity: 'warning' },
+      { id: 'below-benchmark', label: 'Below Industry Benchmark', value: 9, trend: 'down', trendValue: -3, trendLabel: 'Closing the gap', severity: 'warning' },
+      { id: 'maturity-velocity', label: 'Maturity Velocity', value: '+0.2', unit: 'per quarter', trend: 'stable', trendLabel: 'Consistent growth', severity: 'success' }
     ],
     insights: [
       { id: 'cmt-insight-001', type: 'info', severity: 'low', title: 'Steady Maturity Growth Across Portfolio', description: '67% of tracked capabilities showed improvement this quarter. Average improvement rate of 0.2 points per quarter indicates healthy organizational learning.', confidence: 94, actionable: false },
