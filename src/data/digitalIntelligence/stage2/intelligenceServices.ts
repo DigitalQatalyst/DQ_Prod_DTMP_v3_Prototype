@@ -11,33 +11,43 @@ const featuredDashboardConfigs: Record<string, any> = {
   // ═══════════════════════════════════════════════════════════════════════════
 
   // #1 — "Live Ops Command Center"
-  // Hero: full-width area → donut + line → radar solo wide → insight + table
+  // 6 metrics → full-width uptime area → line+donut → bar+radar → area+pie → full-width table → insights
   'system-health-analytics': {
     widgets: [
-      { id: 'overall-uptime', type: 'metric', title: 'Overall Uptime', description: 'System availability', position: { row: 1, col: 1, width: 1, height: 1 } },
-      { id: 'critical-systems', type: 'metric', title: 'Critical Systems Healthy', description: 'Mission-critical status', position: { row: 1, col: 2, width: 1, height: 1 } },
-      { id: 'anomalies-detected', type: 'metric', title: 'Anomalies Detected', description: 'Issues identified', position: { row: 1, col: 3, width: 1, height: 1 } },
-      { id: 'uptime-trend', type: 'chart', chartType: 'area', title: 'System Uptime Landscape', description: 'Daily uptime percentage across all monitored systems', position: { row: 2, col: 1, width: 3, height: 1 } },
-      { id: 'system-health', type: 'chart', chartType: 'donut', title: 'Health Distribution', description: 'Systems by health status', position: { row: 3, col: 1, width: 1, height: 1 } },
-      { id: 'response-time', type: 'chart', chartType: 'line', title: 'Response Time Trend', description: 'Average latency across services', position: { row: 3, col: 2, width: 2, height: 1 } },
-      { id: 'performance-metrics', type: 'chart', chartType: 'radar', title: 'Performance Dimensions', description: 'CPU, memory, disk, network, latency scoring', position: { row: 4, col: 1, width: 2, height: 1 } },
-      { id: 'system-status', type: 'table', title: 'System Status', description: 'Detailed system breakdown', position: { row: 4, col: 3, width: 1, height: 1 } },
-      { id: 'ai-insights', type: 'insight', title: 'AI Insights', description: 'Health recommendations and anomaly alerts', position: { row: 5, col: 1, width: 3, height: 1 } }
+      { id: 'overall-uptime', type: 'metric', title: 'Overall Uptime', description: 'System availability across all monitored services', position: { row: 1, col: 1, width: 1, height: 1 } },
+      { id: 'critical-systems', type: 'metric', title: 'Critical Systems Healthy', description: 'Mission-critical systems operating normally', position: { row: 1, col: 2, width: 1, height: 1 } },
+      { id: 'anomalies-detected', type: 'metric', title: 'Anomalies Detected', description: 'AI-identified anomalous behavior patterns', position: { row: 1, col: 3, width: 1, height: 1 } },
+      { id: 'avg-response-time', type: 'metric', title: 'Avg Response Time', description: 'Mean latency across all service endpoints', position: { row: 2, col: 1, width: 1, height: 1 } },
+      { id: 'error-rate', type: 'metric', title: 'Error Rate', description: 'Failed requests as percentage of total traffic', position: { row: 2, col: 2, width: 1, height: 1 } },
+      { id: 'mttr', type: 'metric', title: 'Mean Time to Recovery', description: 'Average incident resolution time', position: { row: 2, col: 3, width: 1, height: 1 } },
+      { id: 'uptime-trend', type: 'chart', chartType: 'area', title: 'System Uptime Landscape', description: '14-day rolling uptime percentage across all monitored systems', position: { row: 3, col: 1, width: 3, height: 1 } },
+      { id: 'response-time', type: 'chart', chartType: 'line', title: 'Response Time Trend', description: 'Average service latency over the past 14 days', position: { row: 4, col: 1, width: 2, height: 1 } },
+      { id: 'health-distribution', type: 'chart', chartType: 'donut', title: 'Health Distribution', description: 'Current system health status breakdown', position: { row: 4, col: 3, width: 1, height: 1 } },
+      { id: 'error-by-service', type: 'chart', chartType: 'bar', title: 'Error Rate by Service', description: 'Failed request percentage ranked by service', position: { row: 5, col: 1, width: 2, height: 1 } },
+      { id: 'performance-metrics', type: 'chart', chartType: 'radar', title: 'Infrastructure Performance', description: 'CPU, memory, disk I/O, network, and latency scoring', position: { row: 5, col: 3, width: 1, height: 1 } },
+      { id: 'resource-utilization', type: 'chart', chartType: 'area', title: 'Resource Utilization Trend', description: 'Average CPU utilization across infrastructure over 14 days', position: { row: 6, col: 1, width: 2, height: 1 } },
+      { id: 'incident-severity', type: 'chart', chartType: 'pie', title: 'Incident Severity Distribution', description: 'Open and recent incidents by priority level', position: { row: 6, col: 3, width: 1, height: 1 } },
+      { id: 'system-status', type: 'table', title: 'System Status Overview', description: 'Comprehensive health metrics for each monitored system', position: { row: 7, col: 1, width: 3, height: 1 } },
+      { id: 'ai-insights', type: 'insight', title: 'AI Health Intelligence', description: 'AI-powered health analysis, anomaly detection, and recommendations', position: { row: 8, col: 1, width: 3, height: 1 } }
     ],
     filters: [
-      { id: 'dateRange', label: 'Date Range', type: 'daterange', defaultValue: 'last-7-days' },
-      { id: 'system', label: 'System', type: 'dropdown', defaultValue: 'all', options: ['all', 'SAP ERP', 'Salesforce', 'API Gateway', 'Azure Cloud'] }
+      { id: 'dateRange', label: 'Date Range', type: 'daterange', defaultValue: 'last-14-days' },
+      { id: 'system', label: 'System', type: 'dropdown', defaultValue: 'all', options: ['all', 'SAP ERP', 'Salesforce', 'API Gateway', 'Azure Cloud', 'Data Warehouse', 'Payment Service', 'Auth Service', 'CDN'] },
+      { id: 'environment', label: 'Environment', type: 'dropdown', defaultValue: 'production', options: ['production', 'staging', 'development'] }
     ],
-    defaultDateRange: 'last-7-days', defaultView: 'overview', exportFormats: ['excel', 'pdf', 'powerpoint'], supportsScheduling: true
+    defaultDateRange: 'last-14-days', defaultView: 'overview', exportFormats: ['excel', 'pdf', 'powerpoint'], supportsScheduling: true
   },
 
   // #2 — "Failure Prediction Engine"
   // Line hero for predictions + pie for components → bar + radar
   'predictive-maintenance': {
     widgets: [
-      { id: 'failure-risk', type: 'metric', title: 'Systems at Risk', description: 'Predicted failures next 30 days', position: { row: 1, col: 1, width: 1, height: 1 } },
-      { id: 'mtbf', type: 'metric', title: 'Mean Time Between Failures', description: 'Average reliability', position: { row: 1, col: 2, width: 1, height: 1 } },
-      { id: 'cost-saved', type: 'metric', title: 'Cost Avoided', description: 'Preventive savings this quarter', position: { row: 1, col: 3, width: 1, height: 1 } },
+      { id: 'high-risk-systems', type: 'metric', title: 'High Risk Systems', description: 'Systems with elevated failure probability', position: { row: 1, col: 1, width: 1, height: 1 } },
+      { id: 'predicted-failures', type: 'metric', title: 'Predicted Failures (7 days)', description: 'Expected failures in next week', position: { row: 1, col: 2, width: 1, height: 1 } },
+      { id: 'maintenance-windows', type: 'metric', title: 'Optimal Maintenance Windows', description: 'Recommended maintenance slots', position: { row: 1, col: 3, width: 1, height: 1 } },
+      { id: 'cost-savings', type: 'metric', title: 'Potential Cost Savings', description: 'Preventive savings this quarter', position: { row: 2, col: 1, width: 1, height: 1 } },
+      { id: 'mtbf', type: 'metric', title: 'Mean Time Between Failures', description: 'Average system reliability', position: { row: 2, col: 2, width: 1, height: 1 } },
+      { id: 'prediction-accuracy', type: 'metric', title: 'Prediction Accuracy', description: 'AI model performance', position: { row: 2, col: 3, width: 1, height: 1 } },
       { id: 'failure-probability', type: 'chart', chartType: 'line', title: 'Failure Probability Forecast', description: 'Predicted failure likelihood over next 90 days', position: { row: 2, col: 1, width: 2, height: 1 } },
       { id: 'component-risk', type: 'chart', chartType: 'pie', title: 'Risk by Component Type', description: 'Failure distribution across hardware categories', position: { row: 2, col: 3, width: 1, height: 1 } },
       { id: 'maintenance-schedule', type: 'chart', chartType: 'bar', title: 'Optimal Maintenance Windows', description: 'Recommended maintenance by system priority', position: { row: 3, col: 1, width: 2, height: 1 } },
@@ -253,22 +263,29 @@ const featuredDashboardConfigs: Record<string, any> = {
   // DIGITAL MATURITY (8 services)
   // ═══════════════════════════════════════════════════════════════════════════
 
-  // #13 — "Maturity Spider" (radar hero wide, area compact)
+  // #13 — "Maturity Spider" — 6 metrics → radar+area → full-width bar → donut+bar → line+radar → full-width table → insights
   'dbp-maturity-assessment': {
     widgets: [
-      { id: 'overall-maturity', type: 'metric', title: 'Overall Maturity Score', description: 'Organization-wide maturity', position: { row: 1, col: 1, width: 1, height: 1 } },
-      { id: 'domains-assessed', type: 'metric', title: 'Domains Assessed', description: 'Total domains evaluated', position: { row: 1, col: 2, width: 1, height: 1 } },
-      { id: 'improvement-areas', type: 'metric', title: 'Improvement Areas', description: 'Identified gaps', position: { row: 1, col: 3, width: 1, height: 1 } },
-      { id: 'domain-scores', type: 'chart', chartType: 'radar', title: 'Domain Maturity Spider', description: 'Multi-dimensional maturity assessment across all domains', position: { row: 2, col: 1, width: 2, height: 1 } },
-      { id: 'maturity-trend', type: 'chart', chartType: 'area', title: 'Maturity Progression', description: 'Quarterly maturity growth', position: { row: 2, col: 3, width: 1, height: 1 } },
-      { id: 'domain-comparison', type: 'chart', chartType: 'bar', title: 'Domain Comparison', description: 'Scores by domain ranked highest to lowest', position: { row: 3, col: 1, width: 2, height: 1 } },
-      { id: 'maturity-distribution', type: 'chart', chartType: 'donut', title: 'Maturity Distribution', description: 'Domains by maturity level', position: { row: 3, col: 3, width: 1, height: 1 } },
-      { id: 'ai-insights', type: 'insight', title: 'AI Insights', description: 'Improvement recommendations and gap analysis', position: { row: 4, col: 1, width: 2, height: 1 } },
-      { id: 'domain-breakdown', type: 'table', title: 'Domain Breakdown', description: 'Detailed domain analysis with scores and targets', position: { row: 4, col: 3, width: 1, height: 1 } }
+      { id: 'overall-maturity', type: 'metric', title: 'Overall Maturity Score', description: 'Organization-wide composite maturity rating', position: { row: 1, col: 1, width: 1, height: 1 } },
+      { id: 'domains-assessed', type: 'metric', title: 'Domains Assessed', description: 'Total domains evaluated in latest assessment', position: { row: 1, col: 2, width: 1, height: 1 } },
+      { id: 'improvement-areas', type: 'metric', title: 'Improvement Areas', description: 'Identified gaps requiring attention', position: { row: 1, col: 3, width: 1, height: 1 } },
+      { id: 'target-score', type: 'metric', title: 'Target Score (EOY)', description: 'Year-end maturity target', position: { row: 2, col: 1, width: 1, height: 1 } },
+      { id: 'maturity-velocity', type: 'metric', title: 'Maturity Velocity', description: 'Average improvement rate per quarter', position: { row: 2, col: 2, width: 1, height: 1 } },
+      { id: 'industry-percentile', type: 'metric', title: 'Industry Percentile', description: 'Ranking against peer organizations', position: { row: 2, col: 3, width: 1, height: 1 } },
+      { id: 'domain-scores', type: 'chart', chartType: 'radar', title: 'Domain Maturity Spider', description: 'Multi-dimensional maturity assessment across all 8 domains', position: { row: 3, col: 1, width: 2, height: 1 } },
+      { id: 'maturity-trend', type: 'chart', chartType: 'area', title: 'Maturity Progression', description: 'Quarterly composite maturity score trend', position: { row: 3, col: 3, width: 1, height: 1 } },
+      { id: 'domain-comparison', type: 'chart', chartType: 'bar', title: 'Domain Comparison: Current vs Target', description: 'Current maturity score for each domain ranked by gap to target', position: { row: 4, col: 1, width: 3, height: 1 } },
+      { id: 'maturity-distribution', type: 'chart', chartType: 'donut', title: 'Maturity Level Distribution', description: 'Domains categorized by maturity level', position: { row: 5, col: 1, width: 1, height: 1 } },
+      { id: 'sub-capability', type: 'chart', chartType: 'bar', title: 'Data & Analytics Sub-Capabilities', description: 'Granular capability scores within the lowest-scoring domain', position: { row: 5, col: 2, width: 2, height: 1 } },
+      { id: 'benchmark-trend', type: 'chart', chartType: 'line', title: 'Industry Benchmark Trend', description: 'Organization percentile rank vs industry peers over time', position: { row: 6, col: 1, width: 2, height: 1 } },
+      { id: 'capability-profile', type: 'chart', chartType: 'radar', title: 'Strategic Capability Profile', description: 'Maturity across strategic dimensions: strategy, governance, people, process, technology', position: { row: 6, col: 3, width: 1, height: 1 } },
+      { id: 'domain-breakdown', type: 'table', title: 'Domain Breakdown', description: 'Comprehensive domain-level analysis with scores, targets, gaps, and recommended actions', position: { row: 7, col: 1, width: 3, height: 1 } },
+      { id: 'ai-insights', type: 'insight', title: 'AI Maturity Intelligence', description: 'AI-powered gap analysis, benchmarking insights, and improvement recommendations', position: { row: 8, col: 1, width: 3, height: 1 } }
     ],
     filters: [
-      { id: 'dateRange', label: 'Date Range', type: 'daterange', defaultValue: 'last-year' },
-      { id: 'domain', label: 'Domain', type: 'dropdown', defaultValue: 'all', options: ['all', 'Customer Experience', 'Data & Analytics', 'Integration', 'Automation'] }
+      { id: 'dateRange', label: 'Assessment Period', type: 'daterange', defaultValue: 'last-year' },
+      { id: 'domain', label: 'Domain', type: 'dropdown', defaultValue: 'all', options: ['all', 'Customer Experience', 'Data & Analytics', 'Integration', 'Automation', 'Security', 'Cloud', 'DevOps', 'Architecture'] },
+      { id: 'benchmark', label: 'Benchmark Group', type: 'dropdown', defaultValue: 'industry', options: ['industry', 'Financial Services', 'Technology', 'Manufacturing', 'Healthcare'] }
     ],
     defaultDateRange: 'last-year', defaultView: 'overview', exportFormats: ['excel', 'pdf', 'powerpoint'], supportsScheduling: true
   },
@@ -279,12 +296,15 @@ const featuredDashboardConfigs: Record<string, any> = {
       { id: 'readiness-score', type: 'metric', title: 'Readiness Score', description: 'Overall transformation readiness', position: { row: 1, col: 1, width: 1, height: 1 } },
       { id: 'blockers', type: 'metric', title: 'Active Blockers', description: 'Critical readiness gaps', position: { row: 1, col: 2, width: 1, height: 1 } },
       { id: 'enablers-met', type: 'metric', title: 'Enablers Met', description: 'Prerequisites satisfied', position: { row: 1, col: 3, width: 1, height: 1 } },
-      { id: 'readiness-radar', type: 'chart', chartType: 'radar', title: 'Readiness Dimensions', description: 'People, process, technology, culture, governance', position: { row: 2, col: 1, width: 2, height: 1 } },
-      { id: 'readiness-trend', type: 'chart', chartType: 'line', title: 'Readiness Score Trend', description: 'Monthly progression toward readiness threshold', position: { row: 2, col: 3, width: 1, height: 1 } },
-      { id: 'gap-analysis', type: 'chart', chartType: 'bar', title: 'Gap Analysis', description: 'Current vs target state by dimension', position: { row: 3, col: 1, width: 2, height: 1 } },
-      { id: 'risk-dist', type: 'chart', chartType: 'pie', title: 'Risk Categories', description: 'Readiness risks by type', position: { row: 3, col: 3, width: 1, height: 1 } },
-      { id: 'ai-insights', type: 'insight', title: 'Readiness Intelligence', description: 'Risk identification and enabler recommendations', position: { row: 4, col: 1, width: 2, height: 1 } },
-      { id: 'readiness-table', type: 'table', title: 'Readiness Checklist', description: 'Dimension-by-dimension readiness status', position: { row: 4, col: 3, width: 1, height: 1 } }
+      { id: 'critical-dimensions', type: 'metric', title: 'Critical Dimensions', description: 'Dimensions below threshold', position: { row: 2, col: 1, width: 1, height: 1 } },
+      { id: 'improvement-velocity', type: 'metric', title: 'Improvement Velocity', description: 'Rate of readiness improvement', position: { row: 2, col: 2, width: 1, height: 1 } },
+      { id: 'target-timeline', type: 'metric', title: 'Target Achievement', description: 'Projected goal completion', position: { row: 2, col: 3, width: 1, height: 1 } },
+      { id: 'readiness-radar', type: 'chart', chartType: 'radar', title: 'Readiness Dimensions', description: 'People, process, technology, culture, governance', position: { row: 3, col: 1, width: 2, height: 1 } },
+      { id: 'readiness-trend', type: 'chart', chartType: 'line', title: 'Readiness Score Trend', description: 'Monthly progression toward readiness threshold', position: { row: 3, col: 3, width: 1, height: 1 } },
+      { id: 'gap-analysis', type: 'chart', chartType: 'bar', title: 'Gap Analysis', description: 'Current vs target state by dimension', position: { row: 4, col: 1, width: 2, height: 1 } },
+      { id: 'risk-dist', type: 'chart', chartType: 'pie', title: 'Risk Categories', description: 'Readiness risks by type', position: { row: 4, col: 3, width: 1, height: 1 } },
+      { id: 'ai-insights', type: 'insight', title: 'Readiness Intelligence', description: 'Risk identification and enabler recommendations', position: { row: 5, col: 1, width: 2, height: 1 } },
+      { id: 'readiness-table', type: 'table', title: 'Readiness Checklist', description: 'Dimension-by-dimension readiness status', position: { row: 5, col: 3, width: 1, height: 1 } }
     ],
     filters: [
       { id: 'dateRange', label: 'Assessment Period', type: 'daterange', defaultValue: 'latest' },

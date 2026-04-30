@@ -66,20 +66,35 @@ function MetricWidget({ widget, metrics }: { widget: WidgetType; metrics: Dashbo
 }
 
 function ChartWidget({ widget, data }: { widget: WidgetType; data: DashboardData }) {
-  const chartData = data.timeSeries.map(point => ({
+  const chartData = data.widgetData?.[widget.id] || data.timeSeries.map(point => ({
     name: point.label || point.timestamp,
     value: point.value
   }));
 
+  console.log('ChartWidget - widget.id:', widget.id);
+  console.log('ChartWidget - chartData:', chartData);
+
   const COLORS = ['#7C3AED', '#A78BFA', '#C4B5FD', '#DDD6FE', '#EDE9FE'];
 
-  const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number }>; label?: string }) => {
+  const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number; payload?: any }>; label?: string }) => {
     if (active && payload && payload.length) {
+      const value = payload[0].value;
+      const dataPoint = payload[0].payload;
+      
+      // Check if this widget should display percentages
+      const shouldShowPercentage = widget.id.includes('risk') || 
+                                   widget.id.includes('health') || 
+                                   widget.id.includes('component') ||
+                                   widget.id.includes('dimensions');
+      
+      const displayValue = shouldShowPercentage ? `${value}%` : value;
+      const displayLabel = dataPoint?.label || label;
+      
       return (
         <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200">
-          <p className="text-sm font-medium text-gray-900">{label}</p>
+          <p className="text-sm font-medium text-gray-900">{displayLabel}</p>
           <p className="text-sm text-purple-600 font-semibold">
-            {payload[0].value}
+            {displayValue}
           </p>
         </div>
       );
@@ -105,7 +120,7 @@ function ChartWidget({ widget, data }: { widget: WidgetType; data: DashboardData
     <Card className="p-6 bg-white border border-gray-200 hover:shadow-md transition-shadow">
       <h3 className="text-base font-semibold text-gray-900 mb-1">{widget.title}</h3>
       <p className="text-xs text-gray-500 mb-4">{widget.description}</p>
-      <ResponsiveContainer width="100%" height={240}>
+      <ResponsiveContainer width="100%" height={300}>
         {widget.chartType === 'line' ? (
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
@@ -131,24 +146,21 @@ function ChartWidget({ widget, data }: { widget: WidgetType; data: DashboardData
             />
           </LineChart>
         ) : widget.chartType === 'bar' ? (
-          <BarChart data={chartData} layout="horizontal">
-            <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={true} vertical={false} />
+          <BarChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
             <XAxis 
-              type="number"
+              dataKey="name" 
               tick={{ fontSize: 12, fill: '#9ca3af' }}
               axisLine={{ stroke: '#e5e7eb' }}
               tickLine={false}
             />
             <YAxis 
-              type="category"
-              dataKey="name"
               tick={{ fontSize: 12, fill: '#9ca3af' }}
               axisLine={false}
               tickLine={false}
-              width={100}
             />
             <Tooltip content={<CustomTooltip />} />
-            <Bar dataKey="value" fill="#7C3AED" radius={[0, 4, 4, 0]} />
+            <Bar dataKey="value" fill="#7C3AED" radius={[4, 4, 0, 0]} />
           </BarChart>
         ) : widget.chartType === 'area' ? (
           <AreaChart data={chartData}>
@@ -206,8 +218,15 @@ function ChartWidget({ widget, data }: { widget: WidgetType; data: DashboardData
             />
             <PolarRadiusAxis 
               angle={90} 
-              domain={[0, 'auto']}
+              domain={[0, 100]}
               tick={{ fontSize: 12, fill: '#9ca3af' }}
+              tickFormatter={(value) => {
+                const shouldShowPercentage = widget.id.includes('risk') || 
+                                           widget.id.includes('health') || 
+                                           widget.id.includes('component') ||
+                                           widget.id.includes('dimensions');
+                return shouldShowPercentage ? `${value}%` : value;
+              }}
             />
             <Radar 
               name="Value" 
