@@ -314,6 +314,7 @@ const featuredDashboardConfigs: Record<string, any> = {
   },
 
   // #15 — "Capability Tracker" (line leads for tracking, radar secondary, pie not donut)
+  // Updated: Added 3 additional KPI metrics (stagnant, below-benchmark, maturity-velocity)
   'capability-maturity-tracking': {
     widgets: [
       { id: 'avg-maturity', type: 'metric', title: 'Avg Capability Maturity', description: 'Weighted average across capabilities', position: { row: 1, col: 1, width: 1, height: 1 } },
